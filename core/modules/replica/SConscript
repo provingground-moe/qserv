@@ -1,0 +1,12 @@
+Import('env')
+
+import os.path
+
+module_build_targets = []
+env.Append(LIBPATH=Glob("/home/gapon/development/replication/qserv/lib"))
+for f in env.Glob("*.cc"):
+    source = os.path.basename(str(f))
+    target = source[:-3]
+    module_build_targets += env.Program(target=target, source=[source], LIBS=["XrdCl","replica_core", "qserv_common","util","protobuf","boost_system"])
+
+Return('module_build_targets')

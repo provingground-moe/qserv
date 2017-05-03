@@ -1,0 +1,82 @@
+/*
+ * LSST Data Management System
+ * Copyright 2011-2017 LSST Corporation.
+ *
+ * This product includes software developed by the
+ * LSST Project (http://www.lsst.org/).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the LSST License Statement and
+ * the GNU General Public License along with this program.  If not,
+ * see <http://www.lsstcorp.org/LegalNotices/>.
+ */
+/// replication.proto
+/// This defines the wire-messages sent between replication master and workers.
+
+package lsst.qserv.proto;
+
+// Replication header sent to worker. Any communication begins
+// with sending this header and specifying a type of the request.
+
+message ReplicationRequestHeader {
+    enum Type {
+        REPLICATE = 0;
+        STOP      = 1;
+        STATUS    = 2;
+    }
+    required Type type = 1;
+}
+
+// This is a replication request. The message defines a scope
+// of the request and its unique identity ('uuid'). This message
+// is sent once after the header.
+
+message ReplicationRequestReplicate {
+    required string database = 1;
+    required int32  chunk = 2;
+    required string id = 3;
+}
+
+// This request is sent to stop an on-going replication (if any
+// is still in progress). This message is sent once after the header.
+
+message ReplicationRequestStop {
+    required string id = 1;
+}
+
+// This request is sent to request a status of an on-going replication (if any
+// is still in progress). This message is sent once after the header.
+
+message ReplicationRequestStatus {
+    required string id = 1;
+}
+
+// These messages are expected by master upon a completion of the corresponding
+// operations.
+enum ReplicationStatus {
+    SUCCESS     = 0;
+    QUEUED      = 1;
+    IN_PROGRESS = 2;
+    SUSPENDED   = 3;
+    BAD         = 4;
+    FAILED      = 5;
+}
+    
+message ReplicationResponseReplicate {
+    required ReplicationStatus status = 1;
+}
+message ReplicationResponseStop {
+    required ReplicationStatus status = 1;
+}
+message ReplicationResponseStatus {
+    required ReplicationStatus status = 1;
+}
