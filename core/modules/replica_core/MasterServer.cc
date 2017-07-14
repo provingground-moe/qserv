@@ -233,6 +233,8 @@ MasterServer::statusOfReplication (const std::string            &workerName,
 
     THREAD_SAFE_BLOCK {
 
+        std::cout << "MasterServer::statusOfReplication  replicationRequestId = " << replicationRequestId << std::endl;
+
         MasterServer::pointer server = shared_from_this();
 
         StatusRequest::pointer request =
