@@ -21,3 +21,11 @@ See http://slac.stanford.edu/exp/lsst/qserv/
 
 Documentation is avaible in doc/source
 
+Environment setup:
+
+  eval `ssh-agent -s` && ssh-add ~/.ssh/id_github_rsa
+  source /datasets/gapon/stack/loadLSST.bash
+  setup -t qserv-dev qserv_distrib
+  setup -t setup -r .
+
+

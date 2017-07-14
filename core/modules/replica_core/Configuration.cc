@@ -67,16 +67,17 @@ Configuration::create (const std::string &configFile) {
 }
 
 Configuration::Configuration (const std::string &configFile)
-    :   _configFile               (configFile),
-        _workers                  {},
-        _requestBufferSizeBytes   (1024),
-        _defaultRetryTimeoutSec   (2),
-        _masterHttpPort           (80),
-        _masterHttpThreads        (1),
-        _masterRequestTimeoutSec  (0),
-        _workerSvcPort            (50000),
-        _workerXrootdPort         (1094),
-        _workerNumConnectionsLimit(16)
+    :   _configFile                (configFile),
+        _workers                   {},
+        _requestBufferSizeBytes    (1024),
+        _defaultRetryTimeoutSec    (2),
+        _masterHttpPort            (80),
+        _masterHttpThreads         (1),
+        _masterRequestTimeoutSec   (0),
+        _workerSvcPort             (50000),
+        _workerXrootdPort          (1094),
+        _workerNumConnectionsLimit (16),
+        _workerNumProcessingThreads(1)
 {
     loadConfiguration();
 }
@@ -102,6 +103,7 @@ Configuration::loadConfiguration () {
     ::parseKeyVal(configStore, "worker.svc_port",                   _workerSvcPort);
     ::parseKeyVal(configStore, "worker.xrootd_port",                _workerXrootdPort);
     ::parseKeyVal(configStore, "worker.max_connections",            _workerNumConnectionsLimit);
+    ::parseKeyVal(configStore, "worker.num_processing_threads",     _workerNumProcessingThreads);
 }
     
 }}} // namespace lsst::qserv::replica_core

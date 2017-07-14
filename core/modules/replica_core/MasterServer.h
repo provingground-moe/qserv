@@ -127,6 +127,11 @@ public:
     MasterServer (MasterServer const&) = delete;
     MasterServer & operator= (MasterServer const&) = delete;
 
+    /// Return the Service Provider used by the server
+    ServiceProvider::pointer serviceProvider () {
+        return _serviceProvider;
+    }
+
     /**
      * Run the server in a dedicated thread unless it's already running.
      * It's safe to call this method multiple times from any thread.

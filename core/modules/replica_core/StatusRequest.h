@@ -71,7 +71,7 @@ public:
     StatusRequest & operator= (StatusRequest const&) = delete;
 
     /// Destructor
-    virtual ~StatusRequest ();
+    ~StatusRequest () final;
 
     /// Return an identifier of the target replication request
     const std::string& replicationRequestId () const {
@@ -116,7 +116,7 @@ private:
      * asynchronous callback handlers to guarantee that the object always
      * oulive the asynchronous operations.
      */
-    virtual std::shared_ptr<Request> final_shared_from_this ();
+    std::shared_ptr<Request> final_shared_from_this () final;
 
     /**
       * This method is called when a connection is established and
@@ -126,7 +126,7 @@ private:
       * The first step of teh protocol will be to send the replication
       * request to the destination worker.
       */
-    virtual void beginProtocol ();
+    void beginProtocol () final;
     
     /// Callback handler for the asynchronious operation
     void requestSent (const boost::system::error_code &ec,
@@ -148,7 +148,7 @@ private:
      * This method implements the corresponing virtual method defined
      * bu the base class.
      */
-    virtual void endProtocol ();
+    void endProtocol () final;
 
 private:
 

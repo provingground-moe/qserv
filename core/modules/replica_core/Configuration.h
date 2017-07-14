@@ -44,9 +44,9 @@ namespace qserv {
 namespace replica_core {
 
 /**
-  * Class Configuration provides configuration servicese for all servers.
+  * Class Configuration provides configuration services for all servers.
   * 
-  * The implementation of this class capitalizes on the basic parser
+  * The implementation of this class relies upon the basic parser
   * of the INI-style configuration files. In addition to the basic parser,
   * this class also:
   * 
@@ -114,7 +114,9 @@ public:
     uint16_t workerXrootdPort () const { return _workerXrootdPort; }
 
     /// The maximum number of paralle network connections allowed by each worker
-    uint32_t workerNumConnectionsLimit () const { return _workerNumConnectionsLimit; }
+    size_t workerNumConnectionsLimit () const { return _workerNumConnectionsLimit; }
+
+    size_t workerNumProcessingThreads () const { return _workerNumProcessingThreads; }
 
 private:
 
@@ -153,6 +155,7 @@ private:
     uint16_t     _workerSvcPort;
     uint16_t     _workerXrootdPort;
     size_t       _workerNumConnectionsLimit;
+    size_t       _workerNumProcessingThreads;
 };
 
 }}} // namespace lsst::qserv::replica_core

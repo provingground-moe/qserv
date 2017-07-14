@@ -46,8 +46,8 @@ namespace qserv {
 namespace replica_core {
 
 /**
-  * Class ReplicationRequest is a base class for a family of requests a transient state of a request witin
-  * the master service.
+  * Class ReplicationRequest is a base class for a family of requests.
+  * It represents a transient state of a request witi the master service.
   */
 class ReplicationRequest
     :   public Request,
@@ -71,7 +71,12 @@ public:
     ReplicationRequest & operator= (ReplicationRequest const&) = delete;
 
     /// Destructor
-    virtual ~ReplicationRequest ();
+    ~ReplicationRequest () final;
+
+    
+    const std::string& database     () const { return _database; }
+    unsigned int       chunk        () const { return _chunk; }
+    const std::string& sourceWorker () const { return  _sourceWorker; }
 
 private:
 
@@ -113,11 +118,11 @@ private:
 
     /**
      * Return a down-cust pointer onto an object of the final class.
-     * This pointer is used by an implementation of thebase class for registering
+     * This pointer is used by an implementation of the base class for registering
      * asynchronous callback handlers to guarantee that the object always
      * oulive the asynchronous operations.
      */
-    virtual std::shared_ptr<Request> final_shared_from_this ();
+    std::shared_ptr<Request> final_shared_from_this () final;
 
     /**
       * This method is called when a connection is established and
@@ -127,7 +132,7 @@ private:
       * The first step of teh protocol will be to send the replication
       * request to the destination worker.
       */
-    virtual void beginProtocol ();
+    void beginProtocol () final;
     
     /// Callback handler for the asynchronious operation
     void requestSent (const boost::system::error_code &ec,
@@ -170,7 +175,7 @@ private:
      * This method implements the corresponing virtual method defined
      * bu the base class.
      */
-    virtual void endProtocol ();
+    void endProtocol () final;
 
 private:
 
