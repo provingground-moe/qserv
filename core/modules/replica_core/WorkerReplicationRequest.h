@@ -73,12 +73,10 @@ public:
         SUCCEEDED,
         FAILED
     };
-    
-    /// Comparision operator is needed to store requests in the priority queue
-    bool operator < (const WorkerReplicationRequest& rhs) const {
-        return priority < rhs.priority;
-    }
-    
+
+    /// Return the string representation of the status
+    static std::string status2string (CompletionStatus status);
+
     /**
      * Static factory method is needed to prevent issue with the lifespan
      * and memory management of instances created otherwise (as values or via
@@ -113,13 +111,18 @@ public:
     /// Set the new completion status
     void setStatus (CompletionStatus newStatus);
  
-    /// Set (or reset) the new thread
+    /**
+     * Set (or reset) the new thread
+     *
+     * This is needed for bookkeeing purposes in order to figure out which thread
+     * should be notified to cancel processing of a request.
+     */
     void setProcessorThread (WorkerProcessorThread_pointer newProcessorThread = WorkerProcessorThread_pointer());
 
 private:
 
     /**
-     * The constructor of the class.
+     * The normal constructor of the class.
      */
     WorkerReplicationRequest (Priority           priority,
                               const std::string& id,
@@ -139,6 +142,19 @@ private:
     /// The processor thread (set only when the request is being processed)
     WorkerProcessorThread_pointer _processorThread;
 };
+
+
+/// Comparision type for strict weak ordering reaquired by std::priority_queue
+struct WorkerReplicationRequestCompare {
+
+    /// Order requests by their priorities
+    bool operator() (const WorkerReplicationRequest::pointer& lhs,
+                     const WorkerReplicationRequest::pointer& rhs) const {
+
+        return lhs->priority() < rhs->priority();
+    }
+};
+
 
 }}} // namespace lsst::qserv::replica_core
 

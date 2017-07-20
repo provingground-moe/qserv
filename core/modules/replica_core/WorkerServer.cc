@@ -36,19 +36,19 @@ namespace qserv {
 namespace replica_core {
 
 WorkerServer::pointer
-WorkerServer::create (ServiceProvider::pointer serviceProvider,
-                      WorkerRequestProcessor::pointer requestProcessor)
+WorkerServer::create (const ServiceProvider::pointer &serviceProvider,
+                      const WorkerProcessor::pointer &processor)
 {
     return pointer (
         new WorkerServer (
             serviceProvider,
-            requestProcessor));
+            processor));
 }
 
-WorkerServer::WorkerServer (ServiceProvider::pointer serviceProvider,
-                            WorkerRequestProcessor::pointer requestProcessor)
+WorkerServer::WorkerServer (const ServiceProvider::pointer &serviceProvider,
+                            const WorkerProcessor::pointer &processor)
     :   _serviceProvider (serviceProvider),
-        _requestProcessor(requestProcessor),
+        _processor       (processor),
         _io_service (),
         _acceptor (
             _io_service,
@@ -58,7 +58,7 @@ WorkerServer::WorkerServer (ServiceProvider::pointer serviceProvider,
             )
         )
 {}
-    
+
 void
 WorkerServer::run () {
 
@@ -77,7 +77,7 @@ WorkerServer::beginAccept () {
     WorkerConnection::pointer connection =
         WorkerConnection::create (
             _serviceProvider,
-            _requestProcessor,
+            _processor,
             _io_service
         );
         
@@ -93,8 +93,8 @@ WorkerServer::beginAccept () {
 }
 
 void
-WorkerServer::handleAccept (WorkerConnection::pointer        connection,
-                            const boost::system::error_code& err) {
+WorkerServer::handleAccept (const WorkerConnection::pointer &connection,
+                            const boost::system::error_code &err) {
 
     if (!err) {
         connection->beginProtocol();

@@ -36,9 +36,9 @@
 
 // Qserv headers
 
-#include "replica_core/WorkerRequestProcessor.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerConnection.h"
+#include "replica_core/WorkerProcessor.h"
 
 // Forward declarations
 
@@ -70,8 +70,8 @@ public:
      * @param port           - a port number to which to bind the service
      * @param numConnections - the number of connections to be handled simultaneously
      */
-    static pointer create (ServiceProvider::pointer serviceProvider,
-                           WorkerRequestProcessor::pointer requestProcessor);
+    static pointer create (const ServiceProvider::pointer &serviceProvider,
+                           const WorkerProcessor::pointer &processor);
 
     // Default construction and copy semantics are proxibited
 
@@ -91,8 +91,8 @@ private:
      *
      * @param serviceProvider - for configuration, etc. services
      */
-    explicit WorkerServer (ServiceProvider::pointer serviceProvider,
-                           WorkerRequestProcessor::pointer requestProcessor);
+    explicit WorkerServer (const ServiceProvider::pointer &serviceProvider,
+                           const WorkerProcessor::pointer &processor);
 
     /**
      * Begin (asynchrnonously) accepting connection requests.
@@ -104,15 +104,15 @@ private:
      * the comunication will be forewarded to the connection object
      * specified as a parameter of the method.
      */
-    void handleAccept (WorkerConnection::pointer        connection,
-                       const boost::system::error_code& ec);
+    void handleAccept (const WorkerConnection::pointer &connection,
+                       const boost::system::error_code &ec);
 
 private:
 
     // Parameters of the object
 
-    ServiceProvider::pointer        _serviceProvider;
-    WorkerRequestProcessor::pointer _requestProcessor;
+    ServiceProvider::pointer _serviceProvider;
+    WorkerProcessor::pointer _processor;
 
     // The mutable state of the object
 

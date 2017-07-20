@@ -7,7 +7,7 @@
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
-#include "replica_core/WorkerRequestProcessor.h"
+#include "replica_core/WorkerProcessor.h"
 #include "replica_core/WorkerServer.h"
 
 namespace rc = lsst::qserv::replica_core;
@@ -21,22 +21,17 @@ namespace {
     void service (const std::string &configFileName) {
         
         try {
-            rc::Configuration         ::pointer config    = rc::Configuration         ::create (configFileName);
-            rc::ServiceProvider       ::pointer provider  = rc::ServiceProvider       ::create (config);
-            rc::WorkerRequestProcessor::pointer processor = rc::WorkerRequestProcessor::create (provider);
-            rc::WorkerServer          ::pointer server    = rc::WorkerServer          ::create (provider, processor);
+            rc::Configuration  ::pointer config    = rc::Configuration  ::create (configFileName);
+            rc::ServiceProvider::pointer provider  = rc::ServiceProvider::create (config);
+            rc::WorkerProcessor::pointer processor = rc::WorkerProcessor::create (provider);
+            rc::WorkerServer   ::pointer server    = rc::WorkerServer   ::create (provider, processor);
 
             std::thread requestsAcceptorThread (
                 [&server]() { server->run(); }
             );
-            const int minIvalMilliSec = 1000,
-                      maxIvalMilliSec = 5000;
-            rc::BlockPost blockPost (minIvalMilliSec, maxIvalMilliSec);
+            rc::BlockPost blockPost (1000, 5000);
             while (true) {
                 std::cout << "heartbeat of " << blockPost.wait() << " milliseconds" << std::endl;
-                // const std::chrono::duration<long, std::milli> interval = std::chrono::milliseconds(10000);
-                // std::this_thread::sleep_for(interval);
-                // std::cout << "heartbeat of " << interval.count() << " milliseconds" << std::endl;
             }
             requestsAcceptorThread.join();
 

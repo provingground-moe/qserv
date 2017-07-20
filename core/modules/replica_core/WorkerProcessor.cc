@@ -42,62 +42,6 @@ namespace qserv {
 namespace replica_core {
 
 
-class WorkerProcessorThread {
-
-public:
-
-    /// Normal constructor
-    explicit WorkerProcessorThread (WorkerProcessor::pointer processor)
-        :   _processor(processor) {
-    }
-    
-    // Default construction and copy semantics are proxibited
-
-    WorkerProcessorThread () = delete;
-    WorkerProcessorThread (WorkerProcessorThread const&) = delete;
-    WorkerProcessorThread & operator= (WorkerProcessorThread const&) = delete;
-
-    /// Destructor
-    virtual ~WorkerProcessorThread () {
-        // TODO: detach or join(?) the thred if any.
-        ;
-    }
-
-    /// Create and run the thread
-    void run () {
-        if (!_thread) {
-            _thread = std::make_shared<std::thread>([&_processor]() {
-
-                // TODO: in the infinite loop:
-                //
-                // - wait for the next availabe request
-                // - fetch the one and give own hared pointer to be recorded with
-                //   the request in case if the processing will need to be stopped/aborted
-                // - emulate its processing using:
-                //   + a variable timeout to simulate the duration of the request
-                //   + and some random mechanism to emulate variable completion status
-                //     of the operation
-                // - when finished return the request to the completed queue
-                ;
-            });
-        }
-    }
-
-    /// Stop the thread
-    void stop () {
-        if (_thread) {
-            // TODO: think about how to tell the thread to stop processing.
-            ;
-        }
-    }
-    
-private:
-
-    WorkerProcessor::pointer _processor;
-
-    std::shared_ptr<std::thread> _thread;
-};
-
 WorkerProcessor::pointer
 WorkerProcessor::create (ServiceProvider::pointer serviceProvider) {
     return WorkerProcessor::pointer (
@@ -105,51 +49,88 @@ WorkerProcessor::create (ServiceProvider::pointer serviceProvider) {
 }
 
 WorkerProcessor::WorkerProcessor (ServiceProvider::pointer serviceProvider)
-    :   _serviceProvider (serviceProvider)
+    :   _serviceProvider (serviceProvider),
+        _state           (State::STATE_IS_STOPPED)
 
 {}
 
 WorkerProcessor::~WorkerProcessor () {
 }
 
+
 void
 WorkerProcessor::run () {
 
-    if (isRunning()) return;
-
     THREAD_SAFE_BLOCK {
-    
-        const size_t numThreads = _serviceProvider->config().workerNumProcessingThreads();
-        if (!numThreads) throw new std::out_of_range("the number of procesisng threads can't be 0");
-        
-        for (size_t i=0; i < numThreads; ++i) {
-            
-            std::make_shared<WorkerProcessorThread> processingThread =
-                std::make_shared<WorkerProcessorThread>(shared_from_this());
 
-            _threads.push_back(processingThread);
+        if (_state == State::STATE_IS_STOPPED) {
+            
+            const size_t numThreads = _serviceProvider->config()->workerNumProcessingThreads();
+            if (!numThreads) throw new std::out_of_range("the number of procesisng threads can't be 0");
+        
+            // Create threads if needed
+        
+            if (_threads.empty()) {
+                WorkerProcessor::pointer self = shared_from_this();
+                for (size_t i=0; i < numThreads; ++i) {
+                    _threads.push_back(WorkerProcessorThread::create(self));
+                }
+            }
+        
+            // Tell each thread to run
+        
+            for (auto &t: _threads) {
+                t->run();
+            }
+            _state = State::STATE_IS_RUNNING;
         }
     }
 }
 
 void
-WorkerProcessor::replicate (const proto::ReplicationRequestReplicate &request,
-                                   proto::ReplicationResponseReplicate &response) {
+WorkerProcessor::stop () {
 
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::replicate "
+        if (_state != State::STATE_IS_RUNNING) {
+            
+            // Tell each thread to stop.
+        
+            for (auto &t: _threads) {
+                t->stop();
+            }
+            
+            // Begin transitioning to the final state via this intermediate one.
+            // The transition will finish asynchronious when all threads will report
+            // desired changes in their states.
+
+            _state = State::STATE_IS_STOPPING;
+        }
+    }
+}
+
+void
+WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate &request,
+                                        proto::ReplicationResponseReplicate &response) {
+
+    THREAD_SAFE_BLOCK {
+
+        std::cout << "WorkerProcessor::enqueueForReplication "
                   << " id="       << request.id()       << ","
                   << " database=" << request.database() << ","
                   << " chunk="    << request.chunk()    << std::endl;
     
-        WorkerReplicationRequest workerRequest;
-        workerRequest.priority = WorkerReplicationRequest::LOW;
-        workerRequest.id       = request.id();
-        workerRequest.database = request.database();
-        workerRequest.chunk    = request.chunk();
-        workerRequest.status   = WorkerReplicationRequest::NONE;
-    
+
+        // TODO: run the sanity check to ensure no such request is found in any
+        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+
+        WorkerReplicationRequest::pointer workerRequest =
+            WorkerReplicationRequest::create (
+                WorkerReplicationRequest::Priority::LOW,
+                request.id(),
+                request.database(),
+                request.chunk());
+
         _newRequests.push(workerRequest);
         
         // TODO: send a signal via a condition variable to notify
@@ -160,30 +141,31 @@ WorkerProcessor::replicate (const proto::ReplicationRequestReplicate &request,
 }
 
 void
-WorkerProcessor::stop (const proto::ReplicationRequestStop &request,
-                              proto::ReplicationResponseStop &response) {
+WorkerProcessor::dequeueOrCancel (const proto::ReplicationRequestStop &request,
+                                  proto::ReplicationResponseStop      &response) {
 
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::stop "
+        std::cout << "WorkerProcessor::dequeueOrCancel "
                   << " id=" << request.id() <<  std::endl;
     
         // TODO: search for a request with this identifier in all queues.
         // Then take proper actions depending on a queue:
         // - just remove it fom the new requests queue
-        // - find a processing thread which is processing request and tell it to stop, then wait 
+        // - find a processing thread which is processing request and tell it to cancel processing the request
+        // - if it's already complete then return teh completion status
  
         response.set_status (proto::ReplicationStatus::BAD);
     }
 }
 
 void
-WorkerProcessor::status (const proto::ReplicationRequestStatus &request,
-                                proto::ReplicationResponseStatus &response) {
+WorkerProcessor::checkStatus (const proto::ReplicationRequestStatus &request,
+                              proto::ReplicationResponseStatus      &response) {
 
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::status "
+        std::cout << "WorkerProcessor::checkStatus "
                   << " id=" << request.id() <<  std::endl;
 
         // TODO: search for a request with this identifier in all queues.
@@ -195,24 +177,63 @@ WorkerProcessor::status (const proto::ReplicationRequestStatus &request,
 
 
 WorkerReplicationRequest::pointer
-WorkerProcessor::next (WorkerProcessorThread::pointer processorThread,
-                       std::chrono::milliseconds      timeoutMilliseconds) {
+WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &processorThread,
+                                         std::chrono::milliseconds             timeoutMilliseconds) {
 
     THREAD_SAFE_BLOCK {
     
-        std::cout << "WorkerProcessor::next ** NOT IMPLEMENTED **" <<  std::endl;
+        std::cout << "WorkerProcessor::fetchNextForProcessing ** NOT IMPLEMENTED **" <<  std::endl;
         
         return WorkerReplicationRequest::pointer();
     }
 }
 
 void
-WorkerProcessor::finish (WorkerReplicationRequest::pointer) {
+WorkerProcessor::processingRefused (const WorkerReplicationRequest::pointer &request) {
     
     THREAD_SAFE_BLOCK {
     
-        std::cout << "WorkerProcessor::finish ** NOT IMPLEMENTED **" <<  std::endl;
+        std::cout << "WorkerProcessor::processingRefused ** NOT IMPLEMENTED **" <<  std::endl;
     }
 }
 
+void
+WorkerProcessor::processingCancelled (const WorkerReplicationRequest::pointer &request) {
+    
+    THREAD_SAFE_BLOCK {
+    
+        std::cout << "WorkerProcessor::processingCancelled ** NOT IMPLEMENTED **" <<  std::endl;
+    }
+}
+
+void
+WorkerProcessor::processingFinished (const WorkerReplicationRequest::pointer    &request,
+                                     WorkerReplicationRequest::CompletionStatus  completionStatus) {
+    
+    THREAD_SAFE_BLOCK {
+    
+        std::cout << "WorkerProcessor::processingFinished ** NOT IMPLEMENTED **" <<  std::endl;
+    }
+}
+
+void
+WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &processorThread) {
+    
+    THREAD_SAFE_BLOCK {
+
+        std::cout << "WorkerProcessor::processorThreadStopped ** NOT IMPLEMENTED **" <<  std::endl;
+
+        if (_state == State::STATE_IS_STOPPING) {
+
+            // Complete state transition if all threds are stopped
+
+            for (auto &t: _threads) {
+                if (t->isRunning()) return;
+            }
+            _state = State::STATE_IS_STOPPED;
+        }
+    }
+}
+
+    
 }}} // namespace lsst::qserv::replica_core

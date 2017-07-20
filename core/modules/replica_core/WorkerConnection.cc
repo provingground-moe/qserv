@@ -112,9 +112,9 @@ namespace qserv {
 namespace replica_core {
 
 WorkerConnection::pointer
-WorkerConnection::create (ServiceProvider::pointer serviceProvider,
-                          WorkerRequestProcessor::pointer requestProcessor,
-                          boost::asio::io_service& io_service) {
+WorkerConnection::create (const ServiceProvider::pointer &serviceProvider,
+                          const WorkerProcessor::pointer &requestProcessor,
+                          boost::asio::io_service        &io_service) {
 
     return WorkerConnection::pointer (
         new WorkerConnection (
@@ -123,13 +123,13 @@ WorkerConnection::create (ServiceProvider::pointer serviceProvider,
             io_service));
 }
 
-WorkerConnection::WorkerConnection (ServiceProvider::pointer serviceProvider,
-                                    WorkerRequestProcessor::pointer requestProcessor,
-                                    boost::asio::io_service& io_service)
+WorkerConnection::WorkerConnection (const ServiceProvider::pointer &serviceProvider,
+                                    const WorkerProcessor::pointer &requestProcessor,
+                                    boost::asio::io_service        &io_service)
 
     :   _serviceProvider  (serviceProvider),
         _requestProcessor (requestProcessor),
-        _socket (io_service),
+        _socket           (io_service),
 
         _bufferPtr (
             std::make_shared<ProtocolBuffer>(
@@ -184,17 +184,12 @@ WorkerConnection::received (const boost::system::error_code& ec,
     // Now read the request header
 
     proto::ReplicationRequestHeader hdr;
-    if (!::readMessage (_socket,
-                        _bufferPtr,
-                        _bufferPtr->parseLength(),
-                        hdr)) return;
+    if (!::readMessage (_socket, _bufferPtr, _bufferPtr->parseLength(), hdr)) return;
    
     // Read the request length
 
     uint32_t bytes;
-    if (!::readLength (_socket,
-                       _bufferPtr,
-                       bytes)) return;
+    if (!::readLength (_socket, _bufferPtr, bytes)) return;
 
     // Now read a specific request
 
@@ -203,45 +198,36 @@ WorkerConnection::received (const boost::system::error_code& ec,
         case proto::ReplicationRequestHeader::REPLICATE : {
 
             proto::ReplicationRequestReplicate request;
-            if (!::readMessage (_socket,
-                                _bufferPtr,
-                                bytes,
-                                request)) return;
+            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
             proto::ReplicationResponseReplicate response;
-            _requestProcessor->replicate (request,
-                                          response);
+            _requestProcessor->enqueueForReplication (request, response);
             reply(response);
+
             break;
         }
 
         case proto::ReplicationRequestHeader::STOP : {
 
             proto::ReplicationRequestStop request;
-            if (!::readMessage (_socket,
-                                _bufferPtr,
-                                bytes,
-                                request)) return;
+            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
             proto::ReplicationResponseStop response;
-            _requestProcessor->stop (request,
-                                     response);
+            _requestProcessor->dequeueOrCancel (request, response);
             reply(response);
+
             break;
         }
 
         case proto::ReplicationRequestHeader::STATUS : {
 
             proto::ReplicationRequestStatus request;
-            if (!::readMessage (_socket,
-                                _bufferPtr,
-                                bytes,
-                                request)) return;
+            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
             proto::ReplicationResponseStatus response;
-            _requestProcessor->status (request,
-                                       response);
+            _requestProcessor->checkStatus (request, response);
             reply(response);
+
             break;
         }
     }
