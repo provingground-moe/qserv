@@ -40,7 +40,7 @@
 
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
-#include "replica_core/WorkerRequestProcessor.h"
+#include "replica_core/WorkerProcessor.h"
 
 namespace proto = lsst::qserv::proto;
 
@@ -68,9 +68,9 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (ServiceProvider::pointer serviceProvider,
-                           WorkerRequestProcessor::pointer requestProcessor,
-                           boost::asio::io_service& io_service);
+    static pointer create (const ServiceProvider::pointer &serviceProvider,
+                           const WorkerProcessor::pointer &requestProcessor,
+                           boost::asio::io_service        &io_service);
 
     // Default construction and copy semantics are proxibited
 
@@ -120,9 +120,9 @@ private:
     /**
      * The constructor of the class.
      */
-    explicit WorkerConnection (ServiceProvider::pointer serviceProvider,
-                               WorkerRequestProcessor::pointer requestProcessor,
-                               boost::asio::io_service  &io_service);
+    explicit WorkerConnection (const ServiceProvider::pointer &serviceProvider,
+                               const WorkerProcessor::pointer &requestProcessor,
+                               boost::asio::io_service        &io_service);
 
     /**
      * Begin reading (asynchronosly) the frame header of a new request
@@ -163,7 +163,7 @@ private:
     // Parameters of the object
 
     ServiceProvider::pointer _serviceProvider;
-    WorkerRequestProcessor::pointer _requestProcessor;
+    WorkerProcessor::pointer _requestProcessor;
 
     boost::asio::ip::tcp::socket _socket;
 

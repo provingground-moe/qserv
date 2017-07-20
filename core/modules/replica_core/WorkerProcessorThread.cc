@@ -32,6 +32,8 @@
 // Qserv headers
 
 #include "replica_core/BlockPost.h"
+#include "replica_core/SuccessRateGenerator.h"
+#include "replica_core/WorkerProcessor.h"
 #include "replica_core/WorkerReplicationRequest.h"
 
 namespace lsst {
@@ -39,15 +41,16 @@ namespace qserv {
 namespace replica_core {
 
 WorkerProcessorThread::pointer
-WorkerProcessorThread::create (WorkerProcessor_pointer processor) {
+WorkerProcessorThread::create (const WorkerProcessor_pointer &processor) {
     return pointer (
         new WorkerProcessorThread (processor)
     );
 }
 
-WorkerProcessorThread::WorkerProcessorThread (WorkerProcessor_pointer processor)
+WorkerProcessorThread::WorkerProcessorThread (const WorkerProcessor_pointer &processor)
     :   _processor (processor),
-        _stop(false)
+        _stop      (false),
+        _cancel    (false)
 
 {}
 
@@ -66,12 +69,14 @@ WorkerProcessorThread::run () {
     if (isRunning()) return;
 
     WorkerProcessorThread::pointer self = shared_from_this();
-    _thread = std::make_shared<std::thread>([&self]() {
+    _thread = std::make_shared<std::thread> ( [&self] () {
 
         // Simulate request 'processing' for the random duration of time
-        // witin this interval of milliseconds.
+        // witin this interval of milliseconds. Success/failure modes will
+        // be also simulated using the corresponding generator.
 
-        BlockPost blockPost(1000, 10000);
+        BlockPost            blockPost(1000, 10000);
+        SuccessRateGenerator successRateGenerator(0.9);
 
         std::cout << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "] begin" << std::endl;
 
@@ -79,42 +84,96 @@ WorkerProcessorThread::run () {
             
             // Get the next request to process if any. This operation will block
             // until either the next request is available (returned a valid pointer)
-            // or if this thread need to re-evaluate the stopping condition.
-            
-            WorkerReplicationRequest::pointer request = self->_processor->next(self);
+            // or the specified timeout expires. In either case this thread has a chance
+            // to re-evaluate the stopping condition.
+
+            WorkerReplicationRequest::pointer request = self->_processor->fetchNextForProcessing (
+                self,
+                std::chrono::milliseconds(1000));
+
+            if (self->_cancel) {
+                self->cancelled(request);
+                continue;
+            }
+            if (self->_stop) {
+                if (request) self->_processor->processingRefused(request);
+                continue;
+            }
             if (request) {
-                std::cout << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "] begin processing id=" request->id() << ", database=" << request->database() << ", chunk=" << request->chunk() << std::endl;
+
+                std::cout
+                    << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "]"
+                    << " begin  processing id=" << request->id()
+                    << ", database=" << request->database()
+                    << ", chunk=" << request->chunk() << std::endl;
+
+                // Simulate processing the request
+
                 blockPost.wait();
                 
-                // Cancel the request and (possibly cleanup) if the thread was told
-                // to stop while processing the request.
+                // Verify if the request should be cancelled, and if so then (if possibly) cleanup
+                // before finishing this thread.
 
-                if (self->_stop) {
-                    // TODO: finish
-                    ;
+                if (self->_cancel) {
+                    std::cout
+                        << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "]"
+                        << " cancel processing id=" << request->id()
+                        << ", database=" << request->database()
+                        << ", chunk=" << request->chunk() << std::endl;
+
+                    self->cancelled(request);
+                    continue;
                 }
-                
-                std::cout << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "] end   processing id=" request->id() << ", database=" << request->database() << ", chunk=" << request->chunk() << std::endl;
+
+                // Simulate random failures and set proper completion status values
+
+                const WorkerReplicationRequest::CompletionStatus completionStatus =
+                    successRateGenerator.success() ? WorkerReplicationRequest::CompletionStatus::SUCCEEDED :
+                                                     WorkerReplicationRequest::CompletionStatus::FAILED;
+
+                std::cout
+                    << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "]"
+                    << " end    processing id=" << request->id()
+                    << ", database=" << request->database()
+                    << ", chunk=" << request->chunk()
+                    << ", completionStatus=" << WorkerReplicationRequest::status2string(completionStatus) << std::endl;
+
+                self->_processor->processingFinished (
+                    request,
+                    completionStatus);
             }
         }
-        
-        // TODO: consider using std::lock_guard<std::mutex> 
-        self->_stop = false;
-
         std::cout << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "] end" << std::endl;
+
+        self->stopped();
     });
 }
 
 void
-WorkerProcessorThread::stopAndJoin () {
-
+WorkerProcessorThread::stop () {
     if (!isRunning()) return;
-
-    // TODO: consider using std::lock_guard<std::mutex> 
     _stop = true;
-
-    _thread->join();
 }
 
+void
+WorkerProcessorThread::stopped () {
+    _stop = false;
+    _thread->detach();
+    _thread = nullptr;
+    _processor->processorThreadStopped(shared_from_this());
+}
+
+
+void
+WorkerProcessorThread::cancel () {
+    if (!isRunning()) return;
+    _cancel = true;
+}
+
+void
+WorkerProcessorThread::cancelled (const WorkerReplicationRequest::pointer &request) {
+    _cancel= false;
+    if (request) _processor->processingCancelled(request);
+}
 
 }}} // namespace lsst::qserv::replica_core

@@ -35,6 +35,8 @@
 
 // Qserv headers
 
+#include "replica_core/WorkerReplicationRequest.h"
+
 // Forward declarations
 
 // This header declarations
@@ -66,7 +68,7 @@ public:
      * 
      * @param processor - a pointer to the repository of requests to be processed
      */
-    static pointer create (WorkerProcessor_pointer processor);
+    static pointer create (const WorkerProcessor_pointer &processor);
 
     // Default construction and copy semantics are proxibited
 
@@ -87,13 +89,20 @@ public:
     void run ();
 
     /**
-     * Tell the running thread to abort procesisng the current request (if any),
-     * stop processing new requests and finish. Then join with the thread.
+     * Tell the running thread to finish proccessing the current
+     * request (if any), stop fetching new requests and stop.
      *
-     * NOTE: this is a blocking operation.
-     * The method finishes immediatelly if the thred is not running.
+     * NOTE: This is an asynchronous operation.
      */
-    void stopAndJoin ();
+    void stop ();
+
+    /**
+     * Tell the running thread to cancel proccessing the current
+     * request (if any).
+     * 
+     * NOTE: This is an asynchronous operation.
+     */
+    void cancel ();
 
 private:
 
@@ -102,7 +111,17 @@ private:
      *
      * @param processor - a pointer to the repository of requests to be processed
      */
-    explicit WorkerProcessorThread (WorkerProcessor_pointer processor);
+    explicit WorkerProcessorThread (const WorkerProcessor_pointer &processor);
+
+    /**
+     * Event handler called by the thread when it's about to stop
+     */
+    void stopped ();
+
+    /**
+     * Event handler called by the thread when a request is cancelled
+     */
+    void cancelled (const WorkerReplicationRequest::pointer &request);
 
 private:
 
@@ -112,9 +131,13 @@ private:
     /// The processing thread is created on demand when calling method run()
     std::shared_ptr<std::thread> _thread;
     
-    /// The flag to be raised to tell the running thread to stop. And it's reset
-    /// by the thread when it finishes.
+    /// The flag to be raised to tell the running thread to stop.
+    /// The thread will reset this flag when it finishes.
     bool _stop;
+
+    /// The flag to be raised to tell the running thread to cancel.
+    /// The thread will reset this flag when it finishes.
+    bool _cancel;
 };
 
 }}} // namespace lsst::qserv::replica_core

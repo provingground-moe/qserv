@@ -35,6 +35,16 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+std::string
+WorkerReplicationRequest::status2string (CompletionStatus status) {
+    switch (status) {
+        case CompletionStatus::NONE:      return "NONE";
+        case CompletionStatus::SUCCEEDED: return "SUCCEEDED";
+        case CompletionStatus::FAILED:    return "FAILED";
+    }
+    throw std::logic_error("WorkerReplicationRequest::status2string - unhandled status: " + std::to_string(status));
+}
+
 WorkerReplicationRequest::pointer
 WorkerReplicationRequest::create (WorkerReplicationRequest::Priority priority,
                                   const std::string&                 id,
