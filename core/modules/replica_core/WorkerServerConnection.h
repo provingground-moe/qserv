@@ -20,12 +20,12 @@
  * the GNU General Public License along with this program.  If not,
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
-#ifndef LSST_QSERV_REPLICA_CORE_WORKERCONNECTION_H
-#define LSST_QSERV_REPLICA_CORE_WORKERCONNECTION_H
+#ifndef LSST_QSERV_REPLICA_CORE_WORKERSERVERCONNECTION_H
+#define LSST_QSERV_REPLICA_CORE_WORKERSERVERCONNECTION_H
 
-/// WorkerConnection.h declares:
+/// WorkerServerConnection.h declares:
 ///
-/// class WorkerConnection
+/// class WorkerServerConnection
 /// (see individual class documentation for more information)
 
 // System headers
@@ -53,15 +53,15 @@ namespace qserv {
 namespace replica_core {
 
 /**
-  * Class WorkerConnection is used for handling connections from
+  * Class WorkerServerConnection is used for handling connections from
   * remote clients. One instance of the class serves one client.
   */
-class WorkerConnection
-    : public std::enable_shared_from_this<WorkerConnection> {
+class WorkerServerConnection
+    : public std::enable_shared_from_this<WorkerServerConnection> {
 
 public:
 
-    typedef std::shared_ptr<WorkerConnection> pointer;
+    typedef std::shared_ptr<WorkerServerConnection> pointer;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -69,17 +69,17 @@ public:
      * low-level pointers).
      */
     static pointer create (const ServiceProvider::pointer &serviceProvider,
-                           const WorkerProcessor::pointer &requestProcessor,
+                           const WorkerProcessor::pointer &processor,
                            boost::asio::io_service        &io_service);
 
     // Default construction and copy semantics are proxibited
 
-    WorkerConnection () = delete;
-    WorkerConnection (WorkerConnection const&) = delete;
-    WorkerConnection & operator= (WorkerConnection const&) = delete;
+    WorkerServerConnection () = delete;
+    WorkerServerConnection (WorkerServerConnection const&) = delete;
+    WorkerServerConnection & operator= (WorkerServerConnection const&) = delete;
 
     /// Destructor
-    virtual ~WorkerConnection ();
+    virtual ~WorkerServerConnection ();
 
     /**
      * Reurn a network socket associated with the connection.
@@ -120,9 +120,9 @@ private:
     /**
      * The constructor of the class.
      */
-    explicit WorkerConnection (const ServiceProvider::pointer &serviceProvider,
-                               const WorkerProcessor::pointer &requestProcessor,
-                               boost::asio::io_service        &io_service);
+    explicit WorkerServerConnection (const ServiceProvider::pointer &serviceProvider,
+                                     const WorkerProcessor::pointer &processor,
+                                     boost::asio::io_service        &io_service);
 
     /**
      * Begin reading (asynchronosly) the frame header of a new request
@@ -156,14 +156,14 @@ private:
      * The calback on finishing (either successfully or not) of aynchronious writes.
      */
     void sent (const boost::system::error_code &ec,
-               size_t bytes_transferred);
+               size_t                           bytes_transferred);
 
 private:
 
     // Parameters of the object
 
     ServiceProvider::pointer _serviceProvider;
-    WorkerProcessor::pointer _requestProcessor;
+    WorkerProcessor::pointer _processor;
 
     boost::asio::ip::tcp::socket _socket;
 
@@ -174,4 +174,4 @@ private:
 
 }}} // namespace lsst::qserv::replica_core
 
-#endif // LSST_QSERV_REPLICA_CORE_WORKERCONNECTION_H
+#endif // LSST_QSERV_REPLICA_CORE_WORKERSERVERCONNECTION_H

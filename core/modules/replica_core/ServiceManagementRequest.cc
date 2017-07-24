@@ -21,7 +21,7 @@
  */
 
 // Class header
-#include "replica_core/StopRequest.h"
+#include "replica_core/ServiceManagementRequest.h"
 
 // System headers
 
@@ -37,53 +37,55 @@
 
 #include "replica_core/ProtocolBuffer.h"
 
+
 namespace proto = lsst::qserv::proto;
 
 namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-StopRequest::pointer
-StopRequest::create (ServiceProvider::pointer serviceProvider,
-                     const std::string        &worker,
-                     boost::asio::io_service  &io_service,
-                     const std::string        &replicationRequestId,
-                     callback_type            onFinish) {
 
-    return pointer (
-        new StopRequest (
-            serviceProvider,
-            worker,
-            io_service,
-            replicationRequestId,
-            onFinish));
+
+const ServiceManagementRequestBase::ServiceState&
+ServiceManagementRequestBase::getServiceState () const {
+    switch (Request::state()) {
+        case Request::State::FINISHED:
+            switch (Request::extendedState()) {
+                case Request::ExtendedState::SUCCESS:
+                case Request::ExtendedState::SERVER_ERROR:
+                    return _serviceState;
+                default:
+                    break;
+            }
+        default:
+            break;
+    }
+    throw std::logic_error("this informationis not available in the current state of the request");
 }
 
-StopRequest::StopRequest (ServiceProvider::pointer serviceProvider,
-                          const std::string        &workerr,
-                          boost::asio::io_service  &io_service,
-                          const std::string        &replicationRequestId,
-                          callback_type            onFinish)
-    :   Request(serviceProvider,
-                "STOP",
-                workerr,
-                io_service),
+    
+ServiceManagementRequestBase::ServiceManagementRequestBase (
 
-        _replicationRequestId (replicationRequestId),
-        _onFinish             (onFinish)
+        ServiceProvider::pointer               serviceProvider,
+        const char                            *requestTypeName,
+        const std::string                     &worker,
+        boost::asio::io_service               &io_service,
+        proto::ReplicationRequestHeader::Type  requestType)
+
+    :   Request (serviceProvider,
+                 requestTypeName,
+                 worker,
+                 io_service),
+
+        _requestType (requestType)
 {}
 
-StopRequest::~StopRequest ()
-{
-}
+ServiceManagementRequestBase::~ServiceManagementRequestBase ()
+{}
 
-std::shared_ptr<Request>
-StopRequest::final_shared_from_this () {
-    return shared_from_this () ;
-}
 
 void
-StopRequest::beginProtocol () {
+ServiceManagementRequestBase::beginProtocol () {
 
     // Serialize the Request message header and the request itself into
     // the network buffer.
@@ -91,14 +93,9 @@ StopRequest::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::STOP);
+    hdr.set_type(_requestType);
 
     _bufferPtr->serialize(hdr);
-
-    proto::ReplicationRequestStop message;
-    message.set_id(_replicationRequestId);
-
-    _bufferPtr->serialize(message);
 
     // Send the message
 
@@ -109,8 +106,8 @@ StopRequest::beginProtocol () {
             _bufferPtr->size()
         ),
         boost::bind (
-            &StopRequest::requestSent,
-            shared_from_this(),
+            &ServiceManagementRequestBase::requestSent,
+            std::dynamic_pointer_cast<ServiceManagementRequestBase>(final_shared_from_this()),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -118,8 +115,8 @@ StopRequest::beginProtocol () {
 }
 
 void
-StopRequest::requestSent (const boost::system::error_code &ec,
-                          size_t bytes_transferred) {
+ServiceManagementRequestBase::requestSent (const boost::system::error_code &ec,
+                                       size_t                           bytes_transferred) {
     if (isAborted(ec)) return;
 
     if (ec) restart();
@@ -127,7 +124,7 @@ StopRequest::requestSent (const boost::system::error_code &ec,
 }
 
 void
-StopRequest::receiveResponse () {
+ServiceManagementRequestBase::receiveResponse () {
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -149,8 +146,8 @@ StopRequest::receiveResponse () {
         ),
         boost::asio::transfer_at_least(bytes),
         boost::bind (
-            &StopRequest::responseReceived,
-            shared_from_this(),
+            &ServiceManagementRequestBase::responseReceived,
+            std::dynamic_pointer_cast<ServiceManagementRequestBase>(final_shared_from_this()),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -158,8 +155,8 @@ StopRequest::receiveResponse () {
 }
 
 void
-StopRequest::responseReceived (const boost::system::error_code &ec,
-                               size_t bytes_transferred) {
+ServiceManagementRequestBase::responseReceived (const boost::system::error_code &ec,
+                                            size_t                           bytes_transferred) {
     if (isAborted(ec)) return;
 
     if (ec) {
@@ -190,19 +187,41 @@ StopRequest::responseReceived (const boost::system::error_code &ec,
     
         // Parse the response to see what should be done next.
     
-        proto::ReplicationResponseStop message;
+        proto::ReplicationServiceResponse message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
 void
-StopRequest::analyze (proto::ReplicationStatus status) {
+ServiceManagementRequestBase::analyze (proto::ReplicationServiceResponse response) {
 
-    switch (status) {
+    // Capture the general status of the operation
+
+    switch (response.status()) {
  
-        case proto::ReplicationStatus::SUCCESS:
+        // Transfer the state of the remote service into a local data member
+        // before initiating state transition of the request object.
+
+        switch (response.service_state()) {
+            case proto::ReplicationServiceResponse::SUSPEND_IN_PROGRESS:
+                _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPEND_IN_PROGRESS;
+                break;
+            case proto::ReplicationServiceResponse::SUSPENDED:
+                _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPENDED;
+                break;
+            case proto::ReplicationServiceResponse::RUNNING:
+                _serviceState.state = ServiceManagementRequestBase::ServiceState::State::RUNNING;
+                break;
+            default:
+                throw std::runtime_error("service state found in protocol is unknown");
+        }
+        _serviceState.numNewRequests        = response.num_new_requests        ();
+        _serviceState.numInProgressRequests = response.num_in_progress_requests();
+        _serviceState.numFinishedRequests   = response.num_finished_requests   ();
+ 
+        case proto::ReplicationServiceResponse::SUCCESS:
             finish (FINISHED, SUCCESS);
             break;
 
@@ -210,14 +229,8 @@ StopRequest::analyze (proto::ReplicationStatus status) {
             finish (FINISHED, SERVER_ERROR);
             break;
     }
-}
-
-void
-StopRequest::endProtocol () {
-
-    if (_onFinish != nullptr) {
-        _onFinish(shared_from_this());
-    }
+    
+    // Extract service status and store it locally
 }
 
 }}} // namespace lsst::qserv::replica_core

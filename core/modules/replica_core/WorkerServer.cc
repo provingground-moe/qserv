@@ -74,8 +74,8 @@ WorkerServer::run () {
 void
 WorkerServer::beginAccept () {
 
-    WorkerConnection::pointer connection =
-        WorkerConnection::create (
+    WorkerServerConnection::pointer connection =
+        WorkerServerConnection::create (
             _serviceProvider,
             _processor,
             _io_service
@@ -93,8 +93,8 @@ WorkerServer::beginAccept () {
 }
 
 void
-WorkerServer::handleAccept (const WorkerConnection::pointer &connection,
-                            const boost::system::error_code &err) {
+WorkerServer::handleAccept (const WorkerServerConnection::pointer &connection,
+                            const boost::system::error_code       &err) {
 
     if (!err) {
         connection->beginProtocol();

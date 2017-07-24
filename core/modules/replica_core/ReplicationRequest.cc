@@ -56,7 +56,6 @@ ReplicationRequest::create (ServiceProvider::pointer serviceProvider,
     return pointer (
         new ReplicationRequest (
             serviceProvider,
-            Request::generateId(),
             database,
             chunk,
             sourceWorker,
@@ -66,7 +65,6 @@ ReplicationRequest::create (ServiceProvider::pointer serviceProvider,
 }
 
 ReplicationRequest::ReplicationRequest (ServiceProvider::pointer serviceProvider,
-                                        const std::string        &id,
                                         const std::string        &database,
                                         unsigned int             chunk,
                                         const std::string        &sourceWorker,
@@ -75,7 +73,6 @@ ReplicationRequest::ReplicationRequest (ServiceProvider::pointer serviceProvider
                                         callback_type            onFinish)
     :   Request(serviceProvider,
                 "REPLICATE",
-                id,
                 destinationWorker,
                 io_service),
  

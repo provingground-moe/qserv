@@ -37,7 +37,7 @@
 // Qserv headers
 
 #include "replica_core/ServiceProvider.h"
-#include "replica_core/WorkerConnection.h"
+#include "replica_core/WorkerServerConnection.h"
 #include "replica_core/WorkerProcessor.h"
 
 // Forward declarations
@@ -104,8 +104,8 @@ private:
      * the comunication will be forewarded to the connection object
      * specified as a parameter of the method.
      */
-    void handleAccept (const WorkerConnection::pointer &connection,
-                       const boost::system::error_code &ec);
+    void handleAccept (const WorkerServerConnection::pointer &connection,
+                       const boost::system::error_code       &ec);
 
 private:
 

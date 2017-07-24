@@ -31,9 +31,10 @@
 // System headers
 
 #include <chrono>
-#include <queue>
+#include <list>
 #include <memory>       // shared_ptr, enable_shared_from_this
 #include <mutex>
+#include <queue>
 #include <thread>
 #include <vector>
 
@@ -70,16 +71,19 @@ public:
     /// The pointer type for self
     typedef std::shared_ptr<WorkerProcessor> pointer;
 
-    /// The priority queue for pointers
+    /// The priority queue for pointers to the new (unprocessed) requests
     typedef std::priority_queue<WorkerReplicationRequest::pointer,
                                 std::vector<WorkerReplicationRequest::pointer>,
-                                WorkerReplicationRequestCompare> QueueType;
+                                WorkerReplicationRequestCompare> PriorityQueueType;
+
+    /// Ordinary collection of pointers for requests in other (than new/unprocessed) state
+    typedef std::list<WorkerReplicationRequest::pointer> CollectionType;
 
     /// Current state of the request processing engine
     enum State {
-        STATE_IS_STOPPED,    // not started
         STATE_IS_RUNNING,    // all threads are running
-        STATE_IS_STOPPING    // stopping all threads
+        STATE_IS_STOPPING,   // stopping all threads
+        STATE_IS_STOPPED     // not started
     };
 
     /**
@@ -138,6 +142,16 @@ public:
      */
     void checkStatus (const proto::ReplicationRequestStatus &request,
                       proto::ReplicationResponseStatus      &response);
+
+
+    /// Number of new unprocessed requests
+    size_t numNewRequests () const { return _newRequests.size(); }
+
+    /// Number of requests which are being processed
+    size_t numInProgressRequests () const { return _inProgressRequests.size(); }
+
+    /// Number of completed (succeeded or otherwise) requests
+    size_t numFinishedRequests () const { return _finishedRequests.size(); }
 
 private:
 
@@ -222,13 +236,13 @@ private:
     std::mutex _mtx;
 
     /// New unprocessed requests
-    QueueType _newRequests;
+    PriorityQueueType _newRequests;
 
     /// Requests which are being processed
-    QueueType _inProgressRequests;
+    CollectionType _inProgressRequests;
 
     /// Completed (succeeded or otherwise) requests
-    QueueType _finishedRequests;
+    CollectionType _finishedRequests;
 };
 
 }}} // namespace lsst::qserv::replica_core

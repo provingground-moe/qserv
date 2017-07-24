@@ -104,7 +104,6 @@ private:
      * Construct the request with the pointer to the services provider.
      */
     StatusRequest (ServiceProvider::pointer serviceProvider,
-                   const std::string        &id,
                    const std::string        &worker,
                    boost::asio::io_service  &io_service,
                    const std::string        &replicationRequestId,

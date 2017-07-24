@@ -24,21 +24,39 @@
 
 package lsst.qserv.proto;
 
-// Replication header sent to worker. Any communication begins
-// with sending this header and specifying a type of the request.
+//////////////////////////////////////////////////////////////////////
+// Replication header sent to a worker. Any communication begins with
+// sending this header and specifying a type of the request.
+//
+// Chunk replication requests must be followed by another message of
+// the corresponding type to provide a scope of the request.
+//
+// Requests affecting the overall status of the service do not require
+// any additional messages.
 
 message ReplicationRequestHeader {
+
     enum Type {
+
+        // Chunk replication requests
+
         REPLICATE = 0;
         STOP      = 1;
         STATUS    = 2;
+        
+        // Requests affecting the overall state of the worker replication
+        // service
+
+        SERVICE_SUSPEND = 3;
+        SERVICE_RESUME  = 4;
+        SERVICE_STATUS  = 5;
     }
     required Type type = 1;
 }
 
-// This is a replication request. The message defines a scope
-// of the request and its unique identity ('uuid'). This message
-// is sent once after the header.
+////////////////////////////////////////////////////////////////////////////////
+// This is a replication request. The message defines a scope of the request and
+// its unique identity. This message is sent once after the header.
 
 message ReplicationRequestReplicate {
     required string database = 1;
@@ -46,13 +64,16 @@ message ReplicationRequestReplicate {
     required string id = 3;
 }
 
-// This request is sent to stop an on-going replication (if any
-// is still in progress). This message is sent once after the header.
+//////////////////////////////////////////////////////////////////////////////////////
+// This request is sent to stop an on-going replication (if any is still in progress).
+// This message is sent once after the header.
 
 message ReplicationRequestStop {
     required string id = 1;
 }
 
+
+//////////////////////////////////////////////////////////////////////////////
 // This request is sent to request a status of an on-going replication (if any
 // is still in progress). This message is sent once after the header.
 
@@ -60,8 +81,10 @@ message ReplicationRequestStatus {
     required string id = 1;
 }
 
-// These messages are expected by master upon a completion of the corresponding
-// operations.
+/////////////////////////////////////////////////////////////
+// These messages are expected by master upon a completion of
+// the corresponding replication operations.
+
 enum ReplicationStatus {
     SUCCESS     = 0;
     QUEUED      = 1;
@@ -70,7 +93,6 @@ enum ReplicationStatus {
     BAD         = 4;
     FAILED      = 5;
 }
-    
 message ReplicationResponseReplicate {
     required ReplicationStatus status = 1;
 }
@@ -79,4 +101,34 @@ message ReplicationResponseStop {
 }
 message ReplicationResponseStatus {
     required ReplicationStatus status = 1;
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+// The message returned in response to requests related to (or affecting)
+// the overall state of the sorker-side replication service.
+
+message ReplicationServiceResponse {
+
+    // Completion status of the operation
+    
+    enum Status {
+        SUCCESS = 0;
+        FAILED  = 1;
+    }
+    required Status status = 1;
+
+    enum ServiceState {
+        SUSPEND_IN_PROGRESS = 0;
+        SUSPENDED           = 1;
+        RUNNING             = 2;
+    }
+    required ServiceState service_state = 2;
+
+    // Counters for requests known to the service since its last start
+
+    required uint32 num_new_requests         = 3;
+    required uint32 num_in_progress_requests = 4;
+    required uint32 num_finished_requests    = 5;
+
 }
