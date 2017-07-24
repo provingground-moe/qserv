@@ -53,7 +53,6 @@ StatusRequest::create (ServiceProvider::pointer serviceProvider,
     return pointer (
         new StatusRequest (
             serviceProvider,
-            generateId(),
             worker,
             io_service,
             replicationRequestId,
@@ -61,14 +60,12 @@ StatusRequest::create (ServiceProvider::pointer serviceProvider,
 }
 
 StatusRequest::StatusRequest (ServiceProvider::pointer serviceProvider,
-                              const std::string        &id,
                               const std::string        &worker,
                               boost::asio::io_service  &io_service,
                               const std::string        &replicationRequestId,
                               callback_type            onFinish)
     :   Request(serviceProvider,
                 "STATUS",
-                id,
                 worker,
                 io_service),
 

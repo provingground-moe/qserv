@@ -41,6 +41,7 @@
 // Qserv headers
 
 #include "replica_core/ReplicationRequest.h"
+#include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/StatusRequest.h"
 #include "replica_core/StopRequest.h"
@@ -236,6 +237,63 @@ public:
      * Return a list of the on-going status inquery requests.
      */
     std::vector<StatusRequest::pointer> activeStatusInqueries () const;
+ 
+    /**
+     * Tell the worker-side service to temporarily suspend processing requests
+     *
+     * IMPORTANT: this operation requires that the server was runinng.
+     *            Otherwise it will throw std::runtime_error.
+     *
+     * @param workerName - the name of a worker node where the service runs
+     * @param onFinish   - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the request
+     */
+    ServiceSuspendRequest::pointer suspendWorkerService (const std::string                    &workerName,
+                                                         ServiceSuspendRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Return a list of the on-going requests.
+     */
+    std::vector<ServiceSuspendRequest::pointer> activeServiceSuspendRequests () const;
+
+    /**
+     * Tell the worker-side service to resume processing requests
+     *
+     * IMPORTANT: this operation requires that the server was runinng.
+     *            Otherwise it will throw std::runtime_error.
+     *
+     * @param workerName - the name of a worker node where the service runs
+     * @param onFinish   - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the request
+     */
+    ServiceResumeRequest::pointer resumeWorkerServce (const std::string                   &workerName,
+                                                      ServiceResumeRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Return a list of the on-going requests.
+     */
+    std::vector<ServiceResumeRequest::pointer> activeServiceResumeRequests () const;
+
+    /**
+     * Request the current status of the worker-side service
+     *
+     * IMPORTANT: this operation requires that the server was runinng.
+     *            Otherwise it will throw std::runtime_error.
+     *
+     * @param workerName - the name of a worker node where the service runs
+     * @param onFinish   - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the request
+     */
+    ServiceStatusRequest::pointer statusOfWorkerServce (const std::string                   &workerName,
+                                                        ServiceStatusRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Return a list of the on-going requests.
+     */
+    std::vector<ServiceStatusRequest::pointer> activeServiceStatusRequests () const;
 
 private:
 

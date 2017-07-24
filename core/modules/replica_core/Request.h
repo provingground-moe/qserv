@@ -60,7 +60,7 @@ public:
     /// Primary public state of the request
     enum State {
 
-        /// The request has been constructed, and no attempt to execure it has
+        /// The request has been constructed, and no attempt to execute it has
         /// been made.
         CREATED,
         
@@ -160,7 +160,6 @@ protected:
      */
     Request (ServiceProvider::pointer serviceProvider,
              const std::string        &type,
-             const std::string        &id,
              const std::string        &worker,
              boost::asio::io_service  &io_service);
     

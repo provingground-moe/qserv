@@ -108,7 +108,6 @@ private:
      * Construct the request with the pointer to the services provider.
      */
     ReplicationRequest (ServiceProvider::pointer serviceProvider,
-                        const std::string        &id,
                         const std::string        &database,
                         unsigned int             chunk,
                         const std::string        &sourceWorker,

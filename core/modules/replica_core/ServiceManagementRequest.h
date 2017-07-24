@@ -1,0 +1,297 @@
+/*
+ * LSST Data Management System
+ * Copyright 2017 LSST Corporation.
+ *
+ * This product includes software developed by the
+ * LSST Project (http://www.lsst.org/).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the LSST License Statement and
+ * the GNU General Public License along with this program.  If not,
+ * see <http://www.lsstcorp.org/LegalNotices/>.
+ */
+#ifndef LSST_QSERV_REPLICA_CORE_SERVICEMANAGEMENTREQUEST_H
+#define LSST_QSERV_REPLICA_CORE_SERVICEMANAGEMENTREQUEST_H
+
+/// ServiceManagementRequest.h declares:
+///
+/// class ServiceManagementRequestBase
+/// class ServiceManagementRequest
+/// class ServiceSuspendRequest
+/// class ServiceResumeRequest
+/// class ServiceStatusRequest
+//
+/// (see individual class documentation for more information)
+
+// System headers
+
+#include <functional>   // std::function
+#include <iostream>
+#include <memory>       // shared_ptr, enable_shared_from_this
+#include <string>
+
+// Qserv headers
+
+#include "proto/replication.pb.h"
+#include "replica_core/Request.h"
+
+namespace proto = lsst::qserv::proto;
+
+// This header declarations
+
+namespace lsst {
+namespace qserv {
+namespace replica_core {
+
+/**
+  * Class ServiceManagementRequestBase is the base class for a family of requests
+  * managing worker-side replication service. The only variable parameter of this
+  * class is a specific type of teh managemenyt request.
+  *
+  * Note that this class can't be instantiate directly. It serves as an implementation
+  * of the protocol. All final customizations and type-specific operations are
+  * provided via a generic subclass.
+  */
+class ServiceManagementRequestBase
+    :   public Request {
+
+public:
+
+    // Default construction and copy semantics are proxibited
+
+    ServiceManagementRequestBase () = delete;
+    ServiceManagementRequestBase (ServiceManagementRequestBase const&) = delete;
+    ServiceManagementRequestBase & operator= (ServiceManagementRequestBase const&) = delete;
+
+    /// Destructor
+    virtual ~ServiceManagementRequestBase ();
+
+    /// Various parameters representing the state of the service which
+    /// are available upon the completion of the request.
+    struct ServiceState {
+
+        // Its state
+        enum State {
+            SUSPEND_IN_PROGRESS = 0,
+            SUSPENDED           = 1,
+            RUNNING             = 2
+        };
+        State state;
+
+        // Counters for requests known to the service since its last start
+
+        uint32_t numNewRequests;
+        uint32_t numInProgressRequests;
+        uint32_t numFinishedRequests;
+    };
+
+    /**
+     * Get the state of the worker-side service
+     *
+     * This method will throw exception std::logic_error if the request's primary state
+     * is not 'FINISHED' and its extended state is neither 'SUCCESS" or 'SERVER_ERROR'.
+     */
+    const ServiceState& getServiceState () const;
+
+protected:
+
+    /**
+     * Construct the request with the pointer to the services provider.
+     */
+    ServiceManagementRequestBase (ServiceProvider::pointer                            serviceProvider,
+                                  const char                                         *requestTypeName,
+                                  const std::string                                  &worker,
+                                  boost::asio::io_service                            &io_service,
+                                  lsst::qserv::proto::ReplicationRequestHeader::Type  requestType);
+private:
+
+    /**
+      * This method is called when a connection is established and
+      * the stack is ready to begin implementing an actual protocol
+      * with the worker server.
+      *
+      * The first step of teh protocol will be to send the replication
+      * request to the destination worker.
+      */
+    void beginProtocol () final;
+    
+    /// Callback handler for the asynchronious operation
+    void requestSent (const boost::system::error_code &ec,
+                      size_t                           bytes_transferred);
+
+    /// Start receiving the response from the destination worker
+    void receiveResponse ();
+
+    /// Callback handler for the asynchronious operation
+    void responseReceived (const boost::system::error_code &ec,
+                           size_t                           bytes_transferred);
+
+    /// Process the completion of the requested operation
+    void analyze (lsst::qserv::proto::ReplicationServiceResponse status);
+
+private:
+
+    /// Request type
+    lsst::qserv::proto::ReplicationRequestHeader::Type _requestType;
+
+    /// Detailed status of the worker-side service obtained upon completion of
+    /// the management request.
+    ServiceState _serviceState;
+};
+
+
+/**
+  * Generic class ServiceManagementRequest extends its base class
+  * to allow further policy-based customization of specific requests.
+  */
+template <typename POLICY>
+class ServiceManagementRequest
+    :   public ServiceManagementRequestBase,
+        public std::enable_shared_from_this<ServiceManagementRequest<POLICY>>  {
+
+public:
+
+    /// The only class which is allowed to instantiate and manage replications
+    friend class MasterServer;
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<ServiceManagementRequest<POLICY>> pointer;
+
+    /// The function type for notifications on the completon of the request
+    typedef std::function<void(pointer)> callback_type;
+
+    // Default construction and copy semantics are proxibited
+
+    ServiceManagementRequest () = delete;
+    ServiceManagementRequest (ServiceManagementRequest const&) = delete;
+    ServiceManagementRequest & operator= (ServiceManagementRequest const&) = delete;
+
+    /// Destructor
+    ~ServiceManagementRequest () final {
+    }
+
+
+private:
+
+    /**
+     * Create a new request with specified parameters.
+     * 
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     *
+     * @param serviceProvider  - a host of services for various communications
+     * @param worker           - the identifier of a worker node (the one to be affectd by the request)
+     * @param io_service       - network communication service
+     * @param onFinish         - an optional callback function to be called upon a completion of
+     *                           the request.
+     */
+    static pointer create (ServiceProvider::pointer  serviceProvider,
+                           const std::string        &worker,
+                           boost::asio::io_service  &io_service,
+                           callback_type             onFinish) {
+        return pointer (
+            new ServiceManagementRequest<POLICY> (
+                serviceProvider,
+                POLICY::requestTypeName(),
+                worker,
+                io_service,
+                POLICY::requestType(),
+                onFinish));
+    }
+
+    /**
+     * Construct the request
+     */
+    ServiceManagementRequest (ServiceProvider::pointer  serviceProvider,
+                              const char               *requestTypeName,
+                              const std::string        &worker,
+                              boost::asio::io_service  &io_service,
+                              lsst::qserv::proto::ReplicationRequestHeader::Type
+                                                        requestType,
+                              callback_type             onFinish)
+
+        :   ServiceManagementRequestBase (serviceProvider,
+                                          requestTypeName,
+                                          worker,
+                                          io_service,
+                                          requestType),
+            _onFinish (onFinish)
+    {}
+
+    /**
+     * Return a down-cust pointer onto an object of the final class.
+     * This pointer is used by an implementation of the base class for registering
+     * asynchronous callback handlers to guarantee that the object always
+     * oulive the asynchronous operations.
+     */
+    std::shared_ptr<Request> final_shared_from_this () final {
+        pointer self = ServiceManagementRequest<POLICY>::shared_from_this();
+        return self ;
+    }
+
+    /**
+     * Notifying a party which initiated the request.
+     *
+     * This method implements the corresponing virtual method defined
+     * bu the base class.
+     */
+    void endProtocol () final {
+        if (_onFinish != nullptr) {
+            pointer self = ServiceManagementRequest<POLICY>::shared_from_this();
+            _onFinish(self);
+        }
+    }
+
+private:
+
+    /// Registered callback to be called when the operation finishes
+    callback_type _onFinish;
+};
+
+// Customizations for specific request types require dedicated policies
+
+struct ServiceSuspendRequestPolicy {
+    static const char* requestTypeName () {
+        return "SERVICE_SUSPEND";
+    } 
+    static lsst::qserv::proto::ReplicationRequestHeader::Type requestType () {
+        return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_SUSPEND;
+    }
+};
+
+struct ServiceResumeRequestPolicy {
+    static const char* requestTypeName () {
+        return "SERVICE_RESUME";
+    }   
+    static lsst::qserv::proto::ReplicationRequestHeader::Type requestType () {
+        return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_RESUME;
+    }
+};
+
+struct ServiceStatusRequestPolicy {
+    static const char* requestTypeName () {
+        return "SERVICE_STATUS";
+    } 
+    static lsst::qserv::proto::ReplicationRequestHeader::Type requestType () {
+        return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_STATUS;
+    }
+};
+
+typedef ServiceManagementRequest<ServiceSuspendRequestPolicy> ServiceSuspendRequest;
+typedef ServiceManagementRequest<ServiceResumeRequestPolicy>  ServiceResumeRequest;
+typedef ServiceManagementRequest<ServiceStatusRequestPolicy>  ServiceStatusRequest;
+
+
+}}} // namespace lsst::qserv::replica_core
+
+#endif // LSST_QSERV_REPLICA_CORE_SERVICEMANAGEMENTREQUEST_H

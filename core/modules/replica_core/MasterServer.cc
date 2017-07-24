@@ -224,7 +224,6 @@ MasterServer::activeStopReplications () const {
 }
 
 
-
 StatusRequest::pointer
 MasterServer::statusOfReplication (const std::string            &workerName,
                                    const std::string            &replicationRequestId,
@@ -270,6 +269,135 @@ MasterServer::activeStatusInqueries () const {
         return requestsByType<StatusRequest>();
     }
 }
+
+
+ServiceSuspendRequest::pointer
+MasterServer::suspendWorkerService (const std::string                    &workerName,
+                                    ServiceSuspendRequest::callback_type  onFinish) {
+    THREAD_SAFE_BLOCK {
+
+        std::cout << "MasterServer::ServiceSuspendRequest " << std::endl;
+
+        MasterServer::pointer server = shared_from_this();
+
+        ServiceSuspendRequest::pointer request =
+            ServiceSuspendRequest::create (
+                _serviceProvider,
+                workerName,
+                _io_service,
+                [server] (ServiceSuspendRequest::pointer request) {
+                    server->finish(request->id());
+                }
+            );
+    
+        // Register the request (along with its callback) by its unique
+        // identifier in the local registry. Once it's complete it'll
+        // be automatically removed from the Registry.
+    
+        (*_requestsRegistry)[request->id()] =
+            std::make_shared<RequestWrapperImpl<ServiceSuspendRequest>> (request, onFinish);
+    
+        // Initiate the request
+
+        request->start ();
+
+        return request;
+    }
+}
+
+
+std::vector<ServiceSuspendRequest::pointer>
+MasterServer::activeServiceSuspendRequests () const {
+    THREAD_SAFE_BLOCK {
+        return requestsByType<ServiceSuspendRequest>();
+    }
+}
+
+ServiceResumeRequest::pointer
+MasterServer::resumeWorkerServce (const std::string                   &workerName,
+                                  ServiceResumeRequest::callback_type  onFinish) {
+    THREAD_SAFE_BLOCK {
+        
+        std::cout << "MasterServer::ServiceResumeRequest " << std::endl;
+
+        MasterServer::pointer server = shared_from_this();
+
+        ServiceResumeRequest::pointer request =
+            ServiceResumeRequest::create (
+                _serviceProvider,
+                workerName,
+                _io_service,
+                [server] (ServiceResumeRequest::pointer request) {
+                    server->finish(request->id());
+                }
+            );
+    
+        // Register the request (along with its callback) by its unique
+        // identifier in the local registry. Once it's complete it'll
+        // be automatically removed from the Registry.
+    
+        (*_requestsRegistry)[request->id()] =
+            std::make_shared<RequestWrapperImpl<ServiceResumeRequest>> (request, onFinish);
+    
+        // Initiate the request
+
+        request->start ();
+
+        return request;
+    }
+}
+
+
+std::vector<ServiceResumeRequest::pointer>
+MasterServer::activeServiceResumeRequests () const {
+    THREAD_SAFE_BLOCK {
+        return requestsByType<ServiceResumeRequest>();
+    }
+}
+
+
+ServiceStatusRequest::pointer
+MasterServer::statusOfWorkerServce (const std::string                   &workerName,
+                                    ServiceStatusRequest::callback_type  onFinish) {
+    THREAD_SAFE_BLOCK {
+        
+        std::cout << "MasterServer::ServiceStatusRequest " << std::endl;
+
+        MasterServer::pointer server = shared_from_this();
+
+        ServiceStatusRequest::pointer request =
+            ServiceStatusRequest::create (
+                _serviceProvider,
+                workerName,
+                _io_service,
+                [server] (ServiceStatusRequest::pointer request) {
+                    server->finish(request->id());
+                }
+            );
+    
+        // Register the request (along with its callback) by its unique
+        // identifier in the local registry. Once it's complete it'll
+        // be automatically removed from the Registry.
+    
+        (*_requestsRegistry)[request->id()] =
+            std::make_shared<RequestWrapperImpl<ServiceStatusRequest>> (request, onFinish);
+    
+        // Initiate the request
+
+        request->start ();
+
+        return request;
+    }
+}
+
+
+std::vector<ServiceStatusRequest::pointer>
+MasterServer::activeServiceStatusRequests () const {
+    THREAD_SAFE_BLOCK {
+        return requestsByType<ServiceStatusRequest>();
+    }
+}
+
 
 void
 MasterServer::finish (const std::string &id) {
