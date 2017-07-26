@@ -69,7 +69,7 @@ WorkerProcessorThread::run () {
     if (isRunning()) return;
 
     WorkerProcessorThread::pointer self = shared_from_this();
-    _thread = std::make_shared<std::thread> ( [&self] () {
+    _thread = std::make_shared<std::thread> ( [self] () {
 
         // Simulate request 'processing' for the random duration of time
         // witin this interval of milliseconds. Success/failure modes will
@@ -87,9 +87,7 @@ WorkerProcessorThread::run () {
             // or the specified timeout expires. In either case this thread has a chance
             // to re-evaluate the stopping condition.
 
-            WorkerReplicationRequest::pointer request = self->_processor->fetchNextForProcessing (
-                self,
-                std::chrono::milliseconds(1000));
+            WorkerReplicationRequest::pointer request = self->_processor->fetchNextForProcessing(self,1000);
 
             if (self->_cancel) {
                 self->cancelled(request);

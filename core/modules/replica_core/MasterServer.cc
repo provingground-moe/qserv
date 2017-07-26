@@ -276,7 +276,7 @@ MasterServer::suspendWorkerService (const std::string                    &worker
                                     ServiceSuspendRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
 
-        std::cout << "MasterServer::ServiceSuspendRequest " << std::endl;
+        std::cout << "MasterServer::suspendWorkerService " << std::endl;
 
         MasterServer::pointer server = shared_from_this();
 
@@ -314,11 +314,11 @@ MasterServer::activeServiceSuspendRequests () const {
 }
 
 ServiceResumeRequest::pointer
-MasterServer::resumeWorkerServce (const std::string                   &workerName,
-                                  ServiceResumeRequest::callback_type  onFinish) {
+MasterServer::resumeWorkerService (const std::string                   &workerName,
+                                   ServiceResumeRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
         
-        std::cout << "MasterServer::ServiceResumeRequest " << std::endl;
+        std::cout << "MasterServer::resumeWorkerService " << std::endl;
 
         MasterServer::pointer server = shared_from_this();
 
@@ -357,11 +357,11 @@ MasterServer::activeServiceResumeRequests () const {
 
 
 ServiceStatusRequest::pointer
-MasterServer::statusOfWorkerServce (const std::string                   &workerName,
-                                    ServiceStatusRequest::callback_type  onFinish) {
+MasterServer::statusOfWorkerService (const std::string                   &workerName,
+                                     ServiceStatusRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
         
-        std::cout << "MasterServer::ServiceStatusRequest " << std::endl;
+        std::cout << "MasterServer::statusOfWorkerService " << std::endl;
 
         MasterServer::pointer server = shared_from_this();
 

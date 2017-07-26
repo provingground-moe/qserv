@@ -30,7 +30,6 @@
 
 // System headers
 
-#include <chrono>
 #include <list>
 #include <memory>       // shared_ptr, enable_shared_from_this
 #include <mutex>
@@ -85,6 +84,8 @@ public:
         STATE_IS_STOPPING,   // stopping all threads
         STATE_IS_STOPPED     // not started
     };
+
+    static std::string state2string (State state);
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -174,11 +175,12 @@ private:
      * when it becomes available.
      * 
      * ATTENTION: this method will block for a duration of time not exceeding
-     * the client-specified timeout.
+     * the client-specified timeout unless it's set to 0. IN the later case
+     * the method will block indefinitevely.
      */
     WorkerReplicationRequest::pointer fetchNextForProcessing (
             const WorkerProcessorThread::pointer &processorThread,
-            std::chrono::milliseconds             timeoutMilliseconds);
+            unsigned int                          timeoutMilliseconds=0);
 
     /**
      * Report a decision not to process a request

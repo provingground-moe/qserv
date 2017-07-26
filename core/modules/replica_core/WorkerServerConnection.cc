@@ -212,17 +212,20 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
     proto::ReplicationRequestHeader hdr;
     if (!::readMessage (_socket, _bufferPtr, _bufferPtr->parseLength(), hdr)) return;
    
-    // Read the request length
-
-    uint32_t bytes;
-    if (!::readLength (_socket, _bufferPtr, bytes)) return;
-
     // Now read a specific request
+    //
+    // ATTENTION: watch for the protocol! Some requests are fully expressed
+    //            in terms of the above received & parsed header.
 
     switch (hdr.type()) {
 
         case proto::ReplicationRequestHeader::REPLICATE : {
 
+            // Read the request length
+            uint32_t bytes;
+            if (!::readLength (_socket, _bufferPtr, bytes)) return;
+
+            // Read the request body
             proto::ReplicationRequestReplicate request;
             if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
@@ -234,6 +237,11 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
         }
         case proto::ReplicationRequestHeader::STOP : {
 
+            // Read the request length
+            uint32_t bytes;
+            if (!::readLength (_socket, _bufferPtr, bytes)) return;
+
+            // Read the request body
             proto::ReplicationRequestStop request;
             if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
@@ -245,6 +253,11 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
         }
         case proto::ReplicationRequestHeader::STATUS : {
 
+            // Read the request length
+            uint32_t bytes;
+            if (!::readLength (_socket, _bufferPtr, bytes)) return;
+
+            // Read the request body
             proto::ReplicationRequestStatus request;
             if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 

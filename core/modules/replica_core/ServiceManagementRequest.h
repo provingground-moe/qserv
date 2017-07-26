@@ -44,8 +44,6 @@
 #include "proto/replication.pb.h"
 #include "replica_core/Request.h"
 
-namespace proto = lsst::qserv::proto;
-
 // This header declarations
 
 namespace lsst {
@@ -65,6 +63,9 @@ class ServiceManagementRequestBase
     :   public Request {
 
 public:
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<ServiceManagementRequestBase> pointer;
 
     // Default construction and copy semantics are proxibited
 
@@ -115,11 +116,10 @@ protected:
 private:
 
     /**
-      * This method is called when a connection is established and
-      * the stack is ready to begin implementing an actual protocol
-      * with the worker server.
+      * This method is called when a connection  with the worker server is established
+      * and the communication stack is ready to begin implementing the actual protocol.
       *
-      * The first step of teh protocol will be to send the replication
+      * The first step in the protocol will be to send the replication
       * request to the destination worker.
       */
     void beginProtocol () final;

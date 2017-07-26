@@ -268,8 +268,8 @@ public:
      *
      * @return a pointer to the request
      */
-    ServiceResumeRequest::pointer resumeWorkerServce (const std::string                   &workerName,
-                                                      ServiceResumeRequest::callback_type  onFinish=nullptr);
+    ServiceResumeRequest::pointer resumeWorkerService (const std::string                   &workerName,
+                                                       ServiceResumeRequest::callback_type  onFinish=nullptr);
 
     /**
      * Return a list of the on-going requests.
@@ -287,8 +287,8 @@ public:
      *
      * @return a pointer to the request
      */
-    ServiceStatusRequest::pointer statusOfWorkerServce (const std::string                   &workerName,
-                                                        ServiceStatusRequest::callback_type  onFinish=nullptr);
+    ServiceStatusRequest::pointer statusOfWorkerService (const std::string                   &workerName,
+                                                         ServiceStatusRequest::callback_type  onFinish=nullptr);
 
     /**
      * Return a list of the on-going requests.
