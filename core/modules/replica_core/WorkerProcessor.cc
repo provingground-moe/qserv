@@ -26,8 +26,9 @@
 
 // System headers
 
-#include <stdexcept>
+#include <chrono>
 #include <iostream>
+#include <stdexcept>
 
 // Qserv headers
 
@@ -42,17 +43,26 @@ namespace qserv {
 namespace replica_core {
 
 
+std::string
+WorkerProcessor::state2string (State state) {
+    switch (state) {
+        case STATE_IS_RUNNING:  return "STATE_IS_RUNNING";
+        case STATE_IS_STOPPING: return "STATE_IS_STOPPING";
+        case STATE_IS_STOPPED:  return "STATE_IS_STOPPED";
+    }
+    return "";
+}
+
 WorkerProcessor::pointer
 WorkerProcessor::create (ServiceProvider::pointer serviceProvider) {
-    return WorkerProcessor::pointer (
+    return pointer (
         new WorkerProcessor (serviceProvider));
 }
 
 WorkerProcessor::WorkerProcessor (ServiceProvider::pointer serviceProvider)
     :   _serviceProvider (serviceProvider),
-        _state           (State::STATE_IS_STOPPED)
-
-{}
+        _state           (State::STATE_IS_STOPPED) {
+}
 
 WorkerProcessor::~WorkerProcessor () {
 }
@@ -61,10 +71,14 @@ WorkerProcessor::~WorkerProcessor () {
 void
 WorkerProcessor::run () {
 
+    std::cout << "WorkerProcessor::run" << std::endl;
+    
     THREAD_SAFE_BLOCK {
 
+        std::cout << "WorkerProcessor::run::t-safe" << std::endl;
+
         if (_state == State::STATE_IS_STOPPED) {
-            
+
             const size_t numThreads = _serviceProvider->config()->workerNumProcessingThreads();
             if (!numThreads) throw new std::out_of_range("the number of procesisng threads can't be 0");
         
@@ -90,9 +104,13 @@ WorkerProcessor::run () {
 void
 WorkerProcessor::stop () {
 
+    std::cout << "WorkerProcessor::stop" << std::endl;
+    
     THREAD_SAFE_BLOCK {
 
-        if (_state != State::STATE_IS_RUNNING) {
+        std::cout << "WorkerProcessor::stop::t-safe" << std::endl;
+
+        if (_state == State::STATE_IS_RUNNING) {
             
             // Tell each thread to stop.
         
@@ -113,9 +131,11 @@ void
 WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate &request,
                                         proto::ReplicationResponseReplicate &response) {
 
+    std::cout << "WorkerProcessor::enqueueForReplication" << std::endl;
+
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::enqueueForReplication "
+        std::cout << "WorkerProcessor::enqueueForReplication::t-safe "
                   << " id="       << request.id()       << ","
                   << " database=" << request.database() << ","
                   << " chunk="    << request.chunk()    << std::endl;
@@ -144,9 +164,11 @@ void
 WorkerProcessor::dequeueOrCancel (const proto::ReplicationRequestStop &request,
                                   proto::ReplicationResponseStop      &response) {
 
+    std::cout << "WorkerProcessor::dequeueOrCancel" << std::endl;
+
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::dequeueOrCancel "
+        std::cout << "WorkerProcessor::dequeueOrCancel::t-safe "
                   << " id=" << request.id() <<  std::endl;
     
         // TODO: search for a request with this identifier in all queues.
@@ -163,10 +185,12 @@ void
 WorkerProcessor::checkStatus (const proto::ReplicationRequestStatus &request,
                               proto::ReplicationResponseStatus      &response) {
 
+    std::cout << "WorkerProcessor::checkStatus" << std::endl;
+
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::checkStatus "
-                  << " id=" << request.id() <<  std::endl;
+        std::cout << "WorkerProcessor::checkStatus::t-safe "
+                  << " id=" << request.id() << std::endl;
 
         // TODO: search for a request with this identifier in all queues.
         // Then return its status.
@@ -178,31 +202,44 @@ WorkerProcessor::checkStatus (const proto::ReplicationRequestStatus &request,
 
 WorkerReplicationRequest::pointer
 WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &processorThread,
-                                         std::chrono::milliseconds             timeoutMilliseconds) {
+                                         unsigned int                          timeoutMilliseconds) {
+
+    std::cout << "WorkerProcessor::fetchNextForProcessing" <<  std::endl;
 
     THREAD_SAFE_BLOCK {
     
-        std::cout << "WorkerProcessor::fetchNextForProcessing ** NOT IMPLEMENTED **" <<  std::endl;
+        std::cout << "WorkerProcessor::fetchNextForProcessing::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
         
+        std::this_thread::sleep_for (
+            std::chrono::duration<long, std::milli> (
+                std::chrono::milliseconds (
+                    timeoutMilliseconds
+                )
+            )
+        );
         return WorkerReplicationRequest::pointer();
     }
 }
 
 void
 WorkerProcessor::processingRefused (const WorkerReplicationRequest::pointer &request) {
+
+    std::cout << "WorkerProcessor::processingRefused" <<  std::endl;
     
     THREAD_SAFE_BLOCK {
     
-        std::cout << "WorkerProcessor::processingRefused ** NOT IMPLEMENTED **" <<  std::endl;
+        std::cout << "WorkerProcessor::processingRefused::t-safe** NOT IMPLEMENTED **" <<  std::endl;
     }
 }
 
 void
 WorkerProcessor::processingCancelled (const WorkerReplicationRequest::pointer &request) {
     
+    std::cout << "WorkerProcessor::processingCancelled" <<  std::endl;
+
     THREAD_SAFE_BLOCK {
     
-        std::cout << "WorkerProcessor::processingCancelled ** NOT IMPLEMENTED **" <<  std::endl;
+        std::cout << "WorkerProcessor::processingCancelled::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
     }
 }
 
@@ -210,18 +247,22 @@ void
 WorkerProcessor::processingFinished (const WorkerReplicationRequest::pointer    &request,
                                      WorkerReplicationRequest::CompletionStatus  completionStatus) {
     
+    std::cout << "WorkerProcessor::processingFinished" <<  std::endl;
+
     THREAD_SAFE_BLOCK {
-    
-        std::cout << "WorkerProcessor::processingFinished ** NOT IMPLEMENTED **" <<  std::endl;
+
+        std::cout << "WorkerProcessor::processingFinished::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
     }
 }
 
 void
 WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &processorThread) {
     
+    std::cout << "WorkerProcessor::processorThreadStopped" <<  std::endl;
+
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::processorThreadStopped ** NOT IMPLEMENTED **" <<  std::endl;
+        std::cout << "WorkerProcessor::processorThreadStopped::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
 
         if (_state == State::STATE_IS_STOPPING) {
 

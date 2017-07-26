@@ -62,6 +62,10 @@ WorkerServer::WorkerServer (const ServiceProvider::pointer &serviceProvider,
 void
 WorkerServer::run () {
 
+    // Start the processor to allow processing requests.
+
+    _processor->run();
+
     // Begin accepting the specified number of connections simultaneously.
     // The run the service to allow asynchronous operations.
 
