@@ -88,6 +88,16 @@ public:
         };
         State state;
 
+        /// Return string representation of the state
+        std::string state2string () const {
+            switch (state) {
+                case SUSPEND_IN_PROGRESS: return "SUSPEND_IN_PROGRESS";
+                case SUSPENDED:           return "SUSPENDED";
+                case RUNNING:             return "RUNNING";
+            }
+            return "";
+        }
+
         // Counters for requests known to the service since its last start
 
         uint32_t numNewRequests;

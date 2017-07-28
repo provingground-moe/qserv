@@ -48,6 +48,9 @@ namespace replica_core {
 
 const ServiceManagementRequestBase::ServiceState&
 ServiceManagementRequestBase::getServiceState () const {
+
+    std::cout << context() << "getServiceState()" << std::endl;
+
     switch (Request::state()) {
         case Request::State::FINISHED:
             switch (Request::extendedState()) {
@@ -87,6 +90,8 @@ ServiceManagementRequestBase::~ServiceManagementRequestBase ()
 void
 ServiceManagementRequestBase::beginProtocol () {
 
+    std::cout << context() << "beginProtocol()" << std::endl;
+
     // Serialize the Request message header and the request itself into
     // the network buffer.
 
@@ -116,7 +121,10 @@ ServiceManagementRequestBase::beginProtocol () {
 
 void
 ServiceManagementRequestBase::requestSent (const boost::system::error_code &ec,
-                                       size_t                           bytes_transferred) {
+                                           size_t                           bytes_transferred) {
+
+    std::cout << context() << "requestSent()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) restart();
@@ -125,6 +133,8 @@ ServiceManagementRequestBase::requestSent (const boost::system::error_code &ec,
 
 void
 ServiceManagementRequestBase::receiveResponse () {
+
+    std::cout << context() << "receiveResponse()" << std::endl;
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -156,7 +166,10 @@ ServiceManagementRequestBase::receiveResponse () {
 
 void
 ServiceManagementRequestBase::responseReceived (const boost::system::error_code &ec,
-                                            size_t                           bytes_transferred) {
+                                                size_t                           bytes_transferred) {
+
+    std::cout << context() << "responseReceived()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) {
@@ -197,36 +210,39 @@ ServiceManagementRequestBase::responseReceived (const boost::system::error_code 
 void
 ServiceManagementRequestBase::analyze (proto::ReplicationServiceResponse response) {
 
+    std::cout << context() << "analyze()" << std::endl;
+
     // Capture the general status of the operation
 
     switch (response.status()) {
  
-        // Transfer the state of the remote service into a local data member
-        // before initiating state transition of the request object.
-
-        switch (response.service_state()) {
-            case proto::ReplicationServiceResponse::SUSPEND_IN_PROGRESS:
-                _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPEND_IN_PROGRESS;
-                break;
-            case proto::ReplicationServiceResponse::SUSPENDED:
-                _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPENDED;
-                break;
-            case proto::ReplicationServiceResponse::RUNNING:
-                _serviceState.state = ServiceManagementRequestBase::ServiceState::State::RUNNING;
-                break;
-            default:
-                throw std::runtime_error("service state found in protocol is unknown");
-        }
-        _serviceState.numNewRequests        = response.num_new_requests        ();
-        _serviceState.numInProgressRequests = response.num_in_progress_requests();
-        _serviceState.numFinishedRequests   = response.num_finished_requests   ();
- 
         case proto::ReplicationServiceResponse::SUCCESS:
-            finish (FINISHED, SUCCESS);
+
+            // Transfer the state of the remote service into a local data member
+            // before initiating state transition of the request object.
+    
+            switch (response.service_state()) {
+                case proto::ReplicationServiceResponse::SUSPEND_IN_PROGRESS:
+                    _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPEND_IN_PROGRESS;
+                    break;
+                case proto::ReplicationServiceResponse::SUSPENDED:
+                    _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPENDED;
+                    break;
+                case proto::ReplicationServiceResponse::RUNNING:
+                    _serviceState.state = ServiceManagementRequestBase::ServiceState::State::RUNNING;
+                    break;
+                default:
+                    throw std::runtime_error("service state found in protocol is unknown");
+            }
+            _serviceState.numNewRequests        = response.num_new_requests        ();
+            _serviceState.numInProgressRequests = response.num_in_progress_requests();
+            _serviceState.numFinishedRequests   = response.num_finished_requests   ();
+ 
+            finish (SUCCESS);
             break;
 
         default:
-            finish (FINISHED, SERVER_ERROR);
+            finish (SERVER_ERROR);
             break;
     }
     

@@ -85,6 +85,8 @@ StopRequest::final_shared_from_this () {
 void
 StopRequest::beginProtocol () {
 
+    std::cout << context() << "beginProtocol()" << std::endl;
+
     // Serialize the Request message header and the request itself into
     // the network buffer.
 
@@ -119,7 +121,10 @@ StopRequest::beginProtocol () {
 
 void
 StopRequest::requestSent (const boost::system::error_code &ec,
-                          size_t bytes_transferred) {
+                          size_t                           bytes_transferred) {
+
+    std::cout << context() << "requestSent()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) restart();
@@ -128,6 +133,8 @@ StopRequest::requestSent (const boost::system::error_code &ec,
 
 void
 StopRequest::receiveResponse () {
+
+    std::cout << context() << "receiveResponse()" << std::endl;
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -159,7 +166,10 @@ StopRequest::receiveResponse () {
 
 void
 StopRequest::responseReceived (const boost::system::error_code &ec,
-                               size_t bytes_transferred) {
+                               size_t                           bytes_transferred) {
+
+    std::cout << context() << "responseReceived()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) {
@@ -200,20 +210,47 @@ StopRequest::responseReceived (const boost::system::error_code &ec,
 void
 StopRequest::analyze (proto::ReplicationStatus status) {
 
+    std::cout << context() << "analyze()  remote status: " << proto::ReplicationStatus_Name(status) << std::endl;
+
     switch (status) {
  
         case proto::ReplicationStatus::SUCCESS:
-            finish (FINISHED, SUCCESS);
+            finish (SUCCESS);
+            break;
+
+        case proto::ReplicationStatus::QUEUED:
+            finish (SERVER_QUEUED);
+            break;
+
+        case proto::ReplicationStatus::IN_PROGRESS:
+            finish (SERVER_IN_PROGRESS);
+            break;
+
+        case proto::ReplicationStatus::SUSPENDED:
+            finish (SERVER_SUSPENDED);
+            break;
+
+        case proto::ReplicationStatus::BAD:
+            finish (SERVER_BAD);
+            break;
+
+        case proto::ReplicationStatus::FAILED:
+            finish (SERVER_ERROR);
+            break;
+
+        case proto::ReplicationStatus::CANCELLED:
+            finish (SERVER_CANCELLED);
             break;
 
         default:
-            finish (FINISHED, SERVER_ERROR);
-            break;
+            throw std::logic_error("StopRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) + "' received from server");
     }
 }
 
 void
 StopRequest::endProtocol () {
+
+    std::cout << context() << "endProtocol()" << std::endl;
 
     if (_onFinish != nullptr) {
         _onFinish(shared_from_this());

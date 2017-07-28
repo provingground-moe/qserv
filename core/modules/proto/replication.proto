@@ -92,6 +92,7 @@ enum ReplicationStatus {
     SUSPENDED   = 3;
     BAD         = 4;
     FAILED      = 5;
+    CANCELLED   = 6;
 }
 message ReplicationResponseReplicate {
     required ReplicationStatus status = 1;

@@ -57,6 +57,9 @@ class Request {
 
 public:
 
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<Request> pointer;
+
     /// Primary public state of the request
     enum State {
 
@@ -85,26 +88,43 @@ public:
         /// The request has been fully implemented
         SUCCESS,
         
-        /// The request can not be implemented due to incorrect parameters, etc.
-        BAD,
-        
         /// The request could not be implemented due to an unrecoverable
         /// cliend-side error.
         CLIENT_ERROR,
-        
+
+        /// Server reports that the request can not be implemented due to incorrect parameters, etc.
+        SERVER_BAD,
+
         /// The request could not be implemented due to an unrecoverable
         /// server-side error.
         SERVER_ERROR,
 
+        /// The request is queued for processing by the server
+        SERVER_QUEUED,
+
+        /// The request is being processed by the server
+        SERVER_IN_PROGRESS,
+
+        /// The request is suspended by the server
+        SERVER_SUSPENDED,
+
+        /// The request is found as cancelled on the server
+        SERVER_CANCELLED,
+
         /// Expired due to a timeout (as per the Configuration)
         EXPIRED,
         
-        /// Explicitly cancelled
+        /// Explicitly cancelled on the client-side (similar to EXPIRED)
         CANCELLED
     };
 
     /// Return the string representation of the extended state
     static std::string state2string (ExtendedState state) ;
+
+    /// Return the string representation of the compbined state
+    static std::string state2string (State state, ExtendedState extendedState) {
+        return state2string(state) + "::" +state2string(extendedState);
+    }
 
     // Default construction and copy semantics are proxibited
 
@@ -142,6 +162,16 @@ public:
     ExtendedState extendedState () const {
         return _extendedState;
     }
+
+    /**
+     * Explicitly cancel any asynchronous operation(s) and put the object into
+     * the FINISHED::CANCELLED state. This operation is very similar to the
+     * timeout-based request expiration, except it's requested explicitly.
+     *
+     * ATTENTION: this operation won't affect the remote (server-side) state
+     * of the operation in case if the request was queued.
+     */
+    void cancel ();
 
 protected:
 
@@ -189,24 +219,15 @@ protected:
     void expired (const boost::system::error_code &ec);
 
     /**
-     * Cancel any asynchronous operation(s) and put the object into
-     * the initial state
-     */
-    void cancel ();
-
-    /**
      * Restart the whole operation from scratch.
      *
+     * Cancel any asynchronous operation(s) if not in the initial state
+     * w/o notifying a subscriber.
+     * 
      * NOTE: This method is called internally when there is a doubt that
      * it's possible to do a clean recovery from a failure.
      */
     void restart ();
-
-    /**
-     * Cancel any asynchronous operation(s) if not in the initial state
-     * w/o notifying a subscriber.
-     */
-    void reset();
 
     /// Start resolving the destination worker host & port
     void resolve ();
@@ -232,8 +253,7 @@ protected:
      * This is supposed to be the last operation to be called by subclasses
      * upon a completion of the request.
      */
-    void finish (State         state,
-                 ExtendedState extendedState);
+    void finish (ExtendedState extendedState);
 
     /**
       * This method is supposed to be provided by subclasses to begin
@@ -285,6 +305,11 @@ protected:
      */
     void setState (State         state,
                    ExtendedState extendedStat);
+
+    /// Return the context string
+    std::string context () const {
+        return id() + "  " + type() + "  " + state2string(state(), extendedState()) + "  ";
+    }
 
 protected:
 

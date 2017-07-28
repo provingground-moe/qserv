@@ -206,9 +206,12 @@ WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &p
 
     std::cout << "WorkerProcessor::fetchNextForProcessing" <<  std::endl;
 
-    THREAD_SAFE_BLOCK {
+    // Avoid this because the metod will be blocked for the duration of
+    // the simulated wai
+    //
+    //THREAD_SAFE_BLOCK {
     
-        std::cout << "WorkerProcessor::fetchNextForProcessing::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
+        //std::cout << "WorkerProcessor::fetchNextForProcessing::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
         
         std::this_thread::sleep_for (
             std::chrono::duration<long, std::milli> (
@@ -218,7 +221,7 @@ WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &p
             )
         );
         return WorkerReplicationRequest::pointer();
-    }
+    //}
 }
 
 void
