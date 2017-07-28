@@ -95,6 +95,8 @@ ReplicationRequest::final_shared_from_this () {
 void
 ReplicationRequest::beginProtocol () {
 
+    std::cout << context() << "beginProtocol()" << std::endl;
+
     // Serialize the Request message header and the request itself into
     // the network buffer.
 
@@ -131,7 +133,10 @@ ReplicationRequest::beginProtocol () {
 
 void
 ReplicationRequest::requestSent (const boost::system::error_code &ec,
-                                 size_t bytes_transferred) {
+                                 size_t                           bytes_transferred) {
+
+    std::cout << context() << "requestSent()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) restart();
@@ -140,6 +145,8 @@ ReplicationRequest::requestSent (const boost::system::error_code &ec,
 
 void
 ReplicationRequest::receiveResponse () {
+
+    std::cout << context() << "receiveResponse()" << std::endl;
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -171,7 +178,10 @@ ReplicationRequest::receiveResponse () {
 
 void
 ReplicationRequest::responseReceived (const boost::system::error_code &ec,
-                                      size_t bytes_transferred) {
+                                      size_t                           bytes_transferred) {
+
+    std::cout << context() << "responseReceived()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) {
@@ -212,6 +222,8 @@ ReplicationRequest::responseReceived (const boost::system::error_code &ec,
 void
 ReplicationRequest::wait () {
 
+    std::cout << context() << "wait()" << std::endl;
+
     // Allways need to set the interval before launching the timer.
     
     _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
@@ -227,6 +239,8 @@ ReplicationRequest::wait () {
 void
 ReplicationRequest::awaken (const boost::system::error_code &ec) {
 
+    std::cout << context() << "awaken()" << std::endl;
+
     if (isAborted(ec)) return;
 
     sendStatus();
@@ -234,6 +248,8 @@ ReplicationRequest::awaken (const boost::system::error_code &ec) {
 
 void
 ReplicationRequest::sendStatus () {
+
+    std::cout << context() << "sendStatus()" << std::endl;
 
     // Serialize the Status message header and the request itself into
     // the network buffer.
@@ -269,7 +285,10 @@ ReplicationRequest::sendStatus () {
 
 void
 ReplicationRequest::statusSent (const boost::system::error_code &ec,
-                                size_t bytes_transferred) {
+                                size_t                           bytes_transferred) {
+
+    std::cout << context() << "statusSent()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) restart();
@@ -278,6 +297,8 @@ ReplicationRequest::statusSent (const boost::system::error_code &ec,
 
 void
 ReplicationRequest::receiveStatus () {
+
+    std::cout << context() << "receiveStatus()" << std::endl;
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -309,7 +330,10 @@ ReplicationRequest::receiveStatus () {
 
 void
 ReplicationRequest::statusReceived (const boost::system::error_code &ec,
-                                   size_t bytes_transferred) {
+                                   size_t                            bytes_transferred) {
+
+    std::cout << context() << "statusReceived()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) {
@@ -350,35 +374,45 @@ ReplicationRequest::statusReceived (const boost::system::error_code &ec,
 void
 ReplicationRequest::analyze (proto::ReplicationStatus status) {
 
+    std::cout << context() << "analyze()  remote status: " << proto::ReplicationStatus_Name(status) << std::endl;
+
     switch (status) {
  
         case proto::ReplicationStatus::SUCCESS:
-            finish (FINISHED, SUCCESS);
+            finish (SUCCESS);
             break;
-
-        case proto::ReplicationStatus::BAD:
-        case proto::ReplicationStatus::FAILED:
-            finish (FINISHED, SERVER_ERROR);
-            break;
-
-
-        // Go into this mode:
-        //
-        //   wait - request status - analyze - wait - ..
-        //
-        // until a definitive response from the worker is received.
 
         case proto::ReplicationStatus::QUEUED:
         case proto::ReplicationStatus::IN_PROGRESS:
         case proto::ReplicationStatus::SUSPENDED:
 
+            // Go wait until a definitive response from the worker is received.
+
             wait();
             return;
+
+        case proto::ReplicationStatus::BAD:
+            finish (SERVER_BAD);
+            break;
+
+        case proto::ReplicationStatus::FAILED:
+            finish (SERVER_ERROR);
+            break;
+
+        case proto::ReplicationStatus::CANCELLED:
+            finish (SERVER_CANCELLED);
+            break;
+
+        default:
+            throw std::logic_error("ReplicationRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) + "' received from server");
+
     }
 }
 
 void
 ReplicationRequest::endProtocol () {
+
+    std::cout << context() << "endProtocol()" << std::endl;
 
     if (_onFinish != nullptr) {
         _onFinish(shared_from_this());

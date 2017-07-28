@@ -29,13 +29,15 @@ namespace {
     /**
      * Print a status of the service
      */
-    void reportServiceStatus (const rc::ServiceManagementRequestBase::pointer &request) {
+    void printRequest (const rc::ServiceManagementRequestBase::pointer &request) {
+        const rc::ServiceManagementRequestBase::ServiceState& serviceState = request->getServiceState ();
         std::cout
-             << "<" << request->type() << "> finished\n"
-             << "    id      : " << request->id() << "\n"
-             << "    status  : " << request->state2string(request->state()) << "::"
-                                 << request->state2string(request->extendedState()) << "\n"
-             << std::endl;
+            << request->id() << "  DONE"
+            << "  service state: " << serviceState.state2string()
+            << "  number of new/in-progress/finished requests: " << serviceState.numNewRequests
+            << "/" << serviceState.numInProgressRequests
+            << "/" << serviceState.numFinishedRequests
+            << std::endl;
     }
     
     /**
@@ -63,19 +65,19 @@ namespace {
             if      ("SUSPEND" == operation) request = server->suspendWorkerService (
                     worker,
                     [] (rc::ServiceSuspendRequest::pointer request) {
-                        reportServiceStatus(request);
+                        printRequest (request);
                     });
 
             else if ("RESUME"  == operation) request = server->resumeWorkerService (
                     worker,
                     [] (rc::ServiceResumeRequest::pointer request) {
-                        reportServiceStatus(request);
+                        printRequest (request);
                     });
 
             else if ("STATUS"  == operation) request = server->statusOfWorkerService (
                     worker,
                     [] (rc::ServiceStatusRequest::pointer request) {
-                        reportServiceStatus(request);
+                        printRequest (request);
                     });
             else {
                 std::cerr << usage << std::endl;

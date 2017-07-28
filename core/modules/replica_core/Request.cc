@@ -25,6 +25,7 @@
 
 // System headers
 
+#include <stdexcept>
 #include <iostream>
 
 #include <boost/bind.hpp>
@@ -51,21 +52,25 @@ Request::state2string (State state) {
         case IN_PROGRESS: return "IN_PROGRESS";
         case FINISHED:    return "FINISHED";
     }
-    return "";
+    throw std::logic_error("incomplete implementation of method Request::state2string(State)");
 }
 
 std::string
 Request::state2string (ExtendedState state) {
     switch (state) {
-        case NONE:         return "NONE";
-        case SUCCESS:      return "SUCCESS";
-        case BAD:          return "BAD";
-        case CLIENT_ERROR: return "CLIENT_ERROR";
-        case SERVER_ERROR: return "SERVER_ERROR";
-        case EXPIRED:      return "EXPIRED";
-        case CANCELLED:    return "CANCELLED";
+        case NONE:               return "NONE";
+        case SUCCESS:            return "SUCCESS";
+        case CLIENT_ERROR:       return "CLIENT_ERROR";
+        case SERVER_BAD:         return "SERVER_BAD";
+        case SERVER_ERROR:       return "SERVER_ERROR";
+        case SERVER_QUEUED:      return "SERVER_QUEUED";
+        case SERVER_IN_PROGRESS: return "SERVER_IN_PROGRESS";
+        case SERVER_SUSPENDED:   return "SERVER_SUSPENDED";
+        case SERVER_CANCELLED:   return "SERVER_CANCELLED";
+        case EXPIRED:            return "EXPIRED";
+        case CANCELLED:          return "CANCELLED";
     }
-    return "";
+    throw std::logic_error("incomplete implementation of method Request::state2string(ExtendedState)");
 }
 
 std::string
@@ -108,6 +113,8 @@ Request::start () {
 
     assertState(CREATED);
 
+    std::cout << context() << "start()  _requestExpirationIvalSec: " << _requestExpirationIvalSec << std::endl;
+
     if (_requestExpirationIvalSec) {
         _requestExpirationTimer.cancel();
         _requestExpirationTimer.expires_from_now(boost::posix_time::seconds(_requestExpirationIvalSec));
@@ -125,37 +132,61 @@ Request::start () {
 void
 Request::expired (const boost::system::error_code &ec) {
 
-    if (isAborted(ec)) return;
+    // Ignore this event if the timer was aborted
+    if (ec == boost::asio::error::operation_aborted) return;
 
-    // Ignore this event if the request is over
-    
-    //if (_state == State::FINISHED) return;
+    // Also ignore this event if the request is over
+    if (_state == State::FINISHED) return;
 
+    std::cout << context() << "expired()" << std::endl;
 
-    finish(FINISHED, EXPIRED);
+    finish(EXPIRED);
 }
 
 void
 Request::cancel () {
-    finish(FINISHED, CANCELLED);
+
+    std::cout << context() << "cancel()" << std::endl;
+
+    finish(CANCELLED);
 }
 
 void
-Request::finish (State         state,
-                 ExtendedState extendedState) {
-   reset();
-   setState(state, extendedState);
-   endProtocol();
+Request::finish (ExtendedState extendedState) {
+
+    std::cout << context() << "finish()" << std::endl;
+
+    // Check if it's not too late for tis operation
+
+    if (_state == FINISHED) return;
+
+    // Set new state to make sure all event handlers will recognize tis scenario
+    // and avoid making any modifications to the request's state.
+
+    State previouState = _state;    // remember this in case if extra actions will
+                                    // need to be taken later.
+
+    setState(FINISHED, extendedState);
+
+    // Close all sockets if needed
+
+    if (previouState == IN_PROGRESS) {
+        _resolver.cancel();
+        _socket.cancel();
+        _socket.close();
+        _timer.cancel();
+        _requestExpirationTimer.cancel();
+    }
+
+    // This will invoke user-defined notifiers (if any)
+
+    endProtocol();
 }
 
 void
 Request::restart () {
-    reset();
-    resolve();
-}
 
-void
-Request::reset () {
+    std::cout << context() << "restart()" << std::endl;
 
     // Cancel any asynchronous operation(s) if not in the initial state
 
@@ -179,9 +210,14 @@ Request::reset () {
     // Reset the state so that we could begin all over again
 
     setState(CREATED, NONE);
+    
+    resolve();
 }
+
 void
 Request::resolve () {
+
+    std::cout << context() << "resolve()" << std::endl;
 
     boost::asio::ip::tcp::resolver::query query (
         _workerInfoPtr->svcHost(),
@@ -202,6 +238,9 @@ Request::resolve () {
 void
 Request::resolved (const boost::system::error_code &ec,
                               boost::asio::ip::tcp::resolver::iterator iter) {
+
+    std::cout << context() << "resolved()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) restart();
@@ -210,6 +249,8 @@ Request::resolved (const boost::system::error_code &ec,
 
 void
 Request::connect (boost::asio::ip::tcp::resolver::iterator iter) {
+
+    std::cout << context() << "connect()" << std::endl;
 
     boost::asio::async_connect (
         _socket,
@@ -226,6 +267,9 @@ Request::connect (boost::asio::ip::tcp::resolver::iterator iter) {
 void
 Request::connected (const boost::system::error_code &ec,
                     boost::asio::ip::tcp::resolver::iterator iter) {
+
+    std::cout << context() << "connected()" << std::endl;
+
     if (isAborted(ec)) return;
 
     if (ec) restart();
@@ -234,11 +278,9 @@ Request::connected (const boost::system::error_code &ec,
 
 bool
 Request::isAborted (const boost::system::error_code &ec) const {
+
     if (ec == boost::asio::error::operation_aborted) {
-        std::cerr
-            << "Request::[type=" << _type << ",id=" << _id << "]  "
-            << state2string(_state) << "::" << state2string(_extendedState)
-            << "  ** ABORTED **" << std::endl;
+        std::cout << context() << "isAborted()  ** ABORTED **" << std::endl;
         return true;
     }
     return false;
@@ -248,18 +290,14 @@ void
 Request::assertState (State state) const {
     if (state != _state)
         throw std::logic_error (
-            "wrong state " + state2string(state) +
-            " instead of " + state2string(_state));
+            "wrong state " + state2string(state) + " instead of " + state2string(_state));
 }
 
 void
 Request::setState (State         state,
                    ExtendedState extendedState)
 {
-    std::cerr
-        << "Request::[type=" << _type << ",id=" << _id << "]  "
-        << state2string(_state) << "::" << state2string(_extendedState) << "  ->  "
-        << state2string (state) << "::" << state2string (extendedState) << std::endl;
+    std::cout << context() << "setState()  " << state2string(state, extendedState) << std::endl;
 
     _state         = state;
     _extendedState = extendedState;
