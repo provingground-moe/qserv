@@ -33,10 +33,10 @@ namespace {
         const rc::ServiceManagementRequestBase::ServiceState& serviceState = request->getServiceState ();
         std::cout
             << request->id() << "  DONE"
-            << "  service state: " << serviceState.state2string()
-            << "  number of new/in-progress/finished requests: " << serviceState.numNewRequests
-            << "/" << serviceState.numInProgressRequests
-            << "/" << serviceState.numFinishedRequests
+            << "  service: " << serviceState.state2string()
+            << "  new , in-progress , finished: " << serviceState.numNewRequests
+            << " , " << serviceState.numInProgressRequests
+            << " , " << serviceState.numFinishedRequests
             << std::endl;
     }
     

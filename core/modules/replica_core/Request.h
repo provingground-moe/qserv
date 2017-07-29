@@ -30,7 +30,7 @@
 // System headers
 
 #include <chrono>
-#include <memory>
+#include <memory>       // shared_ptr, enable_shared_from_this
 #include <string>
 
 #include <boost/asio.hpp>
@@ -53,7 +53,8 @@ class ProtocolBuffer;
   * Class Request is a base class for a family of requests within
   * the master server.
   */
-class Request {
+class Request
+    :   public std::enable_shared_from_this<Request>  {
 
 public:
 
@@ -173,7 +174,18 @@ public:
      */
     void cancel ();
 
+    /// Return the context string
+    std::string context () const {
+        return id() + "  " + type() + "  " + state2string(state(), extendedState()) + "  ";
+    }
+
 protected:
+
+    /// Return shared pointer of the desired subclass (no dynamic type checking)
+    template <class T>
+    std::shared_ptr<T> shared_from_base () {
+        return std::static_pointer_cast<T>(shared_from_this());
+    }
 
     /**
      * Generate a unique identifier of a request which can also be persisted.
@@ -188,20 +200,10 @@ protected:
      * @param serviceProvider - the pointer to the provider of serviceses
      * @param id              - a unique identifier of the request
      */
-    Request (ServiceProvider::pointer serviceProvider,
-             const std::string        &type,
-             const std::string        &worker,
-             boost::asio::io_service  &io_service);
-    
-    /**
-     * Return a down-cust pointer onto an object of the final class.
-     * This pointer is used by an implementation of this class for registering
-     * asynchronous callback handlers to guarantee that the object always
-     * oulive the asynchronous operations.
-     *
-     * The method is supposed to be implemented by final subclasses.
-     */
-    virtual std::shared_ptr<Request> final_shared_from_this ()=0;
+    Request (const ServiceProvider::pointer &serviceProvider,
+             const std::string              &type,
+             const std::string              &worker,
+             boost::asio::io_service        &io_service);
 
     /**
      * Reset the state (if needed) and begin processing the request.
@@ -305,11 +307,6 @@ protected:
      */
     void setState (State         state,
                    ExtendedState extendedStat);
-
-    /// Return the context string
-    std::string context () const {
-        return id() + "  " + type() + "  " + state2string(state(), extendedState()) + "  ";
-    }
 
 protected:
 

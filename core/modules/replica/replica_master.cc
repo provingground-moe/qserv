@@ -98,11 +98,8 @@ namespace {
                         _destinationWorker,
                         [] (rc::ReplicationRequest::pointer request) {
                             std::cout
-                                << "<REPLICATE>\n"
-                                << "    id                   : " << request->id() << "\n"
-                                << "    status               : " << request->state2string(request->state()) << "::"
-                                                                 << request->state2string(request->extendedState()) << "\n"
-                                << "    chunk                : " << request->chunk() << std::endl;
+                                << request->context() << "** DONE **"
+                                << "  chunk: " << request->chunk() << std::endl;
                         }
                     );
                 requests.push_back(request);
@@ -128,11 +125,9 @@ namespace {
                         request->id(),
                         [] (rc::StatusRequest::pointer request) {
                             std::cout
-                                << "<STATUS>\n"
-                                << "    id                   : " << request->id() << "\n"
-                                << "    status               : " << request->state2string(request->state()) << "::"
-                                                                 << request->state2string(request->extendedState()) << "\n"
-                                << "    replicationRequestId : " << request->replicationRequestId() << std::endl;
+                                << request->context() << "** DONE **"
+                                << "  replicationRequestId: " << request->replicationRequestId()
+                                << std::endl;
                         }
                     )
                 );
@@ -158,11 +153,8 @@ namespace {
                         request->id(),
                         [] (rc::StopRequest::pointer request) {
                             std::cout
-                                << "<STOP> finished\n"
-                                << "    id                   : " << request->id() << "\n"
-                                << "    status               : " << request->state2string(request->state()) << "::"
-                                                                 << request->state2string(request->extendedState()) << "\n"
-                                << "    replicationRequestId : " << request->replicationRequestId()
+                                << request->context() << "** DONE **"
+                                << "  replicationRequestId: " << request->replicationRequestId()
                                 << std::endl;
                         }
                     )

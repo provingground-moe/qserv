@@ -30,8 +30,7 @@
 // System headers
 
 #include <functional>   // std::function
-#include <iostream>
-#include <memory>       // shared_ptr, enable_shared_from_this
+#include <memory>       // shared_ptr
 #include <string>
 
 // Qserv headers
@@ -50,8 +49,7 @@ namespace replica_core {
   * of on-going replications.
   */
 class StatusRequest
-    :   public Request,
-        public std::enable_shared_from_this<StatusRequest>  {
+    :   public Request {
 
 public:
 
@@ -94,28 +92,20 @@ private:
      * @param onFinish             - an optional callback function to be called upon a completion of
      *                               the request.
      */
-    static pointer create (ServiceProvider::pointer serviceProvider,
-                           const std::string        &worker,
-                           boost::asio::io_service  &io_service,
-                           const std::string        &replicationRequestId,
-                           callback_type            onFinish);
+    static pointer create (const ServiceProvider::pointer &serviceProvider,
+                           const std::string              &worker,
+                           boost::asio::io_service        &io_service,
+                           const std::string              &replicationRequestId,
+                           callback_type                   onFinish);
 
     /**
      * Construct the request with the pointer to the services provider.
      */
-    StatusRequest (ServiceProvider::pointer serviceProvider,
-                   const std::string        &worker,
-                   boost::asio::io_service  &io_service,
-                   const std::string        &replicationRequestId,
-                   callback_type            onFinish);
-
-    /**
-     * Return a down-cust pointer onto an object of the final class.
-     * This pointer is used by an implementation of thebase class for registering
-     * asynchronous callback handlers to guarantee that the object always
-     * oulive the asynchronous operations.
-     */
-    std::shared_ptr<Request> final_shared_from_this () final;
+    StatusRequest (const ServiceProvider::pointer &serviceProvider,
+                   const std::string              &worker,
+                   boost::asio::io_service        &io_service,
+                   const std::string              &replicationRequestId,
+                   callback_type                   onFinish);
 
     /**
       * This method is called when a connection is established and
