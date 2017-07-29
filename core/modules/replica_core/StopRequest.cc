@@ -28,6 +28,7 @@
 #include <arpa/inet.h>  // htonl, ntohl
 
 #include <chrono>
+#include <iostream>
 #include <stdexcept>
 
 #include <boost/bind.hpp>
@@ -44,13 +45,13 @@ namespace qserv {
 namespace replica_core {
 
 StopRequest::pointer
-StopRequest::create (ServiceProvider::pointer serviceProvider,
-                     const std::string        &worker,
-                     boost::asio::io_service  &io_service,
-                     const std::string        &replicationRequestId,
-                     callback_type            onFinish) {
+StopRequest::create (const ServiceProvider::pointer &serviceProvider,
+                     const std::string              &worker,
+                     boost::asio::io_service        &io_service,
+                     const std::string              &replicationRequestId,
+                     callback_type                   onFinish) {
 
-    return pointer (
+    return StopRequest::pointer (
         new StopRequest (
             serviceProvider,
             worker,
@@ -59,11 +60,11 @@ StopRequest::create (ServiceProvider::pointer serviceProvider,
             onFinish));
 }
 
-StopRequest::StopRequest (ServiceProvider::pointer serviceProvider,
-                          const std::string        &workerr,
-                          boost::asio::io_service  &io_service,
-                          const std::string        &replicationRequestId,
-                          callback_type            onFinish)
+StopRequest::StopRequest (const ServiceProvider::pointer &serviceProvider,
+                          const std::string              &workerr,
+                          boost::asio::io_service        &io_service,
+                          const std::string              &replicationRequestId,
+                          callback_type                   onFinish)
     :   Request(serviceProvider,
                 "STOP",
                 workerr,
@@ -75,11 +76,6 @@ StopRequest::StopRequest (ServiceProvider::pointer serviceProvider,
 
 StopRequest::~StopRequest ()
 {
-}
-
-std::shared_ptr<Request>
-StopRequest::final_shared_from_this () {
-    return shared_from_this () ;
 }
 
 void
@@ -112,7 +108,7 @@ StopRequest::beginProtocol () {
         ),
         boost::bind (
             &StopRequest::requestSent,
-            shared_from_this(),
+            shared_from_base<StopRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -157,7 +153,7 @@ StopRequest::receiveResponse () {
         boost::asio::transfer_at_least(bytes),
         boost::bind (
             &StopRequest::responseReceived,
-            shared_from_this(),
+            shared_from_base<StopRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -253,7 +249,7 @@ StopRequest::endProtocol () {
     std::cout << context() << "endProtocol()" << std::endl;
 
     if (_onFinish != nullptr) {
-        _onFinish(shared_from_this());
+        _onFinish(shared_from_base<StopRequest>());
     }
 }
 

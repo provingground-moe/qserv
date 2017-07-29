@@ -35,8 +35,7 @@
 // System headers
 
 #include <functional>   // std::function
-#include <iostream>
-#include <memory>       // shared_ptr, enable_shared_from_this
+#include <memory>       // shared_ptr
 #include <string>
 
 // Qserv headers
@@ -118,7 +117,7 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      */
-    ServiceManagementRequestBase (ServiceProvider::pointer                            serviceProvider,
+    ServiceManagementRequestBase (const ServiceProvider::pointer                     &serviceProvider,
                                   const char                                         *requestTypeName,
                                   const std::string                                  &worker,
                                   boost::asio::io_service                            &io_service,
@@ -165,8 +164,7 @@ private:
   */
 template <typename POLICY>
 class ServiceManagementRequest
-    :   public ServiceManagementRequestBase,
-        public std::enable_shared_from_this<ServiceManagementRequest<POLICY>>  {
+    :   public ServiceManagementRequestBase {
 
 public:
 
@@ -205,11 +203,12 @@ private:
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      */
-    static pointer create (ServiceProvider::pointer  serviceProvider,
-                           const std::string        &worker,
-                           boost::asio::io_service  &io_service,
-                           callback_type             onFinish) {
-        return pointer (
+    static pointer create (const ServiceProvider::pointer  &serviceProvider,
+                           const std::string               &worker,
+                           boost::asio::io_service         &io_service,
+                           callback_type                    onFinish) {
+
+        return ServiceManagementRequest<POLICY>::pointer (
             new ServiceManagementRequest<POLICY> (
                 serviceProvider,
                 POLICY::requestTypeName(),
@@ -222,13 +221,12 @@ private:
     /**
      * Construct the request
      */
-    ServiceManagementRequest (ServiceProvider::pointer  serviceProvider,
-                              const char               *requestTypeName,
-                              const std::string        &worker,
-                              boost::asio::io_service  &io_service,
-                              lsst::qserv::proto::ReplicationRequestHeader::Type
-                                                        requestType,
-                              callback_type             onFinish)
+    ServiceManagementRequest (const ServiceProvider::pointer                     &serviceProvider,
+                              const char                                         *requestTypeName,
+                              const std::string                                  &worker,
+                              boost::asio::io_service                            &io_service,
+                              lsst::qserv::proto::ReplicationRequestHeader::Type  requestType,
+                              callback_type                                       onFinish)
 
         :   ServiceManagementRequestBase (serviceProvider,
                                           requestTypeName,
@@ -239,17 +237,6 @@ private:
     {}
 
     /**
-     * Return a down-cust pointer onto an object of the final class.
-     * This pointer is used by an implementation of the base class for registering
-     * asynchronous callback handlers to guarantee that the object always
-     * oulive the asynchronous operations.
-     */
-    std::shared_ptr<Request> final_shared_from_this () final {
-        pointer self = ServiceManagementRequest<POLICY>::shared_from_this();
-        return self ;
-    }
-
-    /**
      * Notifying a party which initiated the request.
      *
      * This method implements the corresponing virtual method defined
@@ -257,7 +244,7 @@ private:
      */
     void endProtocol () final {
         if (_onFinish != nullptr) {
-            pointer self = ServiceManagementRequest<POLICY>::shared_from_this();
+            ServiceManagementRequest<POLICY>::pointer self = shared_from_base<ServiceManagementRequest<POLICY>>();
             _onFinish(self);
         }
     }

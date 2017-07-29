@@ -28,6 +28,7 @@
 #include <arpa/inet.h>  // htonl, ntohl
 
 #include <chrono>
+#include <iostream>
 #include <stdexcept>
 
 #include <boost/bind.hpp>
@@ -45,15 +46,15 @@ namespace qserv {
 namespace replica_core {
 
 ReplicationRequest::pointer
-ReplicationRequest::create (ServiceProvider::pointer serviceProvider,
-                            const std::string        &database,
-                            unsigned int             chunk,
-                            const std::string        &sourceWorker,
-                            const std::string        &destinationWorker,
-                            boost::asio::io_service  &io_service,
-                            callback_type            onFinish) {
+ReplicationRequest::create (const ServiceProvider::pointer &serviceProvider,
+                            const std::string              &database,
+                            unsigned int                    chunk,
+                            const std::string              &sourceWorker,
+                            const std::string              &destinationWorker,
+                            boost::asio::io_service        &io_service,
+                            callback_type                   onFinish) {
 
-    return pointer (
+    return ReplicationRequest::pointer (
         new ReplicationRequest (
             serviceProvider,
             database,
@@ -64,13 +65,13 @@ ReplicationRequest::create (ServiceProvider::pointer serviceProvider,
             onFinish));
 }
 
-ReplicationRequest::ReplicationRequest (ServiceProvider::pointer serviceProvider,
-                                        const std::string        &database,
-                                        unsigned int             chunk,
-                                        const std::string        &sourceWorker,
-                                        const std::string        &destinationWorker,
-                                        boost::asio::io_service  &io_service,
-                                        callback_type            onFinish)
+ReplicationRequest::ReplicationRequest (const ServiceProvider::pointer &serviceProvider,
+                                        const std::string              &database,
+                                        unsigned int                    chunk,
+                                        const std::string              &sourceWorker,
+                                        const std::string              &destinationWorker,
+                                        boost::asio::io_service        &io_service,
+                                        callback_type                   onFinish)
     :   Request(serviceProvider,
                 "REPLICATE",
                 destinationWorker,
@@ -85,11 +86,6 @@ ReplicationRequest::ReplicationRequest (ServiceProvider::pointer serviceProvider
 
 ReplicationRequest::~ReplicationRequest ()
 {
-}
-
-std::shared_ptr<Request>
-ReplicationRequest::final_shared_from_this () {
-    return shared_from_this () ;
 }
 
 void
@@ -124,7 +120,7 @@ ReplicationRequest::beginProtocol () {
         ),
         boost::bind (
             &ReplicationRequest::requestSent,
-            shared_from_this(),
+            shared_from_base<ReplicationRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -169,7 +165,7 @@ ReplicationRequest::receiveResponse () {
         boost::asio::transfer_at_least(bytes),
         boost::bind (
             &ReplicationRequest::responseReceived,
-            shared_from_this(),
+            shared_from_base<ReplicationRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -230,7 +226,7 @@ ReplicationRequest::wait () {
     _timer.async_wait (
         boost::bind (
             &ReplicationRequest::awaken,
-            shared_from_this(),
+            shared_from_base<ReplicationRequest>(),
             boost::asio::placeholders::error
         )
     );
@@ -276,7 +272,7 @@ ReplicationRequest::sendStatus () {
         ),
         boost::bind (
             &ReplicationRequest::statusSent,
-            shared_from_this(),
+            shared_from_base<ReplicationRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -321,7 +317,7 @@ ReplicationRequest::receiveStatus () {
         boost::asio::transfer_at_least(bytes),
         boost::bind (
             &ReplicationRequest::statusReceived,
-            shared_from_this(),
+            shared_from_base<ReplicationRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -415,7 +411,7 @@ ReplicationRequest::endProtocol () {
     std::cout << context() << "endProtocol()" << std::endl;
 
     if (_onFinish != nullptr) {
-        _onFinish(shared_from_this());
+        _onFinish(shared_from_base<ReplicationRequest>());
     }
 }
 

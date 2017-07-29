@@ -79,10 +79,10 @@ Request::generateId () {
     return boost::uuids::to_string(id);
 }
 
-Request::Request (ServiceProvider::pointer serviceProvider,
-                  const std::string        &type,
-                  const std::string        &worker,
-                  boost::asio::io_service  &io_service)
+Request::Request (const ServiceProvider::pointer &serviceProvider,
+                  const std::string              &type,
+                  const std::string              &worker,
+                  boost::asio::io_service        &io_service)
 
     :   _serviceProvider (serviceProvider),
 
@@ -121,7 +121,7 @@ Request::start () {
         _requestExpirationTimer.async_wait (
             boost::bind (
                 &Request::expired,
-                final_shared_from_this(),
+                shared_from_this(),
                 boost::asio::placeholders::error
             )
         );
@@ -227,7 +227,7 @@ Request::resolve () {
         query,
         boost::bind (
             &Request::resolved,
-            final_shared_from_this(),
+            shared_from_this(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::iterator
         )
@@ -257,7 +257,7 @@ Request::connect (boost::asio::ip::tcp::resolver::iterator iter) {
         iter,
         boost::bind (
             &Request::connected,
-            final_shared_from_this(),
+            shared_from_this(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::iterator
         )

@@ -28,6 +28,7 @@
 #include <arpa/inet.h>  // htonl, ntohl
 
 #include <chrono>
+#include <iostream>
 #include <stdexcept>
 
 #include <boost/bind.hpp>
@@ -44,13 +45,13 @@ namespace qserv {
 namespace replica_core {
 
 StatusRequest::pointer
-StatusRequest::create (ServiceProvider::pointer serviceProvider,
-                       const std::string        &worker,
-                       boost::asio::io_service  &io_service,
-                       const std::string        &replicationRequestId,
-                       callback_type            onFinish) {
+StatusRequest::create (const ServiceProvider::pointer &serviceProvider,
+                       const std::string              &worker,
+                       boost::asio::io_service        &io_service,
+                       const std::string              &replicationRequestId,
+                       callback_type                   onFinish) {
 
-    return pointer (
+    return StatusRequest::pointer (
         new StatusRequest (
             serviceProvider,
             worker,
@@ -59,11 +60,11 @@ StatusRequest::create (ServiceProvider::pointer serviceProvider,
             onFinish));
 }
 
-StatusRequest::StatusRequest (ServiceProvider::pointer serviceProvider,
-                              const std::string        &worker,
-                              boost::asio::io_service  &io_service,
-                              const std::string        &replicationRequestId,
-                              callback_type            onFinish)
+StatusRequest::StatusRequest (const ServiceProvider::pointer &serviceProvider,
+                              const std::string              &worker,
+                              boost::asio::io_service        &io_service,
+                              const std::string              &replicationRequestId,
+                              callback_type                   onFinish)
     :   Request(serviceProvider,
                 "STATUS",
                 worker,
@@ -75,11 +76,6 @@ StatusRequest::StatusRequest (ServiceProvider::pointer serviceProvider,
 
 StatusRequest::~StatusRequest ()
 {}
-
-std::shared_ptr<Request>
-StatusRequest::final_shared_from_this () {
-    return shared_from_this () ;
-}
 
 void
 StatusRequest::beginProtocol () {
@@ -111,7 +107,7 @@ StatusRequest::beginProtocol () {
         ),
         boost::bind (
             &StatusRequest::requestSent,
-            shared_from_this(),
+            shared_from_base<StatusRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -156,7 +152,7 @@ StatusRequest::receiveResponse () {
         boost::asio::transfer_at_least(bytes),
         boost::bind (
             &StatusRequest::responseReceived,
-            shared_from_this(),
+            shared_from_base<StatusRequest>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -252,7 +248,7 @@ StatusRequest::endProtocol () {
     std::cout << context() << "endProtocol()" << std::endl;
 
     if (_onFinish != nullptr) {
-        _onFinish(shared_from_this());
+        _onFinish(shared_from_base<StatusRequest>());
     }
 }
 

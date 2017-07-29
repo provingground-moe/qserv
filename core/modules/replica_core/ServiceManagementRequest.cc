@@ -28,6 +28,7 @@
 #include <arpa/inet.h>  // htonl, ntohl
 
 #include <chrono>
+#include <iostream>
 #include <stdexcept>
 
 #include <boost/bind.hpp>
@@ -69,7 +70,7 @@ ServiceManagementRequestBase::getServiceState () const {
     
 ServiceManagementRequestBase::ServiceManagementRequestBase (
 
-        ServiceProvider::pointer               serviceProvider,
+        const ServiceProvider::pointer        &serviceProvider,
         const char                            *requestTypeName,
         const std::string                     &worker,
         boost::asio::io_service               &io_service,
@@ -112,7 +113,7 @@ ServiceManagementRequestBase::beginProtocol () {
         ),
         boost::bind (
             &ServiceManagementRequestBase::requestSent,
-            std::dynamic_pointer_cast<ServiceManagementRequestBase>(final_shared_from_this()),
+            shared_from_base<ServiceManagementRequestBase>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -157,7 +158,7 @@ ServiceManagementRequestBase::receiveResponse () {
         boost::asio::transfer_at_least(bytes),
         boost::bind (
             &ServiceManagementRequestBase::responseReceived,
-            std::dynamic_pointer_cast<ServiceManagementRequestBase>(final_shared_from_this()),
+            shared_from_base<ServiceManagementRequestBase>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
