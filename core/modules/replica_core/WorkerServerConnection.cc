@@ -39,14 +39,17 @@ namespace {
     
 typedef std::shared_ptr<lsst::qserv::replica_core::ProtocolBuffer> ProtocolBufferPtr;
 
+/// The context for diagnostic & debug printouts
+const std::string context = "CONNECTION  ";
+
 bool isErrorCode (boost::system::error_code ec,
-                  const std::string         &context) {
+                  const std::string         &scope) {
 
     if (ec) {
         if (ec == boost::asio::error::eof)
-            std::cout << context << ": connection closed by peer" << std::endl;
+            std::cout << context << scope << "  ** closed **" << std::endl;
         else
-            std::cout << context << ": failed with error code " << ec << std::endl;
+            std::cout << context << scope << "  ** failed: " << ec << " **" << std::endl;
         return true;
     }
     return false;
@@ -69,7 +72,7 @@ bool readIntoBuffer (boost::asio::ip::tcp::socket &socket,
         boost::asio::transfer_at_least(bytes),
         ec
     );
-    return ! ::isErrorCode (ec, "WorkerServerConnection::readIntoBuffer");
+    return ! ::isErrorCode (ec, "readIntoBuffer");
 }
 
 template <class T>
@@ -173,6 +176,8 @@ WorkerServerConnection::beginProtocol () {
 void
 WorkerServerConnection::receive () {
 
+    std::cout << context << "receive" << std::endl;
+
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
     //
@@ -205,7 +210,9 @@ void
 WorkerServerConnection::received (const boost::system::error_code &ec,
                                   size_t                           bytes_transferred) {
 
-    if ( ::isErrorCode (ec, "WorkerServerConnection::received")) return;
+    std::cout << context << "received" << std::endl;
+
+    if ( ::isErrorCode (ec, "received")) return;
 
     // Now read the request header
 
@@ -318,6 +325,8 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
 void
 WorkerServerConnection::send () {
 
+    std::cout << context << "send" << std::endl;
+
     boost::asio::async_write (
         _socket,
         boost::asio::buffer (
@@ -337,7 +346,9 @@ void
 WorkerServerConnection::sent (const boost::system::error_code &ec,
                               size_t                           bytes_transferred) {
 
-    if ( ::isErrorCode (ec, "WorkerServerConnection::sent")) return;
+    std::cout << context << "sent" << std::endl;
+
+    if ( ::isErrorCode (ec, "sent")) return;
 
     // Go wait for another request
 

@@ -107,6 +107,9 @@ private:
     void handleAccept (const WorkerServerConnection::pointer &connection,
                        const boost::system::error_code       &ec);
 
+    /// Return the context string
+    std::string context () const { return "SERVER  "; }
+
 private:
 
     // Parameters of the object

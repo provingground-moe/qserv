@@ -57,7 +57,12 @@ WorkerServer::WorkerServer (const ServiceProvider::pointer &serviceProvider,
                 _serviceProvider->config()->workerSvcPort()
             )
         )
-{}
+{
+    // Set the socket reuse option to allow recycling ports after catastrifc
+    // failures.
+
+    _acceptor.set_option(boost::asio::socket_base::reuse_address(true));
+}
 
 void
 WorkerServer::run () {
@@ -109,7 +114,7 @@ WorkerServer::handleAccept (const WorkerServerConnection::pointer &connection,
         //       mechanism since its' safe to ignore problems with
         //       incoming connections due a lack of side effects.
 
-        std::cerr << "WorkerServer::handleAccept err:" << err << std::endl;
+        std::cerr << context() << "handleAccept  err:" << err << std::endl;
     }
     beginAccept();
 }

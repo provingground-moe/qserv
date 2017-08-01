@@ -79,6 +79,9 @@ public:
     /// Destructor
     virtual ~WorkerProcessorThread ();
 
+    /// Return an ientifier of this thread object
+    unsigned int id () const { return _id; }
+
     /// Return true if the processing thread is still running
     bool isRunning () const;
 
@@ -104,14 +107,19 @@ public:
      */
     void cancel ();
 
+    /// Return the context string
+    std::string context () const { return "THREAD [" + std::to_string(_id) + "]  "; }
+
 private:
 
     /**
      * The constructor of the class.
      *
      * @param processor - a pointer to the repository of requests to be processed
+     * @param id - a unique identifier of this object
      */
-    explicit WorkerProcessorThread (const WorkerProcessor_pointer &processor);
+    explicit WorkerProcessorThread (const WorkerProcessor_pointer &processor,
+                                    unsigned int                   id);
 
     /**
      * Event handler called by the thread when it's about to stop
@@ -122,12 +130,15 @@ private:
      * Event handler called by the thread when a request is cancelled
      */
     void cancelled (const WorkerReplicationRequest::pointer &request);
-
+ 
 private:
 
     /// The processor
     WorkerProcessor_pointer _processor;
-    
+
+    /// The identifier of this thread object   
+    unsigned int _id;
+
     /// The processing thread is created on demand when calling method run()
     std::shared_ptr<std::thread> _thread;
     

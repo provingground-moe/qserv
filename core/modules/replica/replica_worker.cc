@@ -31,12 +31,10 @@ namespace {
             );
             rc::BlockPost blockPost (1000, 5000);
             while (true) {
-                std::cout
-                    << "heartbeat of " << blockPost.wait() << " milliseconds"
-                    << "  server.use_count(): " << server.use_count()
-                    << "  processor.use_count(): " << processor.use_count()
-                    << "  processor state: " << rc::WorkerProcessor::state2string(processor->state()) << std::endl;
-
+                blockPost.wait();
+                std::cout << "HEARTBEAT"
+                    << "  processor: " << rc::WorkerProcessor::state2string(processor->state())
+                    << std::endl;
             }
             requestsAcceptorThread.join();
 
