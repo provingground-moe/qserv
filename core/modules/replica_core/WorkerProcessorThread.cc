@@ -39,16 +39,19 @@
 namespace lsst {
 namespace qserv {
 namespace replica_core {
-
+    
 WorkerProcessorThread::pointer
 WorkerProcessorThread::create (const WorkerProcessor_pointer &processor) {
-    return pointer (
-        new WorkerProcessorThread (processor)
+    static unsigned int id = 0;
+    return WorkerProcessorThread::pointer (
+        new WorkerProcessorThread (processor, id++)
     );
 }
 
-WorkerProcessorThread::WorkerProcessorThread (const WorkerProcessor_pointer &processor)
+WorkerProcessorThread::WorkerProcessorThread (const WorkerProcessor_pointer &processor,
+                                              unsigned int                   id)
     :   _processor (processor),
+        _id        (id),
         _stop      (false),
         _cancel    (false)
 
@@ -56,7 +59,6 @@ WorkerProcessorThread::WorkerProcessorThread (const WorkerProcessor_pointer &pro
 
 WorkerProcessorThread::~WorkerProcessorThread () {
 }
-
 
 bool
 WorkerProcessorThread::isRunning () const {
@@ -78,7 +80,7 @@ WorkerProcessorThread::run () {
         BlockPost            blockPost(1000, 10000);
         SuccessRateGenerator successRateGenerator(0.9);
 
-        std::cout << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "] begin" << std::endl;
+        std::cout << self->context() << "start" << std::endl;
 
         while (!self->_stop) {
             
@@ -99,11 +101,11 @@ WorkerProcessorThread::run () {
             }
             if (request) {
 
-                std::cout
-                    << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "]"
-                    << " begin  processing id=" << request->id()
-                    << ", database=" << request->database()
-                    << ", chunk=" << request->chunk() << std::endl;
+                std::cout << self->context() << "begin processing"
+                    << "  id: " << request->id()
+                    << "  db: " << request->database()
+                    << "  chunk: " << request->chunk()
+                    << std::endl;
 
                 // Simulate processing the request
 
@@ -113,11 +115,11 @@ WorkerProcessorThread::run () {
                 // before finishing this thread.
 
                 if (self->_cancel) {
-                    std::cout
-                        << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "]"
-                        << " cancel processing id=" << request->id()
-                        << ", database=" << request->database()
-                        << ", chunk=" << request->chunk() << std::endl;
+                    std::cout << self->context() << "cancel processing"
+                        << "  id: " << request->id()
+                        << "  db: " << request->database()
+                        << "  chunk: " << request->chunk()
+                        << std::endl;
 
                     self->cancelled(request);
                     continue;
@@ -129,19 +131,19 @@ WorkerProcessorThread::run () {
                     successRateGenerator.success() ? WorkerReplicationRequest::CompletionStatus::SUCCEEDED :
                                                      WorkerReplicationRequest::CompletionStatus::FAILED;
 
-                std::cout
-                    << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "]"
-                    << " end    processing id=" << request->id()
-                    << ", database=" << request->database()
-                    << ", chunk=" << request->chunk()
-                    << ", completionStatus=" << WorkerReplicationRequest::status2string(completionStatus) << std::endl;
+                std::cout << self->context() << "finish processing"
+                    << "  id: " << request->id()
+                    << "  db: " << request->database()
+                    << "  chunk: " << request->chunk()
+                    << "  status: " << WorkerReplicationRequest::status2string(completionStatus)
+                    << std::endl;
 
                 self->_processor->processingFinished (
                     request,
                     completionStatus);
             }
         }
-        std::cout << "WorkerProcessorThread::run [" << std::this_thread::get_id() << "] end" << std::endl;
+        std::cout << self->context() << "stop" << std::endl;
 
         self->stopped();
     });

@@ -26,12 +26,14 @@
 
 // System headers
 
-#include <chrono>
+#include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 
 // Qserv headers
 
+#include "replica_core/BlockPost.h"
 
 // This macro to appear witin each block which requires thread safety
 
@@ -50,16 +52,16 @@ WorkerProcessor::state2string (State state) {
         case STATE_IS_STOPPING: return "STATE_IS_STOPPING";
         case STATE_IS_STOPPED:  return "STATE_IS_STOPPED";
     }
-    return "";
+    throw std::logic_error("unhandled state " + std::to_string(state) + " in WorkerProcessor::state2string()");
 }
 
 WorkerProcessor::pointer
-WorkerProcessor::create (ServiceProvider::pointer serviceProvider) {
+WorkerProcessor::create (const ServiceProvider::pointer &serviceProvider) {
     return pointer (
         new WorkerProcessor (serviceProvider));
 }
 
-WorkerProcessor::WorkerProcessor (ServiceProvider::pointer serviceProvider)
+WorkerProcessor::WorkerProcessor (const ServiceProvider::pointer &serviceProvider)
     :   _serviceProvider (serviceProvider),
         _state           (State::STATE_IS_STOPPED) {
 }
@@ -71,16 +73,14 @@ WorkerProcessor::~WorkerProcessor () {
 void
 WorkerProcessor::run () {
 
-    std::cout << "WorkerProcessor::run" << std::endl;
+    std::cout << context() << "run" << std::endl;
     
     THREAD_SAFE_BLOCK {
-
-        std::cout << "WorkerProcessor::run::t-safe" << std::endl;
 
         if (_state == State::STATE_IS_STOPPED) {
 
             const size_t numThreads = _serviceProvider->config()->workerNumProcessingThreads();
-            if (!numThreads) throw new std::out_of_range("the number of procesisng threads can't be 0");
+            if (!numThreads) throw std::out_of_range("the number of procesisng threads can't be 0");
         
             // Create threads if needed
         
@@ -104,11 +104,9 @@ WorkerProcessor::run () {
 void
 WorkerProcessor::stop () {
 
-    std::cout << "WorkerProcessor::stop" << std::endl;
+    std::cout << context() << "stop" << std::endl;
     
     THREAD_SAFE_BLOCK {
-
-        std::cout << "WorkerProcessor::stop::t-safe" << std::endl;
 
         if (_state == State::STATE_IS_RUNNING) {
             
@@ -129,16 +127,15 @@ WorkerProcessor::stop () {
 
 void
 WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate &request,
-                                        proto::ReplicationResponseReplicate &response) {
+                                        proto::ReplicationResponseReplicate      &response) {
 
-    std::cout << "WorkerProcessor::enqueueForReplication" << std::endl;
+    std::cout << context() << "enqueueForReplication"
+        << "  id: "    << request.id()
+        << "  db: "    << request.database()
+        << "  chunk: " << request.chunk()
+        << std::endl;
 
     THREAD_SAFE_BLOCK {
-
-        std::cout << "WorkerProcessor::enqueueForReplication::t-safe "
-                  << " id="       << request.id()       << ","
-                  << " database=" << request.database() << ","
-                  << " chunk="    << request.chunk()    << std::endl;
     
 
         // TODO: run the sanity check to ensure no such request is found in any
@@ -164,19 +161,68 @@ void
 WorkerProcessor::dequeueOrCancel (const proto::ReplicationRequestStop &request,
                                   proto::ReplicationResponseStop      &response) {
 
-    std::cout << "WorkerProcessor::dequeueOrCancel" << std::endl;
+    std::cout << context() << "dequeueOrCancel"
+        << "  id: " << request.id()
+        << std::endl;
 
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::dequeueOrCancel::t-safe "
-                  << " id=" << request.id() <<  std::endl;
-    
-        // TODO: search for a request with this identifier in all queues.
-        // Then take proper actions depending on a queue:
-        // - just remove it fom the new requests queue
-        // - find a processing thread which is processing request and tell it to cancel processing the request
-        // - if it's already complete then return teh completion status
+        const std::string id = request.id(); 
+     
+         // Still waiting in the queue?
  
+        for (auto const &ptr : _newRequests) {
+            if (ptr->id() == id) {
+                _newRequests.remove(id);
+                response.set_status(proto::ReplicationStatus::CANCELLED);
+                return;
+            }
+        }
+
+        // Is it already being processed?
+
+        for (auto const &ptr : _inProgressRequests) {
+            if (ptr->id() == id) {
+
+                // Go find a processing thread which is working on the request
+                // and tell it to cancel processing the request. A client is expected
+                // to come back and check the thread status later.
+
+                WorkerProcessorThread::pointer processorThread = ptr->processorThread();
+                processorThread->cancel();
+
+                response.set_status(proto::ReplicationStatus::IN_PROGRESS);
+                return;
+            }
+        }
+
+        // Has it finished?
+
+        for (auto &ptr : _finishedRequests) {
+            if (ptr->id() == id) {
+
+                // There is nothing else we can do here other than just
+                // reporting the completion status of the request. It's up to a client
+                // to figure out what to do about this situation.
+
+                switch (ptr->status()) {
+                    case WorkerReplicationRequest::CompletionStatus::SUCCEEDED:
+                        response.set_status(proto::ReplicationStatus::SUCCESS);
+                        return;
+                    case WorkerReplicationRequest::CompletionStatus::FAILED:
+                        response.set_status(proto::ReplicationStatus::FAILED);
+                        return;
+                    default:
+                        break;
+                }
+                throw std::logic_error (
+                    "unexpected request status " + WorkerReplicationRequest::status2string(ptr->status()) +
+                    " at WorkerProcessor::checkStatus.");
+            }
+        }
+
+        // Sorry, no such request found!
+
         response.set_status (proto::ReplicationStatus::BAD);
     }
 }
@@ -185,17 +231,55 @@ void
 WorkerProcessor::checkStatus (const proto::ReplicationRequestStatus &request,
                               proto::ReplicationResponseStatus      &response) {
 
-    std::cout << "WorkerProcessor::checkStatus" << std::endl;
+    std::cout << context() << "checkStatus"
+        << "  id: " << request.id()
+        << std::endl;
 
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::checkStatus::t-safe "
-                  << " id=" << request.id() << std::endl;
+        const std::string id = request.id(); 
 
-        // TODO: search for a request with this identifier in all queues.
-        // Then return its status.
+        // Still waiting in the queue?
+ 
+        for (auto const &ptr : _newRequests) {
+            if (ptr->id() == id) {
+                response.set_status(proto::ReplicationStatus::QUEUED);
+                return;
+            }
+        }
 
-        response.set_status (proto::ReplicationStatus::SUCCESS);
+        // Is it already being processed?
+
+        for (auto const &ptr : _inProgressRequests) {
+            if (ptr->id() == id) {
+                response.set_status(proto::ReplicationStatus::IN_PROGRESS);
+                return;
+            }
+        }
+
+        // Has it finished?
+
+        for (auto &ptr : _finishedRequests) {
+            if (ptr->id() == id) {
+                switch (ptr->status()) {
+                    case WorkerReplicationRequest::CompletionStatus::SUCCEEDED:
+                        response.set_status(proto::ReplicationStatus::SUCCESS);
+                        return;
+                    case WorkerReplicationRequest::CompletionStatus::FAILED:
+                        response.set_status(proto::ReplicationStatus::FAILED);
+                        return;
+                    default:
+                        break;
+                }
+                throw std::logic_error (
+                    "unexpected request status " + WorkerReplicationRequest::status2string(ptr->status()) +
+                    " at WorkerProcessor::checkStatus.");
+            }
+        }
+
+        // Sorry, no such request found!
+
+        response.set_status (proto::ReplicationStatus::BAD);
     }
 }
 
@@ -204,45 +288,89 @@ WorkerReplicationRequest::pointer
 WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &processorThread,
                                          unsigned int                          timeoutMilliseconds) {
 
-    std::cout << "WorkerProcessor::fetchNextForProcessing" <<  std::endl;
+    std::cout << context() << "fetchNextForProcessing"
+        << "  thread: " << processorThread->id()
+        << "  timeout: " << timeoutMilliseconds
+        << std::endl;
 
-    // Avoid this because the metod will be blocked for the duration of
-    // the simulated wai
     //
-    //THREAD_SAFE_BLOCK {
+    BlockPost blockPost(0, timeoutMilliseconds);
+
+    unsigned int totalElapsedTime = 0;
+    while (totalElapsedTime < timeoutMilliseconds) {
+
+        // IMPORTANT: make sure no wait is hppening witin the same
+        // scope where the thread safe block is defined. Otherwise
+        // the queue will be locked for all threads for the duration of
+        // the wait.
+
+        {
+            THREAD_SAFE_BLOCK {
+
+                if (!_newRequests.empty()) {
+
+                    WorkerReplicationRequest::pointer request = _newRequests.top();
+                    _newRequests.pop();
+
+                    request->setProcessorThread(processorThread);
+                    _inProgressRequests.push_back(request);
+
+                    return request;
+                }
+            }
+        }
+        totalElapsedTime += blockPost.wait();
+    }
     
-        //std::cout << "WorkerProcessor::fetchNextForProcessing::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
-        
-        std::this_thread::sleep_for (
-            std::chrono::duration<long, std::milli> (
-                std::chrono::milliseconds (
-                    timeoutMilliseconds
-                )
-            )
-        );
-        return WorkerReplicationRequest::pointer();
-    //}
+    // Return null pointer since noting has been found within the specified
+    // timeout.
+
+    return WorkerReplicationRequest::pointer();
 }
 
 void
 WorkerProcessor::processingRefused (const WorkerReplicationRequest::pointer &request) {
 
-    std::cout << "WorkerProcessor::processingRefused" <<  std::endl;
+    std::cout << context() << "processingRefused"
+        << "  id: " << request->id()
+        << std::endl;
     
     THREAD_SAFE_BLOCK {
-    
-        std::cout << "WorkerProcessor::processingRefused::t-safe** NOT IMPLEMENTED **" <<  std::endl;
+        
+        // Disconnect the reuest from its processing thread.
+        // Then move it back into the input queue.
+
+        request->setProcessorThread();
+
+        _inProgressRequests.remove_if (
+            [&request] (const WorkerReplicationRequest::pointer &ptr) {
+                return ptr->id() == request->id();
+            }
+        );
+        _newRequests.push(request);
     }
 }
 
 void
 WorkerProcessor::processingCancelled (const WorkerReplicationRequest::pointer &request) {
     
-    std::cout << "WorkerProcessor::processingCancelled" <<  std::endl;
+    std::cout << context() << "processingCancelled"
+        << "  id: " << request->id()
+        << std::endl;
 
     THREAD_SAFE_BLOCK {
-    
-        std::cout << "WorkerProcessor::processingCancelled::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
+
+        // Simply get rid of the request altogether
+
+        // Disconnect the reuest from its processing thread.
+
+        request->setProcessorThread();
+
+        _inProgressRequests.remove_if (
+            [&request] (const WorkerReplicationRequest::pointer &ptr) {
+                return ptr->id() == request->id();
+            }
+        );
     }
 }
 
@@ -250,22 +378,37 @@ void
 WorkerProcessor::processingFinished (const WorkerReplicationRequest::pointer    &request,
                                      WorkerReplicationRequest::CompletionStatus  completionStatus) {
     
-    std::cout << "WorkerProcessor::processingFinished" <<  std::endl;
+    std::cout << context() << "processingFinished"
+        << "  id: " << request->id()
+        << "  status: " << WorkerReplicationRequest::status2string(completionStatus)
+        << std::endl;
 
     THREAD_SAFE_BLOCK {
 
-        std::cout << "WorkerProcessor::processingFinished::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
+        // Disconnect the reuest from its processing thread.
+        // Set the desired status.
+        // Then move it forward into the fiished queue.
+
+        request->setProcessorThread();
+        request->setStatus(completionStatus);
+
+        _inProgressRequests.remove_if (
+            [&request] (const WorkerReplicationRequest::pointer &ptr) {
+                return ptr->id() == request->id();
+            }
+        );
+        _finishedRequests.push_back(request);
     }
 }
 
 void
 WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &processorThread) {
     
-    std::cout << "WorkerProcessor::processorThreadStopped" <<  std::endl;
+    std::cout << context() << "processorThreadStopped"
+        << "  thread: " << processorThread->id()
+        << std::endl;
 
     THREAD_SAFE_BLOCK {
-
-        std::cout << "WorkerProcessor::processorThreadStopped::t-safe ** NOT IMPLEMENTED **" <<  std::endl;
 
         if (_state == State::STATE_IS_STOPPING) {
 

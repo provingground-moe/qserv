@@ -73,18 +73,19 @@ namespace {
                     });
 
             else if ("STATUS"  == operation)
+                request = server->statusOfReplication (
+                    worker, id_or_db,
+                    [] (rc::StatusRequest::pointer request) {
+                        printRequest<rc::StatusRequest>(request);
+                    });
+
+            else if ("STOP"  == operation)
                 request = server->stopReplication (
                     worker, id_or_db,
                     [] (rc::StopRequest::pointer request) {
                         printRequest<rc::StopRequest>(request);
                     });
 
-            else if ("STOP"  == operation)
-                request = server->statusOfReplication (
-                    worker, id_or_db,
-                    [] (rc::StatusRequest::pointer request) {
-                        printRequest<rc::StatusRequest>(request);
-                    });
             else
                 return false;
 

@@ -30,6 +30,7 @@
 
 // System headers
 
+#include <algorithm>
 #include <list>
 #include <memory>       // shared_ptr, enable_shared_from_this
 #include <mutex>
@@ -60,7 +61,7 @@ namespace replica_core {
   * requests fro connected clients.
   */
 class WorkerProcessor
-    : public std::enable_shared_from_this<WorkerProcessor> {
+    :   public std::enable_shared_from_this<WorkerProcessor> {
 
 public:
 
@@ -70,10 +71,41 @@ public:
     /// The pointer type for self
     typedef std::shared_ptr<WorkerProcessor> pointer;
 
-    /// The priority queue for pointers to the new (unprocessed) requests
-    typedef std::priority_queue<WorkerReplicationRequest::pointer,
+    /// The priority queue for pointers to the new (unprocessed) requests.
+    /// Using inheritance to get access to the protected data members 'c'
+    /// representing the internal container.
+    struct PriorityQueueType
+        :   std::priority_queue<WorkerReplicationRequest::pointer,
                                 std::vector<WorkerReplicationRequest::pointer>,
-                                WorkerReplicationRequestCompare> PriorityQueueType;
+                                WorkerReplicationRequestCompare> {
+
+        /// The beginning of the container to allow the iterator protocol
+        decltype(c.begin()) begin () {
+            return c.begin();
+        }
+
+        /// The end of the container to allow the iterator protocol
+        decltype(c.end()) end () {
+            return c.end();
+        }
+
+        /// Remove a request from the queue by its identifier
+        bool remove (const std::string &id) {
+            auto itr = std::find_if (
+                c.begin(),
+                c.end(),
+                [&id] (const WorkerReplicationRequest::pointer &ptr) {
+                    return ptr->id() == id;
+                }
+            );
+            if (itr != c.end()) {
+                c.erase(itr);
+                std::make_heap(c.begin(), c.end(), comp);
+                return true;
+            }
+            return false;
+        }
+    };
 
     /// Ordinary collection of pointers for requests in other (than new/unprocessed) state
     typedef std::list<WorkerReplicationRequest::pointer> CollectionType;
@@ -85,6 +117,7 @@ public:
         STATE_IS_STOPPED     // not started
     };
 
+    /// Return the string representation of the status
     static std::string state2string (State state);
 
     /**
@@ -92,7 +125,7 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (ServiceProvider::pointer serviceProvider);
+    static pointer create (const ServiceProvider::pointer &serviceProvider);
 
     // Default construction and copy semantics are proxibited
 
@@ -159,7 +192,7 @@ private:
     /**
      * The constructor of the class.
      */
-    explicit WorkerProcessor (ServiceProvider::pointer serviceProvider);
+    explicit WorkerProcessor (const ServiceProvider::pointer &serviceProvider);
 
     /**
      * Return the next replication request which is ready to be pocessed
@@ -222,6 +255,10 @@ private:
      * State::STATE_IS_STOPPED. The later is achieved when all threads are stopped.
      */
     void processorThreadStopped (const WorkerProcessorThread::pointer &processorThread);
+
+    
+    /// Return the context string
+    std::string context () const { return "PROCESSOR  "; }
 
 private:
 
