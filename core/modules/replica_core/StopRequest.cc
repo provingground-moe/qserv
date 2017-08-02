@@ -25,10 +25,6 @@
 
 // System headers
 
-#include <arpa/inet.h>  // htonl, ntohl
-
-#include <chrono>
-#include <iostream>
 #include <stdexcept>
 
 #include <boost/bind.hpp>
@@ -36,9 +32,16 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
 
 namespace proto = lsst::qserv::proto;
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.StopRequest");
+
+} /// namespace
 
 namespace lsst {
 namespace qserv {
@@ -81,7 +84,7 @@ StopRequest::~StopRequest ()
 void
 StopRequest::beginProtocol () {
 
-    std::cout << context() << "beginProtocol()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
 
     // Serialize the Request message header and the request itself into
     // the network buffer.
@@ -119,7 +122,7 @@ void
 StopRequest::requestSent (const boost::system::error_code &ec,
                           size_t                           bytes_transferred) {
 
-    std::cout << context() << "requestSent()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
 
@@ -130,7 +133,7 @@ StopRequest::requestSent (const boost::system::error_code &ec,
 void
 StopRequest::receiveResponse () {
 
-    std::cout << context() << "receiveResponse()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -164,7 +167,7 @@ void
 StopRequest::responseReceived (const boost::system::error_code &ec,
                                size_t                           bytes_transferred) {
 
-    std::cout << context() << "responseReceived()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     if (isAborted(ec)) return;
 
@@ -206,7 +209,7 @@ StopRequest::responseReceived (const boost::system::error_code &ec,
 void
 StopRequest::analyze (proto::ReplicationStatus status) {
 
-    std::cout << context() << "analyze()  remote status: " << proto::ReplicationStatus_Name(status) << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
 
     switch (status) {
  
@@ -220,6 +223,10 @@ StopRequest::analyze (proto::ReplicationStatus status) {
 
         case proto::ReplicationStatus::IN_PROGRESS:
             finish (SERVER_IN_PROGRESS);
+            break;
+
+        case proto::ReplicationStatus::IS_CANCELLING:
+            finish (SERVER_IS_CANCELLING);
             break;
 
         case proto::ReplicationStatus::SUSPENDED:
@@ -239,14 +246,15 @@ StopRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("StopRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) + "' received from server");
+            throw std::logic_error("StopRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+                                   "' received from server");
     }
 }
 
 void
 StopRequest::endProtocol () {
 
-    std::cout << context() << "endProtocol()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "endProtocol");
 
     if (_onFinish != nullptr) {
         _onFinish(shared_from_base<StopRequest>());

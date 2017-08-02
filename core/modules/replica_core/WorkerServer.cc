@@ -27,9 +27,15 @@
 
 #include <boost/bind.hpp>
 
-#include <iostream>
-
 // Qserv headers
+
+#include "lsst/log/Log.h"
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.WorkerServer");
+
+} /// namespace
 
 namespace lsst {
 namespace qserv {
@@ -39,7 +45,7 @@ WorkerServer::pointer
 WorkerServer::create (const ServiceProvider::pointer &serviceProvider,
                       const WorkerProcessor::pointer &processor)
 {
-    return pointer (
+    return WorkerServer::pointer (
         new WorkerServer (
             serviceProvider,
             processor));
@@ -114,7 +120,7 @@ WorkerServer::handleAccept (const WorkerServerConnection::pointer &connection,
         //       mechanism since its' safe to ignore problems with
         //       incoming connections due a lack of side effects.
 
-        std::cerr << context() << "handleAccept  err:" << err << std::endl;
+        LOGS(_log, LOG_LVL_DEBUG, context() << "handleAccept  err:" << err);
     }
     beginAccept();
 }

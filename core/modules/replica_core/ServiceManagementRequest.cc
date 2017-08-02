@@ -25,10 +25,6 @@
 
 // System headers
 
-#include <arpa/inet.h>  // htonl, ntohl
-
-#include <chrono>
-#include <iostream>
 #include <stdexcept>
 
 #include <boost/bind.hpp>
@@ -36,21 +32,26 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
 
-
 namespace proto = lsst::qserv::proto;
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ServiceManagementRequestBase");
+
+} /// namespace
+
 
 namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-
-
 const ServiceManagementRequestBase::ServiceState&
 ServiceManagementRequestBase::getServiceState () const {
 
-    std::cout << context() << "getServiceState()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "getServiceState");
 
     switch (Request::state()) {
         case Request::State::FINISHED:
@@ -91,7 +92,7 @@ ServiceManagementRequestBase::~ServiceManagementRequestBase ()
 void
 ServiceManagementRequestBase::beginProtocol () {
 
-    std::cout << context() << "beginProtocol()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
 
     // Serialize the Request message header and the request itself into
     // the network buffer.
@@ -124,7 +125,7 @@ void
 ServiceManagementRequestBase::requestSent (const boost::system::error_code &ec,
                                            size_t                           bytes_transferred) {
 
-    std::cout << context() << "requestSent()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
 
@@ -135,7 +136,7 @@ ServiceManagementRequestBase::requestSent (const boost::system::error_code &ec,
 void
 ServiceManagementRequestBase::receiveResponse () {
 
-    std::cout << context() << "receiveResponse()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -169,7 +170,7 @@ void
 ServiceManagementRequestBase::responseReceived (const boost::system::error_code &ec,
                                                 size_t                           bytes_transferred) {
 
-    std::cout << context() << "responseReceived()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     if (isAborted(ec)) return;
 
@@ -211,7 +212,7 @@ ServiceManagementRequestBase::responseReceived (const boost::system::error_code 
 void
 ServiceManagementRequestBase::analyze (proto::ReplicationServiceResponse response) {
 
-    std::cout << context() << "analyze()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 
     // Capture the general status of the operation
 

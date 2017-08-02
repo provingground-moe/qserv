@@ -1,8 +1,8 @@
-//#include <chrono>
+
 #include <iostream>
-//#include <ratio>        // std::milli
 #include <string>
-//#include <thread>
+
+#include "lsst/log/Log.h"
 
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
@@ -14,35 +14,40 @@ namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-    /**
-     * Instantiate and launch the service in its own thread. Then block
-     * the current thread in a series of repeated timeouts.
-     */
-    void service (const std::string &configFileName) {
-        
-        try {
-            rc::Configuration  ::pointer config    = rc::Configuration  ::create (configFileName);
-            rc::ServiceProvider::pointer provider  = rc::ServiceProvider::create (config);
-            rc::WorkerProcessor::pointer processor = rc::WorkerProcessor::create (provider);
-            rc::WorkerServer   ::pointer server    = rc::WorkerServer   ::create (provider, processor);
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_worker");
 
-            std::thread requestsAcceptorThread (
-                [&server]() { server->run(); }
-            );
-            rc::BlockPost blockPost (1000, 5000);
-            while (true) {
-                blockPost.wait();
-                std::cout << "HEARTBEAT"
-                    << "  processor: " << rc::WorkerProcessor::state2string(processor->state())
-                    << std::endl;
-            }
-            requestsAcceptorThread.join();
+/**
+ * Instantiate and launch the service in its own thread. Then block
+ * the current thread in a series of repeated timeouts.
+ */
+void service (const std::string &configFileName) {
+    
+    try {
+        rc::Configuration  ::pointer config    = rc::Configuration  ::create (configFileName);
+        rc::ServiceProvider::pointer provider  = rc::ServiceProvider::create (config);
+        rc::WorkerProcessor::pointer processor = rc::WorkerProcessor::create (provider);
+        rc::WorkerServer   ::pointer server    = rc::WorkerServer   ::create (provider, processor);
 
-        } catch (std::exception& e) {
-            std::cerr << e.what() << std::endl;
+        std::thread requestsAcceptorThread (
+            [&server]() { server->run(); }
+        );
+        rc::BlockPost blockPost (1000, 5000);
+        while (true) {
+            blockPost.wait();
+            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT"
+                << "  processor: " << rc::WorkerProcessor::state2string(processor->state())
+                << "  new, in-progress, finished: "
+                << processor->numNewRequests() << ", "
+                << processor->numInProgressRequests() << ", "
+                << processor->numFinishedRequests());
         }
+        requestsAcceptorThread.join();
+
+    } catch (std::exception& e) {
+        LOGS(_log, LOG_LVL_ERROR, e.what());
     }
 }
+}  /// namespace
 
 int main (int argc, const char* const argv[]) {
 

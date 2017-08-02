@@ -25,10 +25,6 @@
 
 // System headers
 
-#include <arpa/inet.h>  // htonl, ntohl
-
-#include <chrono>
-#include <iostream>
 #include <stdexcept>
 
 #include <boost/bind.hpp>
@@ -36,10 +32,17 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/WorkerInfo.h"
 
 namespace proto = lsst::qserv::proto;
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ReplicationRequest");
+
+} /// namespace
 
 namespace lsst {
 namespace qserv {
@@ -91,7 +94,7 @@ ReplicationRequest::~ReplicationRequest ()
 void
 ReplicationRequest::beginProtocol () {
 
-    std::cout << context() << "beginProtocol()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
 
     // Serialize the Request message header and the request itself into
     // the network buffer.
@@ -131,7 +134,7 @@ void
 ReplicationRequest::requestSent (const boost::system::error_code &ec,
                                  size_t                           bytes_transferred) {
 
-    std::cout << context() << "requestSent()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
 
@@ -142,7 +145,7 @@ ReplicationRequest::requestSent (const boost::system::error_code &ec,
 void
 ReplicationRequest::receiveResponse () {
 
-    std::cout << context() << "receiveResponse()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -176,7 +179,7 @@ void
 ReplicationRequest::responseReceived (const boost::system::error_code &ec,
                                       size_t                           bytes_transferred) {
 
-    std::cout << context() << "responseReceived()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     if (isAborted(ec)) return;
 
@@ -218,7 +221,7 @@ ReplicationRequest::responseReceived (const boost::system::error_code &ec,
 void
 ReplicationRequest::wait () {
 
-    std::cout << context() << "wait()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "wait");
 
     // Allways need to set the interval before launching the timer.
     
@@ -235,7 +238,7 @@ ReplicationRequest::wait () {
 void
 ReplicationRequest::awaken (const boost::system::error_code &ec) {
 
-    std::cout << context() << "awaken()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
     if (isAborted(ec)) return;
 
@@ -245,7 +248,7 @@ ReplicationRequest::awaken (const boost::system::error_code &ec) {
 void
 ReplicationRequest::sendStatus () {
 
-    std::cout << context() << "sendStatus()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "sendStatus");
 
     // Serialize the Status message header and the request itself into
     // the network buffer.
@@ -283,7 +286,7 @@ void
 ReplicationRequest::statusSent (const boost::system::error_code &ec,
                                 size_t                           bytes_transferred) {
 
-    std::cout << context() << "statusSent()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
 
     if (isAborted(ec)) return;
 
@@ -294,7 +297,7 @@ ReplicationRequest::statusSent (const boost::system::error_code &ec,
 void
 ReplicationRequest::receiveStatus () {
 
-    std::cout << context() << "receiveStatus()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "receiveStatus");
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -328,7 +331,7 @@ void
 ReplicationRequest::statusReceived (const boost::system::error_code &ec,
                                    size_t                            bytes_transferred) {
 
-    std::cout << context() << "statusReceived()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
     if (isAborted(ec)) return;
 
@@ -370,7 +373,7 @@ ReplicationRequest::statusReceived (const boost::system::error_code &ec,
 void
 ReplicationRequest::analyze (proto::ReplicationStatus status) {
 
-    std::cout << context() << "analyze()  remote status: " << proto::ReplicationStatus_Name(status) << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
 
     switch (status) {
  
@@ -380,6 +383,7 @@ ReplicationRequest::analyze (proto::ReplicationStatus status) {
 
         case proto::ReplicationStatus::QUEUED:
         case proto::ReplicationStatus::IN_PROGRESS:
+        case proto::ReplicationStatus::IS_CANCELLING:
         case proto::ReplicationStatus::SUSPENDED:
 
             // Go wait until a definitive response from the worker is received.
@@ -400,7 +404,8 @@ ReplicationRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("ReplicationRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) + "' received from server");
+            throw std::logic_error("ReplicationRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+                                   "' received from server");
 
     }
 }
@@ -408,7 +413,7 @@ ReplicationRequest::analyze (proto::ReplicationStatus status) {
 void
 ReplicationRequest::endProtocol () {
 
-    std::cout << context() << "endProtocol()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "endProtocol");
 
     if (_onFinish != nullptr) {
         _onFinish(shared_from_base<ReplicationRequest>());

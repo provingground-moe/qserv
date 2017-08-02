@@ -106,6 +106,9 @@ public:
         /// The request is being processed by the server
         SERVER_IN_PROGRESS,
 
+        /// The request is being cancelled by the server
+        SERVER_IS_CANCELLING,
+
         /// The request is suspended by the server
         SERVER_SUSPENDED,
 

@@ -26,10 +26,28 @@
 
 // System headers
 
-#include <iostream>
 #include <stdexcept>
 
 // Qserv headers
+
+#include "lsst/log/Log.h"
+#include "replica_core/BlockPost.h"
+#include "replica_core/SuccessRateGenerator.h"
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.WorkerReplicationRequest");
+
+/// Maximum duration for the request execution
+const unsigned int maxDurationMillisec = 10000;
+
+/// Random interval for the incremental execution
+lsst::qserv::replica_core::BlockPost incrementIvalMillisec (1000, 2000);
+
+/// Random generator of success/failure rates
+lsst::qserv::replica_core::SuccessRateGenerator successRateGenerator(0.9);
+
+} /// namespace
 
 namespace lsst {
 namespace qserv {
@@ -38,9 +56,12 @@ namespace replica_core {
 std::string
 WorkerReplicationRequest::status2string (CompletionStatus status) {
     switch (status) {
-        case CompletionStatus::NONE:      return "NONE";
-        case CompletionStatus::SUCCEEDED: return "SUCCEEDED";
-        case CompletionStatus::FAILED:    return "FAILED";
+        case CompletionStatus::NONE:          return "NONE";
+        case CompletionStatus::IN_PROGRESS:   return "IN_PROGRESS";
+        case CompletionStatus::IS_CANCELLING: return "IS_CANCELLING";
+        case CompletionStatus::CANCELLED:     return "CANCELLED";
+        case CompletionStatus::SUCCEEDED:     return "SUCCEEDED";
+        case CompletionStatus::FAILED:        return "FAILED";
     }
     throw std::logic_error("WorkerReplicationRequest::status2string - unhandled status: " + std::to_string(status));
 }
@@ -50,7 +71,8 @@ WorkerReplicationRequest::create (WorkerReplicationRequest::Priority priority,
                                   const std::string&                 id,
                                   const std::string&                 database,
                                   unsigned int                       chunk) {
-    return pointer (
+
+    return WorkerReplicationRequest::pointer (
         new WorkerReplicationRequest (priority,
                                       id,
                                       database,
@@ -66,22 +88,116 @@ WorkerReplicationRequest::WorkerReplicationRequest (WorkerReplicationRequest::Pr
         _id      (id),
         _database(database),
         _chunk   (chunk),
-        _status  (CompletionStatus::NONE)
+        _status  (CompletionStatus::NONE),
+
+        _durationMillisec(0)
 {}
 
 WorkerReplicationRequest::~WorkerReplicationRequest () {
 }
 
 void
-WorkerReplicationRequest::setStatus (WorkerReplicationRequest::CompletionStatus status) {
-    _status = status;
+WorkerReplicationRequest::beginProgress () {
+
+    LOGS(_log, LOG_LVL_DEBUG, "beginProgress  "
+         << "status: " << WorkerReplicationRequest::status2string(_status));
+
+    switch (_status) {
+
+        case CompletionStatus::NONE:
+            _status = CompletionStatus::IN_PROGRESS;
+            break;
+
+        default:
+            throw std::logic_error("WorkerReplicationRequest::beginProgress not allowed while in status: " +
+                                    WorkerReplicationRequest::status2string(_status));
+    }
 }
- 
+
+bool
+WorkerReplicationRequest::execute (bool incremental) {
+
+    LOGS(_log, LOG_LVL_DEBUG, "execute  "
+         << "status: " << WorkerReplicationRequest::status2string(_status));
+
+    // Simulate request 'processing' for some maximum duration of time (milliseconds)
+    // while making a progress through increments of random duration of time.
+    // Success/failure modes will be also simulated using the corresponding generator.
+
+   switch (_status) {
+
+        case CompletionStatus::NONE:
+            _status = CompletionStatus::IN_PROGRESS;
+            break;
+
+        case CompletionStatus::IN_PROGRESS:
+            break;
+
+        case CompletionStatus::IS_CANCELLING:
+            _status = CompletionStatus::CANCELLED;
+            throw WorkerReplicationCancelled();
+
+        default:
+            throw std::logic_error("WorkerReplicationRequest::execute not allowed while in status: " +
+                                    WorkerReplicationRequest::status2string(_status));
+    }
+    
+    _durationMillisec += incremental ? ::incrementIvalMillisec.wait() :
+                                       ::maxDurationMillisec;
+
+    if (_durationMillisec < ::maxDurationMillisec) return false;
+
+    _status = ::successRateGenerator.success() ? CompletionStatus::SUCCEEDED :
+                                                 CompletionStatus::FAILED;
+    return true;
+}
+
 void
-WorkerReplicationRequest::setProcessorThread (WorkerProcessorThread_pointer processorThread) {
-    _processorThread = processorThread;
+WorkerReplicationRequest::cancel () {
+
+    LOGS(_log, LOG_LVL_DEBUG, "cancel  "
+         << "status: " << WorkerReplicationRequest::status2string(_status));
+
+    switch (_status) {
+
+        case CompletionStatus::NONE:
+        case CompletionStatus::CANCELLED:
+            _status = CompletionStatus::CANCELLED;
+            break;
+
+        case CompletionStatus::IN_PROGRESS:
+        case CompletionStatus::IS_CANCELLING:
+            _status = CompletionStatus::IS_CANCELLING;
+            break;
+
+        default:
+            throw std::logic_error("WorkerReplicationRequest::cancel not allowed while in status: " +
+                                    WorkerReplicationRequest::status2string(_status));
+    }
 }
+void
+WorkerReplicationRequest::rollback () {
 
+    LOGS(_log, LOG_LVL_DEBUG, "rollback  "
+         << "status: " << WorkerReplicationRequest::status2string(_status));
 
+    switch (_status) {
+
+        case CompletionStatus::NONE:
+        case CompletionStatus::IN_PROGRESS:
+            _status = CompletionStatus::NONE;
+            _durationMillisec = 0;
+            break;
+
+        case CompletionStatus::IS_CANCELLING:
+            _status = CompletionStatus::CANCELLED;
+            throw WorkerReplicationCancelled();
+            break;
+
+        default:
+            throw std::logic_error("WorkerReplicationRequest::rollback not allowed while in status: " +
+                                    WorkerReplicationRequest::status2string(_status));
+    }
+}
 }}} // namespace lsst::qserv::replica_core
 

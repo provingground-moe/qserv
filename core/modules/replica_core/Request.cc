@@ -26,7 +26,6 @@
 // System headers
 
 #include <stdexcept>
-#include <iostream>
 
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -37,9 +36,15 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/WorkerInfo.h"
 
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.Request");
+
+} /// namespace
 
 namespace lsst {
 namespace qserv {
@@ -58,17 +63,18 @@ Request::state2string (State state) {
 std::string
 Request::state2string (ExtendedState state) {
     switch (state) {
-        case NONE:               return "NONE";
-        case SUCCESS:            return "SUCCESS";
-        case CLIENT_ERROR:       return "CLIENT_ERROR";
-        case SERVER_BAD:         return "SERVER_BAD";
-        case SERVER_ERROR:       return "SERVER_ERROR";
-        case SERVER_QUEUED:      return "SERVER_QUEUED";
-        case SERVER_IN_PROGRESS: return "SERVER_IN_PROGRESS";
-        case SERVER_SUSPENDED:   return "SERVER_SUSPENDED";
-        case SERVER_CANCELLED:   return "SERVER_CANCELLED";
-        case EXPIRED:            return "EXPIRED";
-        case CANCELLED:          return "CANCELLED";
+        case NONE:                 return "NONE";
+        case SUCCESS:              return "SUCCESS";
+        case CLIENT_ERROR:         return "CLIENT_ERROR";
+        case SERVER_BAD:           return "SERVER_BAD";
+        case SERVER_ERROR:         return "SERVER_ERROR";
+        case SERVER_QUEUED:        return "SERVER_QUEUED";
+        case SERVER_IN_PROGRESS:   return "SERVER_IN_PROGRESS";
+        case SERVER_IS_CANCELLING: return "SERVER_IS_CANCELLING";
+        case SERVER_SUSPENDED:     return "SERVER_SUSPENDED";
+        case SERVER_CANCELLED:     return "SERVER_CANCELLED";
+        case EXPIRED:              return "EXPIRED";
+        case CANCELLED:            return "CANCELLED";
     }
     throw std::logic_error("incomplete implementation of method Request::state2string(ExtendedState)");
 }
@@ -113,7 +119,7 @@ Request::start () {
 
     assertState(CREATED);
 
-    std::cout << context() << "start()  _requestExpirationIvalSec: " << _requestExpirationIvalSec << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "start  _requestExpirationIvalSec: " << _requestExpirationIvalSec);
 
     if (_requestExpirationIvalSec) {
         _requestExpirationTimer.cancel();
@@ -138,7 +144,7 @@ Request::expired (const boost::system::error_code &ec) {
     // Also ignore this event if the request is over
     if (_state == State::FINISHED) return;
 
-    std::cout << context() << "expired()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "expired");
 
     finish(EXPIRED);
 }
@@ -146,7 +152,7 @@ Request::expired (const boost::system::error_code &ec) {
 void
 Request::cancel () {
 
-    std::cout << context() << "cancel()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "cancel");
 
     finish(CANCELLED);
 }
@@ -154,7 +160,7 @@ Request::cancel () {
 void
 Request::finish (ExtendedState extendedState) {
 
-    std::cout << context() << "finish()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "finish");
 
     // Check if it's not too late for tis operation
 
@@ -186,7 +192,7 @@ Request::finish (ExtendedState extendedState) {
 void
 Request::restart () {
 
-    std::cout << context() << "restart()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "restart");
 
     // Cancel any asynchronous operation(s) if not in the initial state
 
@@ -217,7 +223,7 @@ Request::restart () {
 void
 Request::resolve () {
 
-    std::cout << context() << "resolve()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "resolve");
 
     boost::asio::ip::tcp::resolver::query query (
         _workerInfoPtr->svcHost(),
@@ -236,10 +242,10 @@ Request::resolve () {
 }
 
 void
-Request::resolved (const boost::system::error_code &ec,
-                              boost::asio::ip::tcp::resolver::iterator iter) {
+Request::resolved (const boost::system::error_code          &ec,
+                   boost::asio::ip::tcp::resolver::iterator  iter) {
 
-    std::cout << context() << "resolved()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "resolved");
 
     if (isAborted(ec)) return;
 
@@ -250,7 +256,7 @@ Request::resolved (const boost::system::error_code &ec,
 void
 Request::connect (boost::asio::ip::tcp::resolver::iterator iter) {
 
-    std::cout << context() << "connect()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "connect");
 
     boost::asio::async_connect (
         _socket,
@@ -265,10 +271,10 @@ Request::connect (boost::asio::ip::tcp::resolver::iterator iter) {
 }
 
 void
-Request::connected (const boost::system::error_code &ec,
-                    boost::asio::ip::tcp::resolver::iterator iter) {
+Request::connected (const boost::system::error_code          &ec,
+                    boost::asio::ip::tcp::resolver::iterator  iter) {
 
-    std::cout << context() << "connected()" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "connected");
 
     if (isAborted(ec)) return;
 
@@ -280,7 +286,7 @@ bool
 Request::isAborted (const boost::system::error_code &ec) const {
 
     if (ec == boost::asio::error::operation_aborted) {
-        std::cout << context() << "isAborted()  ** ABORTED **" << std::endl;
+        LOGS(_log, LOG_LVL_DEBUG, context() << "isAborted  ** ABORTED **");
         return true;
     }
     return false;
@@ -297,7 +303,7 @@ void
 Request::setState (State         state,
                    ExtendedState extendedState)
 {
-    std::cout << context() << "setState()  " << state2string(state, extendedState) << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context() << "setState  " << state2string(state, extendedState));
 
     _state         = state;
     _extendedState = extendedState;

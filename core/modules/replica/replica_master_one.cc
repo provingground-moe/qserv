@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 
+#include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/MasterServer.h"
@@ -15,101 +16,103 @@ namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-    const char* usage = "Usage: <config> {REPLICATE <db> <chunk> | STATUS <id> | STOP <id>}";
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_master_one");
 
-    bool assertArguments (int argc, int minArgc) {
-        if (argc < minArgc) {
-            std::cerr << usage << std::endl;
-            std::exit(1);
-        }
-        return true;
+const char* usage = "Usage: <config> {REPLICATE <db> <chunk> | STATUS <id> | STOP <id>}";
+
+bool assertArguments (int argc, int minArgc) {
+    if (argc < minArgc) {
+        std::cerr << usage << std::endl;
+        std::exit(1);
     }
-
-    /**
-     * Return the name of any known worker from the server configuration.
-     * Throw std::runtime_error if no worker found.
-     */
-    std::string getAnyWorker (rc::ServiceProvider::pointer provider) {
-        for (const std::string &workerName : provider->workers())
-            return workerName;
-        throw std::runtime_error ("replica_master: no single worker found in the configuration");
-
-    }
-    
-    template <class T>
-    void printRequest (typename T::pointer &request) {
-        std::cout << request->id() << "  DONE" << std::endl;
-    }
-
-    /**
-     * Run the test
-     */
-    bool test (const std::string &configFileName,
-               const std::string &operation,
-               const std::string &id_or_db,
-               uint32_t           chunk = 0) {
-
-        try {
-
-            rc::Configuration  ::pointer config   = rc::Configuration  ::create (configFileName);
-            rc::ServiceProvider::pointer provider = rc::ServiceProvider::create (config);
-            rc::MasterServer   ::pointer server   = rc::MasterServer   ::create (provider);
-
-            // Configure the generator of requests 
-
-            const std::string worker = getAnyWorker(provider);
-
-            // Start the server in its own thread before injecting any requests
-
-            server->run();
-
-            rc::Request::pointer request;
-
-            if ("REPLICATE" == operation)
-                request = server->replicate (
-                    id_or_db, chunk, worker, worker,
-                    [] (rc::ReplicationRequest::pointer request) {
-                        printRequest<rc::ReplicationRequest>(request);
-                    });
-
-            else if ("STATUS"  == operation)
-                request = server->statusOfReplication (
-                    worker, id_or_db,
-                    [] (rc::StatusRequest::pointer request) {
-                        printRequest<rc::StatusRequest>(request);
-                    });
-
-            else if ("STOP"  == operation)
-                request = server->stopReplication (
-                    worker, id_or_db,
-                    [] (rc::StopRequest::pointer request) {
-                        printRequest<rc::StopRequest>(request);
-                    });
-
-            else
-                return false;
-
-    
-            // Wait before the request is finished. Then stop the master server
-
-            rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between iterations
-
-            while (request->state() != rc::Request::State::FINISHED) {
-                blockPost.wait();
-            }
-            server->stop();
-
-            // Block the current thread indefinitively or untill the server is cancelled.
-
-            std::cout << "waiting for: server->join()" << std::endl;
-            server->join();
-
-        } catch (const std::exception& e) {
-            std::cerr << e.what() << std::endl;
-        }
-        return true;
-    }
+    return true;
 }
+
+/**
+ * Return the name of any known worker from the server configuration.
+ * Throw std::runtime_error if no worker found.
+ */
+std::string getAnyWorker (rc::ServiceProvider::pointer provider) {
+    for (const std::string &workerName : provider->workers())
+        return workerName;
+    throw std::runtime_error ("replica_master: no single worker found in the configuration");
+
+}
+
+template <class T>
+void printRequest (typename T::pointer &request) {
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  DONE");
+}
+
+/**
+ * Run the test
+ */
+bool test (const std::string &configFileName,
+           const std::string &operation,
+           const std::string &id_or_db,
+           uint32_t           chunk = 0) {
+
+    try {
+
+        rc::Configuration  ::pointer config   = rc::Configuration  ::create (configFileName);
+        rc::ServiceProvider::pointer provider = rc::ServiceProvider::create (config);
+        rc::MasterServer   ::pointer server   = rc::MasterServer   ::create (provider);
+
+        // Configure the generator of requests 
+
+        const std::string worker = getAnyWorker(provider);
+
+        // Start the server in its own thread before injecting any requests
+
+        server->run();
+
+        rc::Request::pointer request;
+
+        if ("REPLICATE" == operation)
+            request = server->replicate (
+                id_or_db, chunk, worker, worker,
+                [] (rc::ReplicationRequest::pointer request) {
+                    printRequest<rc::ReplicationRequest>(request);
+                });
+
+        else if ("STATUS"  == operation)
+            request = server->statusOfReplication (
+                worker, id_or_db,
+                [] (rc::StatusRequest::pointer request) {
+                    printRequest<rc::StatusRequest>(request);
+                });
+
+        else if ("STOP"  == operation)
+            request = server->stopReplication (
+                worker, id_or_db,
+                [] (rc::StopRequest::pointer request) {
+                    printRequest<rc::StopRequest>(request);
+                });
+
+        else
+            return false;
+
+
+        // Wait before the request is finished. Then stop the master server
+
+        rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between iterations
+
+        while (request->state() != rc::Request::State::FINISHED) {
+            blockPost.wait();
+        }
+        server->stop();
+
+        // Block the current thread indefinitively or untill the server is cancelled.
+
+        LOGS(_log, LOG_LVL_INFO, "waiting for: server->join()");
+        server->join();
+
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+    }
+    return true;
+}
+} /// namespace
 
 int main (int argc, const char* const argv[]) {
 
