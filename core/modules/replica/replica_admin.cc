@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 
+#include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/MasterServer.h"
@@ -13,95 +14,99 @@ namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-    const char* usage = "Usage: <config> {SUSPEND | RESUME | STATUS}";
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_admin");
 
-    /**
-     * Return the name of any known worker from the server configuration.
-     * Throw std::runtime_error if no worker found.
-     */
-    std::string getAnyWorker (rc::ServiceProvider::pointer provider) {
-        for (const std::string &workerName : provider->workers())
-            return workerName;
-        throw std::runtime_error ("replica_master: no single worker found in the configuration");
+const char* usage = "Usage: <config> {SUSPEND | RESUME | STATUS}";
 
-    }
+/**
+ * Return the name of any known worker from the server configuration.
+ * Throw std::runtime_error if no worker found.
+ */
+std::string getAnyWorker (rc::ServiceProvider::pointer provider) {
+    for (const std::string &workerName : provider->workers())
+        return workerName;
+    throw std::runtime_error ("replica_master: no single worker found in the configuration");
 
-    /**
-     * Print a status of the service
-     */
-    void printRequest (const rc::ServiceManagementRequestBase::pointer &request) {
-        const rc::ServiceManagementRequestBase::ServiceState& serviceState = request->getServiceState ();
-        std::cout
-            << request->id() << "  DONE"
-            << "  service: " << serviceState.state2string()
-            << "  new , in-progress , finished: " << serviceState.numNewRequests
-            << " , " << serviceState.numInProgressRequests
-            << " , " << serviceState.numFinishedRequests
-            << std::endl;
-    }
-    
-    /**
-     * Run the test
-     */
-    void test (const std::string &configFileName,
-               const std::string &operation) {
+}
 
-        try {
+/**
+ * Print a status of the service
+ */
+void printRequest (const rc::ServiceManagementRequestBase::pointer &request) {
 
-            rc::Configuration  ::pointer config   = rc::Configuration  ::create (configFileName);
-            rc::ServiceProvider::pointer provider = rc::ServiceProvider::create (config);
-            rc::MasterServer   ::pointer server   = rc::MasterServer   ::create (provider);
+    const rc::ServiceManagementRequestBase::ServiceState& serviceState =
+        request->getServiceState ();
 
-            // Configure the generator of requests 
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  ** DONE **"
+        << "  service: " << serviceState.state2string()
+        << "  new, in-progress, finished: "
+        << serviceState.numNewRequests << ", "
+        << serviceState.numInProgressRequests << ", "
+        << serviceState.numFinishedRequests);
+}
 
-            const std::string worker = getAnyWorker(provider);
+/**
+ * Run the test
+ */
+void test (const std::string &configFileName,
+           const std::string &operation) {
 
-            // Start the server in its own thread before injecting any requests
+    try {
 
-            server->run();
+        rc::Configuration  ::pointer config   = rc::Configuration  ::create (configFileName);
+        rc::ServiceProvider::pointer provider = rc::ServiceProvider::create (config);
+        rc::MasterServer   ::pointer server   = rc::MasterServer   ::create (provider);
 
-            rc::ServiceManagementRequestBase::pointer request;
+        // Configure the generator of requests 
 
-            if      ("SUSPEND" == operation) request = server->suspendWorkerService (
-                    worker,
-                    [] (rc::ServiceSuspendRequest::pointer request) {
-                        printRequest (request);
-                    });
+        const std::string worker = getAnyWorker(provider);
 
-            else if ("RESUME"  == operation) request = server->resumeWorkerService (
-                    worker,
-                    [] (rc::ServiceResumeRequest::pointer request) {
-                        printRequest (request);
-                    });
+        // Start the server in its own thread before injecting any requests
 
-            else if ("STATUS"  == operation) request = server->statusOfWorkerService (
-                    worker,
-                    [] (rc::ServiceStatusRequest::pointer request) {
-                        printRequest (request);
-                    });
-            else {
-                std::cerr << usage << std::endl;
-                return;
-            }
-    
-            // Wait before the request is finished. Then stop the master server
+        server->run();
 
-            rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between iterations
+        rc::ServiceManagementRequestBase::pointer request;
 
-            while (request->state() != rc::Request::State::FINISHED) {
-                blockPost.wait();
-            }
-            server->stop();
+        if      ("SUSPEND" == operation) request = server->suspendWorkerService (
+                worker,
+                [] (rc::ServiceSuspendRequest::pointer request) {
+                    printRequest (request);
+                });
 
-            // Block the current thread indefinitively or untill the server is cancelled.
+        else if ("RESUME"  == operation) request = server->resumeWorkerService (
+                worker,
+                [] (rc::ServiceResumeRequest::pointer request) {
+                    printRequest (request);
+                });
 
-            std::cout << "waiting for: server->join()" << std::endl;
-            server->join();
-
-        } catch (const std::exception& e) {
-            std::cerr << e.what() << std::endl;
+        else if ("STATUS"  == operation) request = server->statusOfWorkerService (
+                worker,
+                [] (rc::ServiceStatusRequest::pointer request) {
+                    printRequest (request);
+                });
+        else {
+            std::cerr << usage << std::endl;
+            return;
         }
+
+        // Wait before the request is finished. Then stop the master server
+
+        rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between iterations
+
+        while (request->state() != rc::Request::State::FINISHED) {
+            blockPost.wait();
+        }
+        server->stop();
+
+        // Block the current thread indefinitively or untill the server is cancelled.
+
+        LOGS(_log, LOG_LVL_INFO, "waiting for: server->join()");
+        server->join();
+
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
     }
+}
 }
 
 int main (int argc, const char* const argv[]) {

@@ -87,25 +87,19 @@ public:
 
     /**
      * Create and run the thread (if none is still running) fetching
-     * and processing requests.
+     * and processing requests until method stop() is called.
      */
     void run ();
 
     /**
-     * Tell the running thread to finish proccessing the current
-     * request (if any), stop fetching new requests and stop.
+     * Tell the running thread to abort proccessing the current
+     * request (if any), put that request back into the input queue,
+     * stop fetching new requests and finish. The thread can be resumed
+     * later by calling method run().
      *
      * NOTE: This is an asynchronous operation.
      */
     void stop ();
-
-    /**
-     * Tell the running thread to cancel proccessing the current
-     * request (if any).
-     * 
-     * NOTE: This is an asynchronous operation.
-     */
-    void cancel ();
 
     /// Return the context string
     std::string context () const { return "THREAD [" + std::to_string(_id) + "]  "; }
@@ -145,10 +139,6 @@ private:
     /// The flag to be raised to tell the running thread to stop.
     /// The thread will reset this flag when it finishes.
     bool _stop;
-
-    /// The flag to be raised to tell the running thread to cancel.
-    /// The thread will reset this flag when it finishes.
-    bool _cancel;
 };
 
 }}} // namespace lsst::qserv::replica_core

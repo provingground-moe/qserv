@@ -30,6 +30,7 @@
 
 // System headers
 
+#include <exception>    // std::exception
 #include <memory>       // shared_ptr, enable_shared_from_this
 #include <string>
 
@@ -43,9 +44,15 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+/// Exception thrown when a replication request is cancelled
+struct WorkerReplicationCancelled
+    :   std::exception {
 
-/// Forward declaration
-class WorkerProcessorThread;
+    /// Return the short description of the exception
+    virtual const char* what () const noexcept {
+        return "cancelled";
+    }
+};
 
 /**
   * Class WorkerReplicationRequest represents a context and a state of replication
@@ -57,7 +64,6 @@ class WorkerReplicationRequest
 public:
 
     typedef std::shared_ptr<WorkerReplicationRequest> pointer;
-    typedef std::shared_ptr<WorkerProcessorThread>    WorkerProcessorThread_pointer;
 
     /// Priority levels
     enum Priority {
@@ -70,6 +76,9 @@ public:
     /// Completion status of the request processing operation
     enum CompletionStatus {
         NONE,           /// no processing has been attempted
+        IN_PROGRESS,
+        IS_CANCELLING,
+        CANCELLED,
         SUCCEEDED,
         FAILED
     };
@@ -106,18 +115,54 @@ public:
     
     CompletionStatus status () const { return _status; }
 
-    WorkerProcessorThread_pointer processorThread () const { return _processorThread; }
-
-    /// Set the new completion status
-    void setStatus (CompletionStatus newStatus);
- 
     /**
-     * Set (or reset) the new thread
-     *
-     * This is needed for bookkeeing purposes in order to figure out which thread
-     * should be notified to cancel processing of a request.
+     * This method is called to indicate a transtion of the request into
+     * the IN_PROGRESS state.
      */
-    void setProcessorThread (WorkerProcessorThread_pointer newProcessorThread = WorkerProcessorThread_pointer());
+    void beginProgress ();
+
+    /**
+     * This method should be invoked (repeatedly) to execute the request until
+     * it returns 'true' or throws an exception. Note that returning 'true'
+     * may mean both success or failure, depeniding on the completion status
+     * of the request.
+     *
+     * The default (and preferred) mode of operation (see parameter 'incremental') is
+     * to let the method do its work in progressive steps returning 'false' after
+     * each increment while the work is still being done. This prevents a calling thread
+     * from being blocked for the whole duration of the request execution and be gracefully
+     * stopped if needed.
+     *
+     * The method will throw custom exception WorkerReplicationCancelled when
+     * it detects a cancellation request.
+     * 
+     * @param incremental - setting it to 'false' will disable the incremental mode
+     */
+    bool execute (bool incremental=true);
+
+    /**
+     * Cancel execution of the request.
+     *
+     * The effect of the operation varies depending on the current state of
+     * the request:
+     *   NONE or CANCELLED             - transition to state CANCELLED
+     *   IN_PROGRESS or IS_CANCELLING  - transition to state IS_CANCELLING
+     *   other                         - throwing std::logic_error
+
+     */
+    void cancel ();
+
+    /**
+     * Roll back the request into its initial state and cleanup partial results
+     * if possible.
+     *
+     * The effect of the operation varies depending on the current state of
+     * the request:
+     *   NONE or IN_PROGRESS - transition to state NONE
+     *   IS_CANCELLING       - transition to CANCELLED and throwing WorkerReplicationCancelled
+     *   other               - throwing std::logic_error
+     */
+    void rollback ();
 
 private:
 
@@ -139,8 +184,8 @@ private:
     
     CompletionStatus _status;
 
-    /// The processor thread (set only when the request is being processed)
-    WorkerProcessorThread_pointer _processorThread;
+    /// The number of milliseconds since the beginning of the request processing
+    unsigned int _durationMillisec;
 };
 
 

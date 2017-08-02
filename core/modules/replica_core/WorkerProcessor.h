@@ -105,6 +105,16 @@ public:
             }
             return false;
         }
+        
+        /// Remove the specified request and return a new instance of the queue
+        /// w/o the removed entry
+        PriorityQueueType remove_and_copy (const std::string &id) {
+            PriorityQueueType pq;
+            for (auto &ptr : *this) {
+                if (ptr->id() != id) pq.push(ptr);
+            }
+            return pq;
+        }
     };
 
     /// Ordinary collection of pointers for requests in other (than new/unprocessed) state
@@ -228,23 +238,13 @@ private:
     void processingRefused (const WorkerReplicationRequest::pointer &request);
 
     /**
-     * Report the cancellation of the request processing
+     * Report a request which has been processed or cancelled.
      *
-     * This method ia supposed to be called by one of the processing threads
-     * when it was asked to cancel processing a specific request. Requests which
-     * are reported through this mechanism will be removed from any queues.
+     * The method is called by a thread which was processing the request.
+     * The request will be moved into the corresponding queue. A proper
+     * completion status is expected be stored witin the request.
      */
-    void processingCancelled (const WorkerReplicationRequest::pointer &request);
-
-    /**
-     * Report a request which has been processed.
-     *
-     * The metghod is called by a thread which was processing th erequest.
-     * The request wil be moved into the corresponding queue. The completion
-     * status of the operation will be stored witin the request.
-     */
-    void processingFinished (const WorkerReplicationRequest::pointer    &request,
-                             WorkerReplicationRequest::CompletionStatus  completionStatus);
+    void processingFinished (const WorkerReplicationRequest::pointer &request);
 
     /**
      * For threads reporting their completion
@@ -256,7 +256,6 @@ private:
      */
     void processorThreadStopped (const WorkerProcessorThread::pointer &processorThread);
 
-    
     /// Return the context string
     std::string context () const { return "PROCESSOR  "; }
 

@@ -27,13 +27,19 @@
 // System headers
 
 #include <boost/bind.hpp>
-#include <iostream>
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
 
 namespace proto = lsst::qserv::proto;
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.WorkerServerConnection");
+
+} /// namespace
 
 namespace {
     
@@ -47,9 +53,9 @@ bool isErrorCode (boost::system::error_code ec,
 
     if (ec) {
         if (ec == boost::asio::error::eof)
-            std::cout << context << scope << "  ** closed **" << std::endl;
+            LOGS(_log, LOG_LVL_DEBUG, context << scope << "  ** closed **");
         else
-            std::cout << context << scope << "  ** failed: " << ec << " **" << std::endl;
+            LOGS(_log, LOG_LVL_ERROR, context << scope << "  ** failed: " << ec << " **");
         return true;
     }
     return false;
@@ -176,7 +182,7 @@ WorkerServerConnection::beginProtocol () {
 void
 WorkerServerConnection::receive () {
 
-    std::cout << context << "receive" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context << "receive");
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -210,7 +216,7 @@ void
 WorkerServerConnection::received (const boost::system::error_code &ec,
                                   size_t                           bytes_transferred) {
 
-    std::cout << context << "received" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context << "received");
 
     if ( ::isErrorCode (ec, "received")) return;
 
@@ -325,7 +331,7 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
 void
 WorkerServerConnection::send () {
 
-    std::cout << context << "send" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context << "send");
 
     boost::asio::async_write (
         _socket,
@@ -346,7 +352,7 @@ void
 WorkerServerConnection::sent (const boost::system::error_code &ec,
                               size_t                           bytes_transferred) {
 
-    std::cout << context << "sent" << std::endl;
+    LOGS(_log, LOG_LVL_DEBUG, context << "sent");
 
     if ( ::isErrorCode (ec, "sent")) return;
 

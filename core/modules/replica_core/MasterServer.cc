@@ -30,12 +30,19 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "replica_core/ReplicationRequest.h"
 
 // This macro to appear witin each block which requires thread safety
 
 #define THREAD_SAFE_BLOCK \
 std::lock_guard<std::mutex> lock(_requestPocessingMtx);
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.MasterServer");
+
+} /// namespace
 
 namespace lsst {
 namespace qserv {
@@ -232,7 +239,7 @@ MasterServer::statusOfReplication (const std::string            &workerName,
 
     THREAD_SAFE_BLOCK {
 
-        std::cout << "MasterServer::statusOfReplication  replicationRequestId = " << replicationRequestId << std::endl;
+        LOGS(_log, LOG_LVL_DEBUG, "statusOfReplication  replicationRequestId = " << replicationRequestId);
 
         MasterServer::pointer server = shared_from_this();
 
@@ -276,7 +283,7 @@ MasterServer::suspendWorkerService (const std::string                    &worker
                                     ServiceSuspendRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
 
-        std::cout << "MasterServer::suspendWorkerService " << std::endl;
+        LOGS(_log, LOG_LVL_DEBUG, "suspendWorkerService ");
 
         MasterServer::pointer server = shared_from_this();
 
@@ -318,7 +325,7 @@ MasterServer::resumeWorkerService (const std::string                   &workerNa
                                    ServiceResumeRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
         
-        std::cout << "MasterServer::resumeWorkerService " << std::endl;
+        LOGS(_log, LOG_LVL_DEBUG, "resumeWorkerService");
 
         MasterServer::pointer server = shared_from_this();
 
@@ -361,7 +368,7 @@ MasterServer::statusOfWorkerService (const std::string                   &worker
                                      ServiceStatusRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
         
-        std::cout << "MasterServer::statusOfWorkerService " << std::endl;
+        LOGS(_log, LOG_LVL_DEBUG, "statusOfWorkerService");
 
         MasterServer::pointer server = shared_from_this();
 
