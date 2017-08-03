@@ -90,10 +90,9 @@ enum ReplicationStatus {
     QUEUED        = 1;
     IN_PROGRESS   = 2;
     IS_CANCELLING = 3;
-    SUSPENDED     = 4;
-    BAD           = 5;
-    FAILED        = 6;
-    CANCELLED     = 7;
+    BAD           = 4;
+    FAILED        = 5;
+    CANCELLED     = 6;
 }
 message ReplicationResponseReplicate {
     required ReplicationStatus status = 1;

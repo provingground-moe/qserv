@@ -207,6 +207,158 @@ StopRequest::responseReceived (const boost::system::error_code &ec,
 }
 
 void
+StopRequest::wait () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "wait");
+
+    // Allways need to set the interval before launching the timer.
+    
+    _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
+    _timer.async_wait (
+        boost::bind (
+            &StopRequest::awaken,
+            shared_from_base<StopRequest>(),
+            boost::asio::placeholders::error
+        )
+    );
+}
+
+void
+StopRequest::awaken (const boost::system::error_code &ec) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
+
+    if (isAborted(ec)) return;
+
+    sendStatus();
+}
+
+void
+StopRequest::sendStatus () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "sendStatus");
+
+    // Serialize the Status message header and the request itself into
+    // the network buffer.
+
+    _bufferPtr->resize();
+
+    proto::ReplicationRequestHeader hdr;
+    hdr.set_type(proto::ReplicationRequestHeader::STATUS);
+
+    _bufferPtr->serialize(hdr);
+
+    proto::ReplicationRequestStatus message;
+    message.set_id(_replicationRequestId);
+
+    _bufferPtr->serialize(message);
+
+    // Send the message
+
+    boost::asio::async_write (
+        _socket,
+        boost::asio::buffer (
+            _bufferPtr->data(),
+            _bufferPtr->size()
+        ),
+        boost::bind (
+            &StopRequest::statusSent,
+            shared_from_base<StopRequest>(),
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred
+        )
+    );
+}
+
+void
+StopRequest::statusSent (const boost::system::error_code &ec,
+                         size_t                           bytes_transferred) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
+
+    if (isAborted(ec)) return;
+
+    if (ec) restart();
+    else    receiveStatus();
+}
+
+void
+StopRequest::receiveStatus () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "receiveStatus");
+
+    // Start with receiving the fixed length frame carrying
+    // the size (in bytes) the length of the subsequent message.
+    //
+    // The message itself will be read from the handler using
+    // the synchronous read method. This is based on an assumption
+    // that the worker server sends the whol emessage (its frame and
+    // the message itsef) at once.
+
+    const size_t bytes = sizeof(uint32_t);
+
+    _bufferPtr->resize(bytes);
+
+    boost::asio::async_read (
+        _socket,
+        boost::asio::buffer (
+            _bufferPtr->data(),
+            bytes
+        ),
+        boost::asio::transfer_at_least(bytes),
+        boost::bind (
+            &StopRequest::statusReceived,
+            shared_from_base<StopRequest>(),
+            boost::asio::placeholders::error,
+            boost::asio::placeholders::bytes_transferred
+        )
+    );
+}
+
+void
+StopRequest::statusReceived (const boost::system::error_code &ec,
+                             size_t                            bytes_transferred) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
+
+    if (isAborted(ec)) return;
+
+    if (ec) {
+        restart();
+        return;
+    }
+
+    // Get the length of the message and try reading the message itself
+    // from the socket.
+
+    const uint32_t bytes = _bufferPtr->parseLength();
+
+    _bufferPtr->resize(bytes);      // make sure the buffer has enough space to accomodate
+                                    // the data of the message.
+
+    boost::system::error_code error_code;
+    boost::asio::read (
+        _socket,
+        boost::asio::buffer (
+            _bufferPtr->data(),
+            bytes
+        ),
+        boost::asio::transfer_at_least(bytes),
+        error_code
+    );
+    if (error_code) restart();
+    else {
+    
+        // Parse the response to see what should be done next.
+    
+        proto::ReplicationResponseStatus message;
+        _bufferPtr->parse(message, bytes);
+    
+        analyze(message.status());
+    }
+}
+
+void
 StopRequest::analyze (proto::ReplicationStatus status) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
@@ -218,20 +370,13 @@ StopRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         case proto::ReplicationStatus::QUEUED:
-            finish (SERVER_QUEUED);
-            break;
-
         case proto::ReplicationStatus::IN_PROGRESS:
-            finish (SERVER_IN_PROGRESS);
-            break;
-
         case proto::ReplicationStatus::IS_CANCELLING:
-            finish (SERVER_IS_CANCELLING);
-            break;
 
-        case proto::ReplicationStatus::SUSPENDED:
-            finish (SERVER_SUSPENDED);
-            break;
+            // Go wait until a definitive response from the worker is received.
+
+            wait();
+            return;
 
         case proto::ReplicationStatus::BAD:
             finish (SERVER_BAD);

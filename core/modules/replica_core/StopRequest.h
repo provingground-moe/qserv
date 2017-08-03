@@ -118,14 +118,35 @@ private:
     
     /// Callback handler for the asynchronious operation
     void requestSent (const boost::system::error_code &ec,
-                      size_t bytes_transferred);
+                      size_t                           bytes_transferred);
 
     /// Start receiving the response from the destination worker
     void receiveResponse ();
 
     /// Callback handler for the asynchronious operation
     void responseReceived (const boost::system::error_code &ec,
-                           size_t bytes_transferred);
+                           size_t                           bytes_transferred);
+
+    /// Start the timer before attempting the previously failed
+    /// or successfull (if a status check is needed) step.
+    void wait ();
+
+    /// Callback handler for the asynchronious operation
+    void awaken (const boost::system::error_code &ec);
+
+    /// Start sending the status request to the destination worker
+    void sendStatus ();
+
+    /// Callback handler for the asynchronious operation
+    void statusSent (const boost::system::error_code &ec,
+                     size_t                           bytes_transferred);
+
+    /// Start receiving the status response from the destination worker
+    void receiveStatus ();
+
+    /// Callback handler for the asynchronious operation
+    void statusReceived (const boost::system::error_code &ec,
+                         size_t                           bytes_transferred);
 
     /// Process the completion of the requested operation
     void analyze (lsst::qserv::proto::ReplicationStatus status);
