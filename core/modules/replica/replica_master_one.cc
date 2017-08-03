@@ -18,7 +18,7 @@ namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_master_one");
 
-const char* usage = "Usage: <config> {REPLICATE <db> <chunk> | STATUS <id> | STOP <id>}";
+const char* usage = "Usage: <config> {REPLICATE <db> <chunk> | REPLICATE_AND_CANCEL <db> <chunk> | STATUS <id> | STOP <id>}";
 
 bool assertArguments (int argc, int minArgc) {
     if (argc < minArgc) {
@@ -68,29 +68,42 @@ bool test (const std::string &configFileName,
 
         rc::Request::pointer request;
 
-        if ("REPLICATE" == operation)
+        if ("REPLICATE" == operation) {
             request = server->replicate (
                 id_or_db, chunk, worker, worker,
                 [] (rc::ReplicationRequest::pointer request) {
                     printRequest<rc::ReplicationRequest>(request);
                 });
 
-        else if ("STATUS"  == operation)
+        } else if ("REPLICATE_AND_CANCEL" == operation) {
+            request = server->replicate (
+                id_or_db, chunk, worker, worker,
+                [] (rc::ReplicationRequest::pointer request) {
+                    printRequest<rc::ReplicationRequest>(request);
+                });
+
+            rc::BlockPost blockPost (0, 500);
+            blockPost.wait();
+
+            request->cancel();
+
+        } else if ("STATUS"  == operation) {
             request = server->statusOfReplication (
                 worker, id_or_db,
                 [] (rc::StatusRequest::pointer request) {
                     printRequest<rc::StatusRequest>(request);
                 });
 
-        else if ("STOP"  == operation)
+        } else if ("STOP"  == operation) {
             request = server->stopReplication (
                 worker, id_or_db,
                 [] (rc::StopRequest::pointer request) {
                     printRequest<rc::StopRequest>(request);
                 });
 
-        else
+        } else {
             return false;
+        }
 
 
         // Wait before the request is finished. Then stop the master server
@@ -122,7 +135,7 @@ int main (int argc, const char* const argv[]) {
     const std::string operation      (argv[2]);
     const std::string id_or_db       (argv[3]);
     
-    if (    "REPLICATE" == operation)
+    if     (("REPLICATE" == operation) || ("REPLICATE_AND_CANCEL" == operation))
         ::assertArguments (argc, 5) &&
         ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
 
