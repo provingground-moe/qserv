@@ -71,7 +71,6 @@ Request::state2string (ExtendedState state) {
         case SERVER_QUEUED:        return "SERVER_QUEUED";
         case SERVER_IN_PROGRESS:   return "SERVER_IN_PROGRESS";
         case SERVER_IS_CANCELLING: return "SERVER_IS_CANCELLING";
-        case SERVER_SUSPENDED:     return "SERVER_SUSPENDED";
         case SERVER_CANCELLED:     return "SERVER_CANCELLED";
         case EXPIRED:              return "EXPIRED";
         case CANCELLED:            return "CANCELLED";

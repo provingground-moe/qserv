@@ -109,9 +109,6 @@ public:
         /// The request is being cancelled by the server
         SERVER_IS_CANCELLING,
 
-        /// The request is suspended by the server
-        SERVER_SUSPENDED,
-
         /// The request is found as cancelled on the server
         SERVER_CANCELLED,
 

@@ -384,7 +384,6 @@ ReplicationRequest::analyze (proto::ReplicationStatus status) {
         case proto::ReplicationStatus::QUEUED:
         case proto::ReplicationStatus::IN_PROGRESS:
         case proto::ReplicationStatus::IS_CANCELLING:
-        case proto::ReplicationStatus::SUSPENDED:
 
             // Go wait until a definitive response from the worker is received.
 

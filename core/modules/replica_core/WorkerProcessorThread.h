@@ -102,7 +102,7 @@ public:
     void stop ();
 
     /// Return the context string
-    std::string context () const { return "THREAD [" + std::to_string(_id) + "]  "; }
+    std::string context () const { return "THREAD: " + std::to_string(_id) + "  "; }
 
 private:
 

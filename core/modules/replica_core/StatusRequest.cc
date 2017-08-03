@@ -227,9 +227,6 @@ StatusRequest::analyze (proto::ReplicationStatus status) {
         case proto::ReplicationStatus::IS_CANCELLING:
             finish (SERVER_IS_CANCELLING);
             break;
-        case proto::ReplicationStatus::SUSPENDED:
-            finish (SERVER_SUSPENDED);
-            break;
 
         case proto::ReplicationStatus::BAD:
             finish (SERVER_BAD);
