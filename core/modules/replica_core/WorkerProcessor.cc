@@ -69,7 +69,7 @@ WorkerProcessor::create (const ServiceProvider::pointer &serviceProvider) {
 
 WorkerProcessor::WorkerProcessor (const ServiceProvider::pointer &serviceProvider)
     :   _serviceProvider (serviceProvider),
-        _state           (State::STATE_IS_STOPPED) {
+        _state           (STATE_IS_STOPPED) {
 }
 
 WorkerProcessor::~WorkerProcessor () {
@@ -82,7 +82,7 @@ WorkerProcessor::run () {
 
     THREAD_SAFE_BLOCK {
 
-        if (_state == State::STATE_IS_STOPPED) {
+        if (_state == STATE_IS_STOPPED) {
 
             const size_t numThreads = _serviceProvider->config()->workerNumProcessingThreads();
             if (!numThreads) throw std::out_of_range("the number of procesisng threads can't be 0");
@@ -101,7 +101,7 @@ WorkerProcessor::run () {
             for (auto &t: _threads) {
                 t->run();
             }
-            _state = State::STATE_IS_RUNNING;
+            _state = STATE_IS_RUNNING;
         }
     }
 }
@@ -113,7 +113,7 @@ WorkerProcessor::stop () {
     
     THREAD_SAFE_BLOCK {
 
-        if (_state == State::STATE_IS_RUNNING) {
+        if (_state == STATE_IS_RUNNING) {
             
             // Tell each thread to stop.
         
@@ -125,7 +125,7 @@ WorkerProcessor::stop () {
             // The transition will finish asynchronious when all threads will report
             // desired changes in their states.
 
-            _state = State::STATE_IS_STOPPING;
+            _state = STATE_IS_STOPPING;
         }
     }
 }
@@ -145,21 +145,99 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
         // TODO: run the sanity check to ensure no such request is found in any
         //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-        WorkerReplicationRequest::pointer workerRequest =
+        WorkerRequest::pointer workerRequest =
             WorkerReplicationRequest::create (
-                WorkerReplicationRequest::Priority::LOW,
+                WorkerRequest::PRIORITY_LEVEL_LOW,
                 request.id(),
                 request.database(),
                 request.chunk());
 
         _newRequests.push(workerRequest);
         
-        // TODO: send a signal via a condition variable to notify
-        // processing threads that there is a new request.
+        response.set_status (proto::ReplicationStatus::QUEUED);
+    }
+}
+
+void
+WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &request,
+                                     proto::ReplicationResponseDelete      &response) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForDeletion"
+        << "  id: "    << request.id()
+        << "  db: "    << request.database()
+        << "  chunk: " << request.chunk());
+
+    THREAD_SAFE_BLOCK {
+    
+        // TODO: run the sanity check to ensure no such request is found in any
+        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+
+        WorkerRequest::pointer workerRequest =
+            WorkerDeleteRequest::create (
+                WorkerRequest::PRIORITY_LEVEL_LOW,
+                request.id(),
+                request.database(),
+                request.chunk());
+
+        _newRequests.push(workerRequest);
  
         response.set_status (proto::ReplicationStatus::QUEUED);
     }
 }
+
+void
+WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
+                                 proto::ReplicationResponseFind      &response) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFind"
+        << "  id: "    << request.id()
+        << "  db: "    << request.database()
+        << "  chunk: " << request.chunk());
+
+    THREAD_SAFE_BLOCK {
+
+        // TODO: run the sanity check to ensure no such request is found in any
+        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+
+        WorkerRequest::pointer workerRequest =
+            WorkerFindRequest::create (
+                WorkerRequest::PRIORITY_LEVEL_LOW,
+                request.id(),
+                request.database(),
+                request.chunk());
+
+        _newRequests.push(workerRequest);
+ 
+        response.set_status (proto::ReplicationStatus::QUEUED);
+    }
+}
+
+
+void
+WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &request,
+                                    proto::ReplicationResponseFindAll      &response) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFindAll"
+        << "  id: " << request.id()
+        << "  db: " << request.database());
+
+    THREAD_SAFE_BLOCK {
+
+        // TODO: run the sanity check to ensure no such request is found in any
+        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+
+        WorkerRequest::pointer workerRequest =
+            WorkerFindAllRequest::create (
+                WorkerRequest::PRIORITY_LEVEL_LOW,
+                request.id(),
+                request.database());
+
+        _newRequests.push(workerRequest);
+
+        response.set_status (proto::ReplicationStatus::QUEUED);
+    }
+}
+
 
 void
 WorkerProcessor::dequeueOrCancel (const proto::ReplicationRequestStop &request,
@@ -185,7 +263,7 @@ WorkerProcessor::dequeueOrCancel (const proto::ReplicationRequestStop &request,
 
                 switch (ptr->status()) {
 
-                    case WorkerReplicationRequest::CompletionStatus::CANCELLED:
+                    case WorkerRequest::STATUS_CANCELLED:
 
                         _newRequests.remove(id);
                         _finishedRequests.push_back(ptr);
@@ -217,7 +295,7 @@ WorkerProcessor::dequeueOrCancel (const proto::ReplicationRequestStop &request,
 
                 switch (ptr->status()) {
 
-                    case WorkerReplicationRequest::CompletionStatus::IS_CANCELLING:
+                    case WorkerRequest::STATUS_IS_CANCELLING:
                         response.set_status(proto::ReplicationStatus::IS_CANCELLING);
                         return;
 
@@ -240,15 +318,15 @@ WorkerProcessor::dequeueOrCancel (const proto::ReplicationRequestStop &request,
 
                 switch (ptr->status()) {
 
-                    case WorkerReplicationRequest::CompletionStatus::CANCELLED:
+                    case WorkerRequest::STATUS_CANCELLED:
                         response.set_status(proto::ReplicationStatus::CANCELLED);
                         return;
 
-                    case WorkerReplicationRequest::CompletionStatus::SUCCEEDED:
+                    case WorkerRequest::STATUS_SUCCEEDED:
                         response.set_status(proto::ReplicationStatus::SUCCESS);
                         return;
 
-                    case WorkerReplicationRequest::CompletionStatus::FAILED:
+                    case WorkerRequest::STATUS_FAILED:
                         response.set_status(proto::ReplicationStatus::FAILED);
                         return;
 
@@ -282,7 +360,7 @@ WorkerProcessor::checkStatus (const proto::ReplicationRequestStatus &request,
         for (auto ptr : _newRequests) {
             if (ptr->id() == id) {
                 switch (ptr->status()) {
-                    case WorkerReplicationRequest::CompletionStatus::NONE:
+                    case WorkerRequest::STATUS_NONE:
                         response.set_status(proto::ReplicationStatus::QUEUED);
                         return;
                     default:
@@ -299,10 +377,10 @@ WorkerProcessor::checkStatus (const proto::ReplicationRequestStatus &request,
         for (auto ptr : _inProgressRequests) {
             if (ptr->id() == id) {
                 switch (ptr->status()) {
-                    case WorkerReplicationRequest::CompletionStatus::IS_CANCELLING:
+                    case WorkerRequest::STATUS_IS_CANCELLING:
                         response.set_status(proto::ReplicationStatus::IS_CANCELLING);
                         return;
-                    case WorkerReplicationRequest::CompletionStatus::IN_PROGRESS:
+                    case WorkerRequest::STATUS_IN_PROGRESS:
                         response.set_status(proto::ReplicationStatus::IN_PROGRESS);
                         return;
                     default:
@@ -319,13 +397,13 @@ WorkerProcessor::checkStatus (const proto::ReplicationRequestStatus &request,
         for (auto ptr : _finishedRequests) {
             if (ptr->id() == id) {
                 switch (ptr->status()) {
-                    case WorkerReplicationRequest::CompletionStatus::CANCELLED:
+                    case WorkerRequest::STATUS_CANCELLED:
                         response.set_status(proto::ReplicationStatus::CANCELLED);
                         return;
-                    case WorkerReplicationRequest::CompletionStatus::SUCCEEDED:
+                    case WorkerRequest::STATUS_SUCCEEDED:
                         response.set_status(proto::ReplicationStatus::SUCCESS);
                         return;
-                    case WorkerReplicationRequest::CompletionStatus::FAILED:
+                    case WorkerRequest::STATUS_FAILED:
                         response.set_status(proto::ReplicationStatus::FAILED);
                         return;
                     default:
@@ -436,14 +514,14 @@ WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &p
 
     THREAD_SAFE_BLOCK {
 
-        if (_state == State::STATE_IS_STOPPING) {
+        if (_state == STATE_IS_STOPPING) {
 
             // Complete state transition if all threds are stopped
 
             for (auto &t: _threads) {
                 if (t->isRunning()) return;
             }
-            _state = State::STATE_IS_STOPPED;
+            _state = STATE_IS_STOPPED;
         }
     }
 }

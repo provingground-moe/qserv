@@ -117,7 +117,7 @@ WorkerProcessorThread::run () {
                         }
                     }
 
-                } catch (const WorkerReplicationCancelled &ex) {
+                } catch (const WorkerRequestCancelled &ex) {
 
                     LOGS(_log, LOG_LVL_DEBUG, self->context() << "cancel processing"
                         << "  id: " << request->id()

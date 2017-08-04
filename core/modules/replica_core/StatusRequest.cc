@@ -91,7 +91,7 @@ StatusRequest::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::STATUS);
+    hdr.set_type(proto::ReplicationRequestHeader::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 

@@ -77,7 +77,7 @@ public:
     struct PriorityQueueType
         :   std::priority_queue<WorkerReplicationRequest::pointer,
                                 std::vector<WorkerReplicationRequest::pointer>,
-                                WorkerReplicationRequestCompare> {
+                                WorkerRequestCompare> {
 
         /// The beginning of the container to allow the iterator protocol
         decltype(c.begin()) begin () {
@@ -165,6 +165,33 @@ public:
                                 proto::ReplicationResponseReplicate      &response);
 
     /**
+     * Enqueue the replica deletion request for processing
+     *
+     * @param request  - the protobuf object received from a client
+     * @param response - the protobuf object to be initialized and sent back to the client
+     */
+    void enqueueForDeletion (const proto::ReplicationRequestDelete &request,
+                             proto::ReplicationResponseDelete      &response);
+
+    /**
+     * Enqueue the replica lookup request for processing
+     *
+     * @param request  - the protobuf object received from a client
+     * @param response - the protobuf object to be initialized and sent back to the client
+     */
+    void enqueueForFind (const proto::ReplicationRequestFind &request,
+                         proto::ReplicationResponseFind      &response);
+
+    /**
+     * Enqueue the multi-replica lookup request for processing
+     *
+     * @param request  - the protobuf object received from a client
+     * @param response - the protobuf object to be initialized and sent back to the client
+     */
+    void enqueueForFindAll (const proto::ReplicationRequestFindAll &request,
+                            proto::ReplicationResponseFindAll      &response);
+
+    /**
      * Dequeue replication request
      *
      * If the request is not being processed yet then it wil be simply removed
@@ -205,7 +232,7 @@ private:
     explicit WorkerProcessor (const ServiceProvider::pointer &serviceProvider);
 
     /**
-     * Return the next replication request which is ready to be pocessed
+     * Return the next request which is ready to be pocessed
      * and if then one found assign it to the specified thread. The request
      * will be removed from the ready-to-be-processed queue.
      * 
@@ -218,8 +245,8 @@ private:
      * when it becomes available.
      * 
      * ATTENTION: this method will block for a duration of time not exceeding
-     * the client-specified timeout unless it's set to 0. IN the later case
-     * the method will block indefinitevely.
+     *            the client-specified timeout unless it's set to 0. In the later
+     *            case the method will block indefinitevely.
      */
     WorkerReplicationRequest::pointer fetchNextForProcessing (
             const WorkerProcessorThread::pointer &processorThread,
