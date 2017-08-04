@@ -102,7 +102,7 @@ ReplicationRequest::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::REPLICATE);
+    hdr.set_type(proto::ReplicationRequestHeader::REPLICA_CREATE;
 
     _bufferPtr->serialize(hdr);
 
@@ -256,12 +256,13 @@ ReplicationRequest::sendStatus () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::STATUS);
+    hdr.set_type(proto::ReplicationRequestHeader::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
     message.set_id(id());
+    message.set_type(proto::ReplicationRequestHeader::REPLICA_CREATE;
 
     _bufferPtr->serialize(message);
 
@@ -329,7 +330,7 @@ ReplicationRequest::receiveStatus () {
 
 void
 ReplicationRequest::statusReceived (const boost::system::error_code &ec,
-                                   size_t                            bytes_transferred) {
+                                    size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -363,7 +364,7 @@ ReplicationRequest::statusReceived (const boost::system::error_code &ec,
     
         // Parse the response to see what should be done next.
     
-        proto::ReplicationResponseStatus message;
+        proto::ReplicationResponseReplicate message;
         _bufferPtr->parse(message, bytes);
     
         analyze(message.status());

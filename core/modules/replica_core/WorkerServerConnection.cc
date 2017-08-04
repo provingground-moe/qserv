@@ -232,7 +232,7 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
 
     switch (hdr.type()) {
 
-        case proto::ReplicationRequestHeader::REPLICATE : {
+        case proto::ReplicationRequestHeader::REPLICA_CREATE : {
 
             // Read the request length
             uint32_t bytes;
@@ -248,7 +248,55 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
 
             break;
         }
-        case proto::ReplicationRequestHeader::STOP : {
+        case proto::ReplicationRequestHeader::REPLICA_DELETE : {
+
+            // Read the request length
+            uint32_t bytes;
+            if (!::readLength (_socket, _bufferPtr, bytes)) return;
+
+            // Read the request body
+            proto::ReplicationRequestDelete request;
+            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+
+            proto::ReplicationResponseDelete response;
+            _processor->enqueueForDeletion (request, response);
+            reply(response);
+
+            break;
+        }
+        case proto::ReplicationRequestHeader::REPLICA_FIND : {
+
+            // Read the request length
+            uint32_t bytes;
+            if (!::readLength (_socket, _bufferPtr, bytes)) return;
+
+            // Read the request body
+            proto::ReplicationRequestFind request;
+            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+
+            proto::ReplicationResponseFind response;
+            _processor->enqueueForFind (request, response);
+            reply(response);
+
+            break;
+        }
+        case proto::ReplicationRequestHeader::REPLICA_FIND_ALL : {
+
+            // Read the request length
+            uint32_t bytes;
+            if (!::readLength (_socket, _bufferPtr, bytes)) return;
+
+            // Read the request body
+            proto::ReplicationRequestFindAll request;
+            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+
+            proto::ReplicationResponseFindAll response;
+            _processor->enqueueForFindAll (request, response);
+            reply(response);
+
+            break;
+        }
+        case proto::ReplicationRequestHeader::REQUEST_STOP : {
 
             // Read the request length
             uint32_t bytes;
@@ -264,7 +312,7 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
 
             break;
         }
-        case proto::ReplicationRequestHeader::STATUS : {
+        case proto::ReplicationRequestHeader::REQUEST_STATUS : {
 
             // Read the request length
             uint32_t bytes;
@@ -274,10 +322,39 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
             proto::ReplicationRequestStatus request;
             if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
-            proto::ReplicationResponseStatus response;
-            _processor->checkStatus (request, response);
-            reply(response);
+            switch (request.type()) {
 
+                  case proto::ReplicationRequestHeader::REPLICA_CREATE : {
+                      proto::ReplicationResponseReplicate response;
+                      _processor->checkStatus (request, response);
+                      reply(response);
+                      break;
+                  }
+                  case proto::ReplicationRequestHeader::REPLICA_DELETE : {
+                      proto::ReplicationResponseDelete response;
+                      _processor->checkStatus (request, response);
+                      reply(response);
+                      break;
+                  }
+                  case proto::ReplicationRequestHeader::REPLICA_FIND : {
+                      proto::ReplicationResponseFind response;
+                      _processor->checkStatus (request, response);
+                      reply(response);
+                      break;
+                  }
+                  case proto::ReplicationRequestHeader::REPLICA_FIND_ALL : {
+                      proto::ReplicationResponseFindAll response;
+                      _processor->checkStatus (request, response);
+                      reply(response);
+                      break;
+                  }
+                  case proto::ReplicationRequestHeader::REQUEST_STOP : {
+                      proto::ReplicationResponseStop response;
+                      _processor->checkStatus (request, response);
+                      reply(response);
+                      break;
+                  }
+            }
             break;
         }
         case proto::ReplicationRequestHeader::SERVICE_SUSPEND : {

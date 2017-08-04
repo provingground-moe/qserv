@@ -52,7 +52,7 @@ namespace replica_core {
 /**
   * Class ServiceManagementRequestBase is the base class for a family of requests
   * managing worker-side replication service. The only variable parameter of this
-  * class is a specific type of teh managemenyt request.
+  * class is a specific type of the managemenyt request.
   *
   * Note that this class can't be instantiate directly. It serves as an implementation
   * of the protocol. All final customizations and type-specific operations are

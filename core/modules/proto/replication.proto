@@ -34,57 +34,128 @@ package lsst.qserv.proto;
 // Requests affecting the overall status of the service do not require
 // any additional messages.
 
+// Request types related to operations with replicas
+//
+enum ReplicationReplicaRequestType {
+
+    REPLICA_CREATE   = 0;    // replicate a chunk
+    REPLICA_DELETE   = 1;    // delete an existing replica of a chunk
+    REPLICA_FIND     = 2;    // find out if a replica is present, and report its state
+    REPLICA_FIND_ALL = 3;    // find all replicas and report their states
+}
+
+// Request types for managing above defined requests
+//
+enum ReplicationManagementRequestType {
+
+    REQUEST_STOP     = 0;    // stop a previously requested request
+    REQUEST_STATUS   = 1;    // check a status of a request
+}
+
+// Request types affecting the overall state of the worker replication service
+//
+enum ReplicationServiceRequestType {
+
+    SERVICE_SUSPEND = 0;
+    SERVICE_RESUME  = 1;
+    SERVICE_STATUS  = 2;
+}
+
+// Message header is sent next after the frame size request. A sender must
+// indicate a class of a request by choosing one of a few options defined
+// in 'Type', and then set the specific request in the corresponding
+// optional field.
+//
 message ReplicationRequestHeader {
 
     enum Type {
-
-        // Chunk replication requests
-
-        REPLICATE = 0;
-        STOP      = 1;
-        STATUS    = 2;
-        
-        // Requests affecting the overall state of the worker replication
-        // service
-
-        SERVICE_SUSPEND = 3;
-        SERVICE_RESUME  = 4;
-        SERVICE_STATUS  = 5;
+        REPLICA    = 0,
+        MANAGEMENT = 1,
+        SERVICE    = 2
     }
-    required Type type = 1;
+    required Type                             type           = 1;
+    optional ReplicationReplicaRequestType    replicaType    = 2;
+    optional ReplicationManagementRequestType managementType = 3;
+    optional ReplicationServiceRequestType    serviceType    = 4;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//
+// The type of the next message (if any) to be sent depends on  specific type of
+// the operation. It should provide additional parameters of the operation.
+//
+
 // This is a replication request. The message defines a scope of the request and
 // its unique identity. This message is sent once after the header.
-
+//
 message ReplicationRequestReplicate {
     required string database = 1;
     required int32  chunk = 2;
     required string id = 3;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////
+// This is a replica deletion request. The message defines a scope of the request
+// and its unique identity. This message is sent once after the header.
+//
+message ReplicationRequestDelete {
+    required string database = 1;
+    required int32  chunk = 2;
+    required string id = 3;
+}
+
+// This is a replica lookup request. The message defines a scope of the request
+// and its unique identity. This message is sent once after the header.
+//
+message ReplicationRequestFind {
+    required string database = 1;
+    required int32  chunk = 2;
+    required string id = 3;
+}
+
+// This is a replica lookup request for multiple replicas. The message defines
+// a scope of the request and its unique identity. This message is sent once
+// after the header.
+//
+message ReplicationRequestFindAll {
+    required string database = 1;
+    required string id = 2;
+}
+
 // This request is sent to stop an on-going replication (if any is still in progress).
 // This message is sent once after the header.
-
+//
 message ReplicationRequestStop {
-    required string id = 1;
+
+    required string id   = 1;    // an identifier of a request to be stopped
+
+    // A specific type of the request will affect a choice
+    // of the status object returned in response
+
+    required ReplicationReplicaRequestType type = 2;
 }
 
-
-//////////////////////////////////////////////////////////////////////////////
 // This request is sent to request a status of an on-going replication (if any
 // is still in progress). This message is sent once after the header.
-
+//
 message ReplicationRequestStatus {
-    required string id = 1;
+
+    required string id   = 1;    // an identifier of a request to be inspected
+
+    // A specific type of the request will affect a choice
+    // of the status object returned in response
+
+    required ReplicationReplicaRequestType type = 2;
 }
 
-/////////////////////////////////////////////////////////////
+//
 // These messages are expected by master upon a completion of
 // the corresponding replication operations.
+//
 
+// Status values returned by all request related to operations with
+// replicas. Request management operations always return messages whose types
+// match the return types of the corresponding (original) replica-related reqiests.
+// Service management requests have their own set of status values.
+//
 enum ReplicationStatus {
     SUCCESS       = 0;
     QUEUED        = 1;
@@ -94,20 +165,40 @@ enum ReplicationStatus {
     FAILED        = 5;
     CANCELLED     = 6;
 }
+
 message ReplicationResponseReplicate {
     required ReplicationStatus status = 1;
 }
-message ReplicationResponseStop {
-    required ReplicationStatus status = 1;
-}
-message ReplicationResponseStatus {
+
+message ReplicationResponseDelete {
     required ReplicationStatus status = 1;
 }
 
+message ReplicaInfo {
+    enum ReplicaStatus {
+        REPLICA_IS_NOT_FOUND  = 0;
+        REPLICA_IS_INCOMPLETE = 1;
+        REPLICA_IS_COMPLETE   = 2;
+        REPLICA_IS_CORRUPT    = 3;
+    }
+    required ReplicaStatus status   = 1;
+    required string        database = 2;
+    required int32         chunk    = 3;
+}
+
+message ReplicationResponseFind {
+    required ReplicationStatus status = 1;
+    required ReplicaInfo       info   = 2;
+}
+
+message ReplicationResponseFindAll {
+    required ReplicationStatus status = 1;
+    repeated ReplicaInfo       infos  = 2;
+}
 
 /////////////////////////////////////////////////////////////////////////
 // The message returned in response to requests related to (or affecting)
-// the overall state of the sorker-side replication service.
+// the overall state of the server-side replication service.
 
 message ReplicationServiceResponse {
 

@@ -92,7 +92,7 @@ StopRequest::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::STOP);
+    hdr.set_type(proto::ReplicationRequestHeader::REQUEST_STOP);
 
     _bufferPtr->serialize(hdr);
 
@@ -244,12 +244,13 @@ StopRequest::sendStatus () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::STATUS);
+    hdr.set_type(proto::ReplicationRequestHeader::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
     message.set_id(_replicationRequestId);
+    message.set_type(proto::ReplicationRequestHeader::REQUEST_STOP;
 
     _bufferPtr->serialize(message);
 
@@ -317,7 +318,7 @@ StopRequest::receiveStatus () {
 
 void
 StopRequest::statusReceived (const boost::system::error_code &ec,
-                             size_t                            bytes_transferred) {
+                             size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -350,8 +351,8 @@ StopRequest::statusReceived (const boost::system::error_code &ec,
     else {
     
         // Parse the response to see what should be done next.
-    
-        proto::ReplicationResponseStatus message;
+
+        proto::ReplicationResponseStop message;
         _bufferPtr->parse(message, bytes);
     
         analyze(message.status());
