@@ -140,29 +140,22 @@ public:
     ServiceProvider::pointer serviceProvider() { return _serviceProvider; }
 
     /// Return a string representing a type of a request.
-    const std::string& type () const {
-        return _type;
-    }
+    const std::string& type () const { return _type; }
 
     /// Return a unique identifier of the request
-    const std::string& id () const {
-        return _id;
-    }
+    const std::string& id () const { return _id; }
+
+    /// Return the priority level of the request
+    int priority () const { return _id; }
 
     /// Return a unique identifier of the request
-    const std::string& worker () const {
-        return _worker;
-    }
+    const std::string& worker () const { return _worker; }
 
     /// Return the primary status of the request
-    State state () const {
-        return _state;
-    }
+    State state () const { return _state; }
     
     /// Return the extended state of the request when it finished.
-    ExtendedState extendedState () const {
-        return _extendedState;
-    }
+    ExtendedState extendedState () const { return _extendedState; }
 
     /**
      * Explicitly cancel any asynchronous operation(s) and put the object into
@@ -174,7 +167,7 @@ public:
      */
     void cancel ();
 
-    /// Return the context string
+    /// Return the context string for debugging and diagnostic printouts
     std::string context () const {
         return id() + "  " + type() + "  " + state2string(state(), extendedState()) + "  ";
     }
@@ -198,12 +191,18 @@ protected:
      * Construct the request with the pointer to the services provider.
      *
      * @param serviceProvider - the pointer to the provider of serviceses
-     * @param id              - a unique identifier of the request
+     * @param type            - its type name (used informally for debugging)
+     * @param worker          - the name of a worker
+     * @io_service            - BOOST ASIO service
+     * @priority              - may affect an execution order of the request by
+     *                          the worker service. Higher number means higher
+     *                          priority.
      */
     Request (const ServiceProvider::pointer &serviceProvider,
              const std::string              &type,
              const std::string              &worker,
-             boost::asio::io_service        &io_service);
+             boost::asio::io_service        &io_service,
+             int                             priority=0);
 
     /**
      * Reset the state (if needed) and begin processing the request.
@@ -317,6 +316,8 @@ protected:
     std::string _type;
     std::string _id;
     std::string _worker;
+
+    int _priority;
 
     // Primary and extended states of the request
 

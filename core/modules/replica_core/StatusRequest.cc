@@ -21,7 +21,7 @@
  */
 
 // Class header
-#include "replica_core/StatusRequest.h"
+#include "replica_core/StatusRequestBase.h"
 
 // System headers
 
@@ -39,7 +39,7 @@ namespace proto = lsst::qserv::proto;
 
 namespace {
 
-LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.StatusRequest");
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.StatusRequestBase");
 
 } /// namespace
 
@@ -47,41 +47,27 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-StatusRequest::pointer
-StatusRequest::create (const ServiceProvider::pointer &serviceProvider,
-                       const std::string              &worker,
-                       boost::asio::io_service        &io_service,
-                       const std::string              &replicationRequestId,
-                       callback_type                   onFinish) {
 
-    return StatusRequest::pointer (
-        new StatusRequest (
-            serviceProvider,
-            worker,
-            io_service,
-            replicationRequestId,
-            onFinish));
-}
-
-StatusRequest::StatusRequest (const ServiceProvider::pointer &serviceProvider,
-                              const std::string              &worker,
-                              boost::asio::io_service        &io_service,
-                              const std::string              &replicationRequestId,
-                              callback_type                   onFinish)
+StatusRequestBase::StatusRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+                                      const char                                        *requestTypeName,
+                                      const std::string                                 &worker,
+                                      boost::asio::io_service                           &io_service,
+                                      const std::string                                 &targetRequestId,
+                                      lsst::qserv::proto::ReplicationReplicaRequestType  requestType)
     :   Request(serviceProvider,
-                "STATUS",
+                requestTypeName,
                 worker,
                 io_service),
 
-        _replicationRequestId (replicationRequestId),
-        _onFinish             (onFinish)
+        _targetRequestId (targetRequestId),
+        _requestType     (requestType)
 {}
 
-StatusRequest::~StatusRequest ()
+StatusRequestBase::~StatusRequestBase ()
 {}
 
 void
-StatusRequest::beginProtocol () {
+StatusRequestBase::beginProtocol () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
 
@@ -91,12 +77,14 @@ StatusRequest::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::REQUEST_STATUS);
+    hdr.set_type       (proto::ReplicationRequestHeader::REQUEST);
+    hdr.management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
-    message.set_id(_replicationRequestId);
+    message.set_id  (_targetRequestId);
+    message.set_type(_requestType);
 
     _bufferPtr->serialize(message);
 
@@ -109,8 +97,8 @@ StatusRequest::beginProtocol () {
             _bufferPtr->size()
         ),
         boost::bind (
-            &StatusRequest::requestSent,
-            shared_from_base<StatusRequest>(),
+            &StatusRequestBase::requestSent,
+            shared_from_base<StatusRequestBase>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -118,8 +106,8 @@ StatusRequest::beginProtocol () {
 }
 
 void
-StatusRequest::requestSent (const boost::system::error_code &ec,
-                            size_t                           bytes_transferred) {
+StatusRequestBase::requestSent (const boost::system::error_code &ec,
+                                size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
@@ -130,7 +118,7 @@ StatusRequest::requestSent (const boost::system::error_code &ec,
 }
 
 void
-StatusRequest::receiveResponse () {
+StatusRequestBase::receiveResponse () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
@@ -154,8 +142,8 @@ StatusRequest::receiveResponse () {
         ),
         boost::asio::transfer_at_least(bytes),
         boost::bind (
-            &StatusRequest::responseReceived,
-            shared_from_base<StatusRequest>(),
+            &StatusRequestBase::responseReceived,
+            shared_from_base<StatusRequestBase>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -163,8 +151,8 @@ StatusRequest::receiveResponse () {
 }
 
 void
-StatusRequest::responseReceived (const boost::system::error_code &ec,
-                                 size_t                           bytes_transferred) {
+StatusRequestBase::responseReceived (const boost::system::error_code &ec,
+                                     size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
@@ -196,17 +184,15 @@ StatusRequest::responseReceived (const boost::system::error_code &ec,
     if (error_code) restart();
     else {
     
-        // Parse the response to see what should be done next.
+        // Parse the request-specific response, extract the completion status of
+        // the opeation and then (based on the status) see what should be done next.
     
-        proto::ReplicationResponseStatus message;
-        _bufferPtr->parse(message, bytes);
-    
-        analyze(message.status());
+        analyze (parseResponse());
     }
 }
 
 void
-StatusRequest::analyze (proto::ReplicationStatus status) {
+StatusRequestBase::analyze (proto::ReplicationStatus status) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
 
@@ -241,19 +227,10 @@ StatusRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("StatusRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+            throw std::logic_error("StatusRequestBase::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
                                    "' received from server");
     }
 }
 
-void
-StatusRequest::endProtocol () {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "endProtocol");
-
-    if (_onFinish != nullptr) {
-        _onFinish(shared_from_base<StatusRequest>());
-    }
-}
 
 }}} // namespace lsst::qserv::replica_core

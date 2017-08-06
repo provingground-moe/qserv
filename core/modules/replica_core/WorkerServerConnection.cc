@@ -225,183 +225,212 @@ WorkerServerConnection::received (const boost::system::error_code &ec,
     proto::ReplicationRequestHeader hdr;
     if (!::readMessage (_socket, _bufferPtr, _bufferPtr->parseLength(), hdr)) return;
    
-    // Now read a specific request
+    // Analyse the header of the request. Note that th eheader message defined
+    // requests in two layers:
     //
-    // ATTENTION: watch for the protocol! Some requests are fully expressed
-    //            in terms of the above received & parsed header.
+    // - first goes the class of requests as defined by member 'type'
+    // - themn goes a choice of a specific request witin its class. Those specific
+    //   request codes are obtained from the corresponding members
 
     switch (hdr.type()) {
 
-        case proto::ReplicationRequestHeader::REPLICA_CREATE : {
+        case proto::ReplicationRequestHeader::REPLICA : {
 
             // Read the request length
             uint32_t bytes;
             if (!::readLength (_socket, _bufferPtr, bytes)) return;
 
-            // Read the request body
-            proto::ReplicationRequestReplicate request;
-            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+            switch (hdr.replica_type()) {
 
-            proto::ReplicationResponseReplicate response;
-            _processor->enqueueForReplication (request, response);
-            reply(response);
+                case proto::ReplicationReplicaRequestType::REPLICA_CREATE : {
 
-            break;
+                    // Read the request body
+                    proto::ReplicationRequestReplicate request;
+                    if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+
+                    proto::ReplicationResponseReplicate response;
+                    _processor->enqueueForReplication (request, response);
+                    reply(response);
+
+                    break;
+                }
+                case proto::ReplicationReplicaRequestType::REPLICA_DELETE : {
+
+                    // Read the request body
+                    proto::ReplicationRequestDelete request;
+                    if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+
+                    proto::ReplicationResponseDelete response;
+                    _processor->enqueueForDeletion (request, response);
+                    reply(response);
+
+                    break;
+                }
+                case proto::ReplicationReplicaRequestType::REPLICA_FIND : {
+
+                    // Read the request body
+                    proto::ReplicationRequestFind request;
+                    if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+
+                    proto::ReplicationResponseFind response;
+                    _processor->enqueueForFind (request, response);
+                    reply(response);
+
+                    break;
+                }
+                case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL : {
+
+                    // Read the request body
+                    proto::ReplicationRequestFindAll request;
+                    if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+
+                    proto::ReplicationResponseFindAll response;
+                    _processor->enqueueForFindAll (request, response);
+                    reply(response);
+
+                    break;
+                }
+                default:
+                    throw std::logic_error("WorkerServerConnection::received() unknown replica request '" +
+                                           proto::ReplicationServiceRequestType_Name(hdr.replica_type()));
         }
-        case proto::ReplicationRequestHeader::REPLICA_DELETE : {
+        case proto::ReplicationRequestHeader::REQUEST : {
 
             // Read the request length
             uint32_t bytes;
             if (!::readLength (_socket, _bufferPtr, bytes)) return;
 
-            // Read the request body
-            proto::ReplicationRequestDelete request;
-            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+            switch (hdr.management_type()) {
 
-            proto::ReplicationResponseDelete response;
-            _processor->enqueueForDeletion (request, response);
-            reply(response);
+                case proto::ReplicationManagementRequestType::REQUEST_STOP: {
 
-            break;
-        }
-        case proto::ReplicationRequestHeader::REPLICA_FIND : {
+                    // Read the request body
+                    proto::ReplicationRequestStop request;
+                    if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
-            // Read the request length
-            uint32_t bytes;
-            if (!::readLength (_socket, _bufferPtr, bytes)) return;
+                    switch (request.type()) {
 
-            // Read the request body
-            proto::ReplicationRequestFind request;
-            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
+                        case proto::ReplicationReplicaRequestType::REPLICA_CREATE: {
+                            proto::ReplicationResponseReplicate response;
+                            _processor->dequeueOrCancel (reques, response);
+                            reply(response);
+                            break;
+                        }
+                        case proto::ReplicationReplicaRequestType::REPLICA_DELETE: {
+                            proto::ReplicationResponseDelete response;
+                            _processor->dequeueOrCancel (request, response);
+                            reply(response);
+                            break;
+                        }
+                        case proto::ReplicationReplicaRequestType::REPLICA_FIND: {
+                            proto::ReplicationResponseFind response;
+                            _processor->dequeueOrCancel (request, response);
+                            reply(response);
+                            break;
+                        }
+                        case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL: {
+                            proto::ReplicationResponseFindAll response;
+                            _processor->dequeueOrCancel (request, response);
+                            reply(response);
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case proto::ReplicationManagementRequestType::REQUEST_STATUS : {
 
-            proto::ReplicationResponseFind response;
-            _processor->enqueueForFind (request, response);
-            reply(response);
+                    // Read the request body
+                    proto::ReplicationRequestStatus request;
+                    if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
 
-            break;
-        }
-        case proto::ReplicationRequestHeader::REPLICA_FIND_ALL : {
+                    switch (request.type()) {
 
-            // Read the request length
-            uint32_t bytes;
-            if (!::readLength (_socket, _bufferPtr, bytes)) return;
-
-            // Read the request body
-            proto::ReplicationRequestFindAll request;
-            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
-
-            proto::ReplicationResponseFindAll response;
-            _processor->enqueueForFindAll (request, response);
-            reply(response);
-
-            break;
-        }
-        case proto::ReplicationRequestHeader::REQUEST_STOP : {
-
-            // Read the request length
-            uint32_t bytes;
-            if (!::readLength (_socket, _bufferPtr, bytes)) return;
-
-            // Read the request body
-            proto::ReplicationRequestStop request;
-            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
-
-            proto::ReplicationResponseStop response;
-            _processor->dequeueOrCancel (request, response);
-            reply(response);
-
-            break;
-        }
-        case proto::ReplicationRequestHeader::REQUEST_STATUS : {
-
-            // Read the request length
-            uint32_t bytes;
-            if (!::readLength (_socket, _bufferPtr, bytes)) return;
-
-            // Read the request body
-            proto::ReplicationRequestStatus request;
-            if (!::readMessage (_socket, _bufferPtr, bytes, request)) return;
-
-            switch (request.type()) {
-
-                  case proto::ReplicationRequestHeader::REPLICA_CREATE : {
-                      proto::ReplicationResponseReplicate response;
-                      _processor->checkStatus (request, response);
-                      reply(response);
-                      break;
-                  }
-                  case proto::ReplicationRequestHeader::REPLICA_DELETE : {
-                      proto::ReplicationResponseDelete response;
-                      _processor->checkStatus (request, response);
-                      reply(response);
-                      break;
-                  }
-                  case proto::ReplicationRequestHeader::REPLICA_FIND : {
-                      proto::ReplicationResponseFind response;
-                      _processor->checkStatus (request, response);
-                      reply(response);
-                      break;
-                  }
-                  case proto::ReplicationRequestHeader::REPLICA_FIND_ALL : {
-                      proto::ReplicationResponseFindAll response;
-                      _processor->checkStatus (request, response);
-                      reply(response);
-                      break;
-                  }
-                  case proto::ReplicationRequestHeader::REQUEST_STOP : {
-                      proto::ReplicationResponseStop response;
-                      _processor->checkStatus (request, response);
-                      reply(response);
-                      break;
-                  }
+                        case proto::ReplicationReplicaRequestType::REPLICA_CREATE : {
+                            proto::ReplicationResponseReplicate response;
+                            _processor->checkStatus (request, response);
+                            reply(response);
+                            break;
+                        }
+                        case proto::ReplicationReplicaRequestType::REPLICA_DELETE : {
+                            proto::ReplicationResponseDelete response;
+                            _processor->checkStatus (request, response);
+                            reply(response);
+                            break;
+                        }
+                        case proto::ReplicationReplicaRequestType::REPLICA_FIND : {
+                            proto::ReplicationResponseFind response;
+                            _processor->checkStatus (request, response);
+                            reply(response);
+                            break;
+                        }
+                        case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL : {
+                            proto::ReplicationResponseFindAll response;
+                            _processor->checkStatus (request, response);
+                            reply(response);
+                            break;
+                        }
+                    }
+                    break;
+                }
             }
-            break;
         }
-        case proto::ReplicationRequestHeader::SERVICE_SUSPEND : {
+        case proto::ReplicationRequestHeader::SERVICE : {
+ 
+            switch (hdr.service_type()) {
 
-            // This operation is allowed to be asynchronious as it may take
-            // extra time for the processor's threads to finish on-going processing
+                case proto::ReplicationServiceRequestType::SERVICE_SUSPEND : {
+          
+                    // This operation is allowed to be asynchronious as it may take
+                    // extra time for the processor's threads to finish on-going processing
+          
+                    _processor->stop ();
+          
+                    proto::ReplicationServiceResponse response;
+                    ::setServiceResponse(response,
+                                         _processor->state() == WorkerProcessor::State::STATE_IS_RUNNING ?
+                                             proto::ReplicationServiceResponse::FAILED :
+                                             proto::ReplicationServiceResponse::SUCCESS,
+                                         _processor);
+                    reply(response);
+          
+                    break;
+                }
+                case proto::ReplicationServiceRequestType::SERVICE_RESUME : {
+          
+                  
+                      // This is a synchronus operation. The state transition request should happen
+                      // (or be denied) instantaneously.
+                  
+                      _processor->run ();
+          
+                      proto::ReplicationServiceResponse response;
+                      ::setServiceResponse(response,
+                                           _processor->state() == WorkerProcessor::State::STATE_IS_RUNNING ?
+                                              proto::ReplicationServiceResponse::SUCCESS :
+                                              proto::ReplicationServiceResponse::FAILED,
+                                           _processor);
+                      reply(response);
+          
+                      break;
+                  }
+                  case proto::ReplicationServiceRequestType::SERVICE_STATUS : {
+          
+                      proto::ReplicationServiceResponse response;
+                      ::setServiceResponse (response,
+                                            proto::ReplicationServiceResponse::SUCCESS,
+                                            _processor);
+                      reply(response);
 
-            _processor->stop ();
-
-            proto::ReplicationServiceResponse response;
-            ::setServiceResponse(response,
-                                 _processor->state() == WorkerProcessor::State::STATE_IS_RUNNING ?
-                                    proto::ReplicationServiceResponse::FAILED :
-                                    proto::ReplicationServiceResponse::SUCCESS,
-                                 _processor);
-            reply(response);
-
-            break;
+                      break;
+                  }
+                  default:
+                      throw std::logic_error("WorkerServerConnection::received() unknown service request '" +
+                                              proto::ReplicationServiceRequestType_Name(hdr.service_type()));
+            }
         }
-        case proto::ReplicationRequestHeader::SERVICE_RESUME : {
-
-        
-            // This is a synchronus operation. The state transition request should happen
-            // (or be denied) instantaneously.
-        
-            _processor->run ();
-
-            proto::ReplicationServiceResponse response;
-            ::setServiceResponse(response,
-                                 _processor->state() == WorkerProcessor::State::STATE_IS_RUNNING ?
-                                    proto::ReplicationServiceResponse::SUCCESS :
-                                    proto::ReplicationServiceResponse::FAILED,
-                                 _processor);
-            reply(response);
-
-            break;
-        }
-        case proto::ReplicationRequestHeader::SERVICE_STATUS : {
-
-            proto::ReplicationServiceResponse response;
-            ::setServiceResponse (response,
-                                  proto::ReplicationServiceResponse::SUCCESS,
-                                  _processor);
-            reply(response);
-
-            break;
-        }
+        default:
+            throw std::logic_error("WorkerServerConnection::received() unknown request class '" +
+                                   proto::ReplicationRequestHeader::RequestType_Name(hdr.type()));
     }
 }
 

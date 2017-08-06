@@ -100,7 +100,8 @@ private:
                            const std::string              &sourceWorker,
                            const std::string              &destinationWorker,
                            boost::asio::io_service        &io_service,
-                           callback_type                   onFinish);
+                           callback_type                   onFinish,
+                           int                             priority=0);
 
     /**
      * Construct the request with the pointer to the services provider.
@@ -110,8 +111,9 @@ private:
                         unsigned int                    chunk,
                         const std::string              &sourceWorker,
                         const std::string              &destinationWorker,
-                        boost::asio::io_service        &io_service,
-                        callback_type                   onFinish);
+                        boost::asio::io_service         &io_service,
+                        callback_type                   onFinish,
+                        int                             priority=0);
 
     /**
       * This method is called when a connection is established and

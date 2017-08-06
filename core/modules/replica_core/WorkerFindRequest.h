@@ -20,13 +20,12 @@
  * the GNU General Public License along with this program.  If not,
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
-#ifndef LSST_QSERV_REPLICA_CORE_WORKERREPLICATIONREQUEST_H
-#define LSST_QSERV_REPLICA_CORE_WORKERREPLICATIONREQUEST_H
+#ifndef LSST_QSERV_REPLICA_CORE_WORKERFINDREQUEST_H
+#define LSST_QSERV_REPLICA_CORE_WORKERFINDREQUEST_H
 
-/// WorkerReplicationRequest.h declares:
+/// WorkerFindRequest.h declares:
 ///
-/// class WorkerReplicationRequest
-/// class WorkerReplicationRequestX
+/// class WorkerFindRequest
 /// (see individual class documentation for more information)
 
 // System headers
@@ -47,19 +46,19 @@ namespace replica_core {
 
 
 /**
-  * Class WorkerReplicationRequest represents a context and a state of replication
+  * Class WorkerFindRequest represents a context and a state of replica lookup
   * requsts within the worker servers. It can also be used for testing the framework
   * operation as its implementation won't make any changes to any files or databases.
   *
   * Real implementations of the request processing must derive from this class.
   */
-class WorkerReplicationRequest
+class WorkerFindRequest
     :   public WorkerRequest {
 
 public:
 
     /// Pointer to self
-    typedef std::shared_ptr<WorkerReplicationRequest> pointer;
+    typedef std::shared_ptr<WorkerFindRequest> pointer;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -73,12 +72,12 @@ public:
 
     // Default construction and copy semantics are proxibited
 
-    WorkerReplicationRequest () = delete;
-    WorkerReplicationRequest (WorkerReplicationRequest const&) = delete;
-    WorkerReplicationRequest & operator= (WorkerReplicationRequest const&) = delete;
+    WorkerFindRequest () = delete;
+    WorkerFindRequest (WorkerFindRequest const&) = delete;
+    WorkerFindRequest & operator= (WorkerFindRequest const&) = delete;
 
     /// Destructor
-    ~WorkerReplicationRequest () override;
+    ~WorkerFindRequest () override;
 
     // Trivial accessors
 
@@ -90,28 +89,27 @@ private:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequest (int                priority,
-                              const std::string &id,
-                              const std::string &database,
-                              unsigned int       chunk);
+    WorkerFindRequest (int                priority,
+                       const std::string &id,
+                       const std::string &database,
+                       unsigned int       chunk);
 private:
 
     std::string  _database;
     unsigned int _chunk;
 };
 
-
 /**
   * Class WorkerReplicationRequestX provides an actual implementation for
-  * the replication requests using XRootD.
+  * the replica lookup requests using XRootD.
   */
-class WorkerReplicationRequestX
-    :   public WorkerReplicationRequest {
+class WorkerFindRequestX
+    :   public WorkerFindRequest {
 
 public:
 
     /// Pointer to self
-    typedef std::shared_ptr<WorkerReplicationRequestX> pointer;
+    typedef std::shared_ptr<WorkerFindRequestX> pointer;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -125,12 +123,12 @@ public:
 
     // Default construction and copy semantics are proxibited
 
-    WorkerReplicationRequestX () = delete;
-    WorkerReplicationRequestX (WorkerReplicationRequestX const&) = delete;
-    WorkerReplicationRequestX & operator= (WorkerReplicationRequestX const&) = delete;
+    WorkerFindRequestX () = delete;
+    WorkerFindRequestX (WorkerFindRequestX const&) = delete;
+    WorkerFindRequestX & operator= (WorkerFindRequestX const&) = delete;
 
     /// Destructor
-    ~WorkerReplicationRequestX () override;
+    ~WorkerFindRequestX () override;
 
     /**
      * This method implements the virtual method of the base class
@@ -144,14 +142,12 @@ private:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequestX (int                priority,
-                               const std::string &id,
-                               const std::string &database,
-                               unsigned int       chunk);
+    WorkerFindRequestX (int                priority,
+                        const std::string &id,
+                        const std::string &database,
+                        unsigned int       chunk);
 };
-
-
 
 }}} // namespace lsst::qserv::replica_core
 
-#endif // LSST_QSERV_REPLICA_CORE_WORKERREPLICATIONREQUEST_H
+#endif // LSST_QSERV_REPLICA_CORE_WORKERFINDREQUEST_H

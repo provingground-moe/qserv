@@ -68,17 +68,6 @@ public:
     /// Pointer to self
     typedef std::shared_ptr<WorkerRequest> pointer;
 
-    /// Priority levels
-    enum PriorityLevel {
-        PRIORITY_LEVEL_LOW      = 0,
-        PRIORITY_LEVEL_MEDIUM   = 1,
-        PRIORITY_LEVEL_HIGH     = 2,
-        PRIORITY_LEVEL_CRITICAL = 3
-    };
-
-    /// Return the string representation of the status
-    static std::string priorityLevel2string (PriorityLevel status);    
-
     /// Completion status of the request processing operation
     enum CompletionStatus {
         STATUS_NONE,           /// no processing has been attempted
@@ -103,10 +92,12 @@ public:
 
     // Trivial accessors
 
-    const std::string& type          () const { return _type; }
-    PriorityLevel      priorityLevel () const { return _priorityLevel; }
-    const std::string& id            () const { return _id; }
-    CompletionStatus   status        () const { return _status; }
+    int priority () const { return _priority; }
+
+    const std::string& type () const { return _type; }
+    const std::string& id   () const { return _id; }
+
+    CompletionStatus  status () const { return _status; }
 
     /**
      * This method is called to indicate a transtion of the request
@@ -131,10 +122,14 @@ public:
      *
      * The method will throw custom exception WorkerRequestCancelled when
      * it detects a cancellation request.
+     *
+     * The default implementation of the method will do nothing, just simulate
+     * processing. This can be serve as a foundation for various tests
+     * of this framework.
      * 
      * @param incremental - setting it to 'false' will disable the incremental mode
      */
-    virtual bool execute (bool incremental=true) = 0;
+    virtual bool execute (bool incremental=true);
 
     /**
      * Cancel execution of the request.
@@ -174,8 +169,8 @@ protected:
     /**
      * The normal constructor of the class.
      */
-    WorkerRequest (const std::string &type,
-                   PriorityLevel      priorityLevel,
+    WorkerRequest (int                priority,
+                   const std::string &type,
                    const std::string &id);
 
     /// Set the status
@@ -183,11 +178,17 @@ protected:
 
 private:
 
-    std::string   _type;
-    PriorityLevel _priorityLevel;
-    std::string   _id;
+    int _priority;
+
+    std::string _type;
+    std::string _id;
     
     CompletionStatus _status;
+
+    /// The number of milliseconds since the beginning of the request processing.
+    /// This members is used by the default implementation of method execute()
+    /// to simulate request processing.
+    unsigned int _durationMillisec;
 };
 
 
@@ -198,7 +199,7 @@ struct WorkerRequestCompare {
     bool operator() (const WorkerRequest::pointer& lhs,
                      const WorkerRequest::pointer& rhs) const {
 
-        return lhs->priorityLevel() < rhs->priorityLevel();
+        return lhs->priority() < rhs->priority();
     }
 };
 

@@ -8,6 +8,7 @@
 #include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerProcessor.h"
+#include "replica_core/WorkerRequestFactory.h"
 #include "replica_core/WorkerServer.h"
 
 namespace rc = lsst::qserv::replica_core;
@@ -25,7 +26,8 @@ void service (const std::string &configFileName) {
     try {
         rc::Configuration  ::pointer config    = rc::Configuration  ::create (configFileName);
         rc::ServiceProvider::pointer provider  = rc::ServiceProvider::create (config);
-        rc::WorkerProcessor::pointer processor = rc::WorkerProcessor::create (provider);
+        rc::WorkerRequestFactory     requestFactory{provider};
+        rc::WorkerProcessor::pointer processor = rc::WorkerProcessor::create (provider, requestFactory);
         rc::WorkerServer   ::pointer server    = rc::WorkerServer   ::create (provider, processor);
 
         std::thread requestsAcceptorThread (
