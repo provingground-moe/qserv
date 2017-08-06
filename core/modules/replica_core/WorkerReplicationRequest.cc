@@ -26,26 +26,13 @@
 
 // System headers
 
-#include <stdexcept>
-
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/BlockPost.h"
-#include "replica_core/SuccessRateGenerator.h"
 
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.WorkerReplicationRequest");
-
-/// Maximum duration for the request execution
-const unsigned int maxDurationMillisec = 10000;
-
-/// Random interval for the incremental execution
-lsst::qserv::replica_core::BlockPost incrementIvalMillisec (1000, 2000);
-
-/// Random generator of success/failure rates
-lsst::qserv::replica_core::SuccessRateGenerator successRateGenerator(0.9);
 
 } /// namespace
 
@@ -53,71 +40,82 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+
+///////////////////////////////////////////////////////////////////
+///////////////////// WorkerReplicationRequest ////////////////////
+///////////////////////////////////////////////////////////////////
+
 WorkerReplicationRequest::pointer
-WorkerReplicationRequest::create (WorkerReplicationRequest::PriorityLevel  priorityLevel,
-                                  const std::string                       &id,
-                                  const std::string                       &database,
-                                  unsigned int                             chunk) {
+WorkerReplicationRequest::create (int                priority,
+                                  const std::string &id,
+                                  const std::string &database,
+                                  unsigned int       chunk) {
 
     return WorkerReplicationRequest::pointer (
-        new WorkerReplicationRequest (priorityLevel,
+        new WorkerReplicationRequest (priority,
                                       id,
                                       database,
-                                      chunk)
-    );
+                                      chunk));
 }
 
-WorkerReplicationRequest::WorkerReplicationRequest (WorkerReplicationRequest::PriorityLevel  priorityLevel,
-                                                    const std::string                       &id,
-                                                    const std::string                       &database,
-                                                    unsigned int                             chunk)
+WorkerReplicationRequest::WorkerReplicationRequest (int                priority,
+                                                    const std::string &id,
+                                                    const std::string &database,
+                                                    unsigned int       chunk)
     :   WorkerRequest ("REPLICATE",
-                       priorityLevel,
+                       priority,
                        id),
 
-        _database        (database),
-        _chunk           (chunk),
-        _durationMillisec(0)
-{}
+        _database (database),
+        _chunk    (chunk) {
+}
+
 
 WorkerReplicationRequest::~WorkerReplicationRequest () {
 }
 
-bool
-WorkerReplicationRequest::execute (bool incremental) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  db: "    << _database
-         << "  chunk: " << _chunk);
+////////////////////////////////////////////////////////////////////
+///////////////////// WorkerReplicationRequestX ////////////////////
+////////////////////////////////////////////////////////////////////
 
-    // Simulate request 'processing' for some maximum duration of time (milliseconds)
-    // while making a progress through increments of random duration of time.
-    // Success/failure modes will be also simulated using the corresponding generator.
+WorkerReplicationRequestX::pointer
+WorkerReplicationRequestX::create (int                priority,
+                                   const std::string &id,
+                                   const std::string &database,
+                                   unsigned int       chunk) {
 
-   switch (status()) {
-
-        case STATUS_IN_PROGRESS:
-            break;
-
-        case STATUS_IS_CANCELLING:
-            setStatus(STATUS_CANCELLED);
-            throw WorkerRequestCancelled();
-
-        default:
-            throw std::logic_error("WorkerReplicationRequest::execute not allowed while in status: " +
-                                    WorkerReplicationRequest::status2string(status()));
-    }
-    
-    _durationMillisec += incremental ? ::incrementIvalMillisec.wait() :
-                                       ::maxDurationMillisec;
-
-    if (_durationMillisec < ::maxDurationMillisec) return false;
-
-    setStatus (::successRateGenerator.success() ? STATUS_SUCCEEDED :
-                                                  STATUS_FAILED);
-    return true;
+    return WorkerReplicationRequestX::pointer (
+        new WorkerReplicationRequestX (priority,
+                                       id,
+                                       database,
+                                       chunk));
 }
 
+WorkerReplicationRequestX::WorkerReplicationRequestX (int                priority,
+                                                      const std::string &id,
+                                                      const std::string &database,
+                                                      unsigned int       chunk)
+    :   WorkerReplicationRequest (priority,
+                                  id,
+                                  database,
+                                  chunk) {
+}
+
+WorkerReplicationRequestX::~WorkerReplicationRequestX () {
+}
+
+bool
+WorkerReplicationRequestX::execute (bool incremental) {
+
+   LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+         << "  db: "    << database()
+         << "  chunk: " << chunk());
+
+    // TODO: provide the actual implementation instead of the dummy one.
+
+    return WorkerRequest::execute(incremental);
+}
 
 }}} // namespace lsst::qserv::replica_core
 

@@ -87,13 +87,16 @@ Request::generateId () {
 Request::Request (const ServiceProvider::pointer &serviceProvider,
                   const std::string              &type,
                   const std::string              &worker,
-                  boost::asio::io_service        &io_service)
+                  boost::asio::io_service        &io_service,
+                  int                             priority)
 
     :   _serviceProvider (serviceProvider),
 
         _type   (type),
         _id     (generateId()),
         _worker (worker),
+
+        _priority (priority),
 
         _state         (CREATED),
         _extendedState (NONE),

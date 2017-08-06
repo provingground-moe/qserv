@@ -31,10 +31,21 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/BlockPost.h"
+#include "replica_core/SuccessRateGenerator.h"
 
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.WorkerRequest");
+
+/// Maximum duration for the request execution
+const unsigned int maxDurationMillisec = 10000;
+
+/// Random interval for the incremental execution
+lsst::qserv::replica_core::BlockPost incrementIvalMillisec (1000, 2000);
+
+/// Random generator of success/failure rates
+lsst::qserv::replica_core::SuccessRateGenerator successRateGenerator(0.9);
 
 } /// namespace
 
@@ -55,24 +66,15 @@ WorkerRequest::status2string (CompletionStatus status) {
     throw std::logic_error("WorkerRequest::status2string - unhandled status: " + std::to_string(status));
 }
 
-std::string
-WorkerRequest::priorityLevel2string (PriorityLevel level) {
-    switch (level) {
-        case PRIORITY_LEVEL_LOW:      return "PRIORITY_LEVEL_LOW";
-        case PRIORITY_LEVEL_MEDIUM:   return "PRIORITY_LEVEL_MEDIUM";
-        case PRIORITY_LEVEL_HIGH:     return "PRIORITY_LEVEL_HIGH";
-        case PRIORITY_LEVEL_CRITICAL: return "PRIORITY_LEVEL_CRITICAL";
-    }
-    throw std::logic_error("WorkerRequest::priorityLevel2string - unhandled level: " + std::to_string(level));
-}
+WorkerRequest::WorkerRequest (int                priority,
+                              const std::string &type,
+                              const std::string &id)
+    :   _priority (priority),
+        _type     (type),
+        _id       (id),
+        _status   (STATUS_NONE),
 
-WorkerRequest::WorkerRequest (const std::string            &type,
-                              WorkerRequest::PriorityLevel  priorityLevel,
-                              const std::string            &id)
-    :   _type         (type),
-        _priorityLevel(priorityLevel),
-        _id          (id),
-        _status      (STATUS_NONE)
+        _durationMillisec (0)
 {}
 
 WorkerRequest::~WorkerRequest () {
@@ -101,6 +103,39 @@ WorkerRequest::beginProgress () {
             throw std::logic_error("WorkerRequest::beginProgress not allowed while in status: " +
                                     WorkerRequest::status2string(status()));
     }
+}
+
+bool
+WorkerRequest::execute (bool incremental) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "execute");
+
+    // Simulate request 'processing' for some maximum duration of time (milliseconds)
+    // while making a progress through increments of random duration of time.
+    // Success/failure modes will be also simulated using the corresponding generator.
+
+   switch (status()) {
+
+        case STATUS_IN_PROGRESS:
+            break;
+
+        case STATUS_IS_CANCELLING:
+            setStatus(STATUS_CANCELLED);
+            throw WorkerRequestCancelled();
+
+        default:
+            throw std::logic_error("WorkerRequest::execute not allowed while in status: " +
+                                    WorkerRequest::status2string(status()));
+    }
+    
+    _durationMillisec += incremental ? ::incrementIvalMillisec.wait() :
+                                       ::maxDurationMillisec;
+
+    if (_durationMillisec < ::maxDurationMillisec) return false;
+
+    setStatus (::successRateGenerator.success() ? STATUS_SUCCEEDED :
+                                                  STATUS_FAILED);
+    return true;
 }
 
 void

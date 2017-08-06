@@ -55,7 +55,8 @@ ReplicationRequest::create (const ServiceProvider::pointer &serviceProvider,
                             const std::string              &sourceWorker,
                             const std::string              &destinationWorker,
                             boost::asio::io_service        &io_service,
-                            callback_type                   onFinish) {
+                            callback_type                   onFinish,
+                            int                             priority) {
 
     return ReplicationRequest::pointer (
         new ReplicationRequest (
@@ -65,7 +66,8 @@ ReplicationRequest::create (const ServiceProvider::pointer &serviceProvider,
             sourceWorker,
             destinationWorker,
             io_service,
-            onFinish));
+            onFinish,
+            priority));
 }
 
 ReplicationRequest::ReplicationRequest (const ServiceProvider::pointer &serviceProvider,
@@ -74,11 +76,13 @@ ReplicationRequest::ReplicationRequest (const ServiceProvider::pointer &serviceP
                                         const std::string              &sourceWorker,
                                         const std::string              &destinationWorker,
                                         boost::asio::io_service        &io_service,
-                                        callback_type                   onFinish)
+                                        callback_type                   onFinish,
+                                        int                             priority)
     :   Request(serviceProvider,
                 "REPLICATE",
                 destinationWorker,
-                io_service),
+                io_service,
+                priority),
  
         _database            (database),
         _chunk               (chunk),
@@ -102,14 +106,16 @@ ReplicationRequest::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::REPLICA_CREATE;
+    hdr.set_type        (proto::ReplicationRequestHeader::REPLICA);
+    hdr.set_replica_type(proto::ReplicationReplicaRequestType::REPLICA_CREATE);
 
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestReplicate message;
-    message.set_database(_database);
-    message.set_chunk(_chunk);
-    message.set_id(id());
+    message.set_priority (priority());
+    message.set_id       (id());
+    message.set_database (database());
+    message.set_chunk    (chunk());
 
     _bufferPtr->serialize(message);
 
@@ -256,13 +262,14 @@ ReplicationRequest::sendStatus () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(proto::ReplicationRequestHeader::REQUEST_STATUS);
+    hdr.set_type       (proto::ReplicationRequestHeader::REQUEST);
+    hdr.management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
     message.set_id(id());
-    message.set_type(proto::ReplicationRequestHeader::REPLICA_CREATE;
+    message.set_type(proto::ReplicationReplicaRequestType::REPLICA_CREATE);
 
     _bufferPtr->serialize(message);
 

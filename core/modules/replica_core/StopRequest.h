@@ -24,7 +24,7 @@
 
 /// StopRequest.h declares:
 ///
-/// class StopRequest
+/// class StopRequestBase
 /// (see individual class documentation for more information)
 
 // System headers
@@ -45,73 +45,46 @@ namespace qserv {
 namespace replica_core {
 
 /**
-  * Class StopRequest represents requests for stopping on-going replications.
+  * Class StopRequestBase represents requests for stopping on-going replications.
   */
-class StopRequest
+class StopRequestBase
     :   public Request  {
 
 public:
 
-    /// The only class which is allowed to instantiate and manage replications
-    friend class MasterServer;
-
     /// The pointer type for instances of the class
-    typedef std::shared_ptr<StopRequest> pointer;
-
-    /// The function type for notifications on the completon of the request
-    typedef std::function<void(pointer)> callback_type;
+    typedef std::shared_ptr<StopRequestBase> pointer;
 
     // Default construction and copy semantics are proxibited
 
-    StopRequest () = delete;
-    StopRequest (StopRequest const&) = delete;
-    StopRequest & operator= (StopRequest const&) = delete;
+    StopRequestBase () = delete;
+    StopRequestBase (StopRequestBase const&) = delete;
+    StopRequestBase & operator= (StopRequestBase const&) = delete;
 
     /// Destructor
-    ~StopRequest () final;
+    ~StopRequestBase () override;
 
-    /// Return an identifier of the target replication request
-    const std::string& replicationRequestId () const {
-        return _replicationRequestId;
-    }
+    /// Return an identifier of the target request
+    const std::string& targetRequestId () const { return _targetRequestId; }
 
-private:
-
-    /**
-     * Create a new request with specified parameters.
-     * 
-     * Static factory method is needed to prevent issue with the lifespan
-     * and memory management of instances created otherwise (as values or via
-     * low-level pointers).
-     *
-     * @param serviceProvider      - a host of services for various communications
-     * @param worker               - the identifier of a worker node (the one to be affectd by the request)
-     * @param io_service           - network communication service
-     * @param replicationRequestId - a unique identifier of an existing replication request to be stopped
-     * @param onFinish             - an optional callback function to be called upon a completion of
-     *                               the request.
-     */
-    static pointer create (const ServiceProvider::pointer &serviceProvider,
-                           const std::string              &worker,
-                           boost::asio::io_service        &io_service,
-                           const std::string              &replicationRequestId,
-                           callback_type                   onFinish);
+protected:
 
     /**
      * Construct the request with the pointer to the services provider.
      */
-    StopRequest (const ServiceProvider::pointer &serviceProvider,
-                 const std::string              &worker,
-                 boost::asio::io_service        &io_service,
-                 const std::string              &replicationRequestId,
-                 callback_type                   onFinish);
+    StopRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+                     const char                                        *requestTypeName,
+                     const std::string                                 &worker,
+                     boost::asio::io_service                           &io_service,
+                     const std::string                                 &targetRequestId,
+                     lsst::qserv::proto::ReplicationReplicaRequestType  requestType);
 
     /**
       * This method is called when a connection is established and
       * the stack is ready to begin implementing an actual protocol
       * with the worker server.
       *
-      * The first step of teh protocol will be to send the replication
+      * The first step of the protocol will be to send the replication
       * request to the destination worker.
       */
     void beginProtocol () final;
@@ -148,27 +121,196 @@ private:
     void statusReceived (const boost::system::error_code &ec,
                          size_t                           bytes_transferred);
 
+    /**
+     * Parse request-specific reply
+     *
+     * This method must be implemented by subclasses.
+     */
+    virtual lsst::qserv::proto::ReplicationStatus parseResponse ()=0;
+
     /// Process the completion of the requested operation
     void analyze (lsst::qserv::proto::ReplicationStatus status);
+
+private:
+
+    /// An identifier of the targer request whose state is to be queried
+    std::string _targetRequestId;
+
+    /// The type of the targer request (must match the identifier)
+    lsst::qserv::proto::ReplicationReplicaRequestType  _requestType;
+};
+
+
+/**
+  * Generic class StopRequest extends its base class
+  * to allow further policy-based customization of specific requests.
+  */
+template <typename POLICY>
+class StopRequest
+    :   public StopRequestBase {
+
+public:
+
+    /// The only class which is allowed to instantiate and manage replications
+    friend class MasterServer;
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<StopRequest<POLICY>> pointer;
+
+    /// The function type for notifications on the completon of the request
+    typedef std::function<void(pointer)> callback_type;
+
+    // Default construction and copy semantics are proxibited
+
+    StopRequest () = delete;
+    StopRequest (StopRequest const&) = delete;
+    StopRequest & operator= (StopRequest const&) = delete;
+
+    /// Destructor
+    ~StopRequest () final {
+    }
+
+    /// Return request-specific extended data reported upon completion of the request
+    const POLICY::responseDataType& responseData () const {
+        return _responseData;
+    }
+
+private:
+
+    /**
+     * Create a new request with specified parameters.
+     * 
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     *
+     * @param serviceProvider  - a host of services for various communications
+     * @param worker           - the identifier of a worker node (the one to be affectd by the request)
+     * @param io_service       - network communication service
+     * @param targetRequestId  - an identifier of the target request whose remote status
+     *                           is going to be inspected
+     * @param onFinish         - an optional callback function to be called upon a completion of
+     *                           the request.
+     */
+    static pointer create (const ServiceProvider::pointer  &serviceProvider,
+                           const std::string               &worker,
+                           boost::asio::io_service         &io_service,
+                           const std::string               &targetRequestId,
+                           callback_type                    onFinish) {
+
+        return StopRequest<POLICY>::pointer (
+            new StopRequest<POLICY> (
+                serviceProvider,
+                POLICY::requestTypeName(),
+                worker,
+                io_service,
+                targetRequestId,
+                POLICY::requestType(),
+                onFinish));
+    }
+
+    /**
+     * Construct the request
+     */
+    StopRequest (const ServiceProvider::pointer                    &serviceProvider,
+                 const char                                        *requestTypeName,
+                 const std::string                                 &worker,
+                 boost::asio::io_service                           &io_service,
+                 const std::string                                 &targetRequestId,
+                 lsst::qserv::proto::ReplicationReplicaRequestType  requestType,
+                 callback_type                                      onFinish)
+
+        :   StopRequestBase (serviceProvider,
+                             requestTypeName,
+                             worker,
+                             io_service,
+                             targetRequestId,
+                             requestType),
+            _onFinish (onFinish)
+    {}
 
     /**
      * Notifying a party which initiated the request.
      *
      * This method implements the corresponing virtual method defined
-     * bu the base class.
+     * by the base class.
      */
-    void endProtocol () final;
+    void endProtocol () final {
+        if (_onFinish != nullptr) {
+            StopRequest<POLICY>::pointer self = shared_from_base<StopRequest<POLICY>>();
+            _onFinish(self);
+        }
+    }
+
+    /**
+     * Parse request-specific reply
+     *
+     * This method implements the corresponing virtual method defined
+     * by the base class.
+     */
+    lsst::qserv::proto::ReplicationStatus parseResponse () final {
+
+        typename POLICY::responseMessageType message;
+        _bufferPtr->parse(message, _bufferPtr->size());
+
+        // Extract request-specific data from the response even if they mame no
+        // sense before returning from thsi method
+        //
+        // TODO: consider optimizing this method to do teh parsing only
+        //       if the status is 'SUCCESS".
+
+        POLICY::parseResponseMessage(message, _responseData);
+        
+        // NOTE: field 'message' of a type returned by the current method
+        //       must always be defined in all types of request-specific
+        //       responses.
+
+        return message.status();
+    }
 
 private:
 
-    // Parameters of the object
-
-    std::string _replicationRequestId;
-
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+    
+    /// Request-specific data
+    typename POLICY::responseDataType _responseData;
 };
+
+
+// Customizations for specific request types require dedicated policies
+
+struct StopReplicateRequestPolicy {
+
+    static const char* requestTypeName () { return "REPLICA_CREATE"; } 
+
+    static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
+        return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_CREATE; }
+
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseReplicate;
+
+    struct responseDataType {};
+
+    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+};
+typedef StopRequest<StopReplicateRequestPolicy> StopReplicateRequest;
+
+
+struct StopDeleteRequestPolicy {
+
+    static const char* requestTypeName () { return "REPLICA_DELETE"; }
+
+    static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
+        return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }
+
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseReplicate;
+
+    struct responseDataType {};
+
+    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+};
+typedef StopRequest<StopDeleteRequestPolicy> StopDeleteRequest;
+
 
 }}} // namespace lsst::qserv::replica_core
 

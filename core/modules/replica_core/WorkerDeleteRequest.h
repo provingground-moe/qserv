@@ -20,13 +20,12 @@
  * the GNU General Public License along with this program.  If not,
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
-#ifndef LSST_QSERV_REPLICA_CORE_WORKERREPLICATIONREQUEST_H
-#define LSST_QSERV_REPLICA_CORE_WORKERREPLICATIONREQUEST_H
+#ifndef LSST_QSERV_REPLICA_CORE_WORKERDELETEREQUEST_H
+#define LSST_QSERV_REPLICA_CORE_WORKERDELETEREQUEST_H
 
-/// WorkerReplicationRequest.h declares:
+/// WorkerDeleteRequest.h declares:
 ///
-/// class WorkerReplicationRequest
-/// class WorkerReplicationRequestX
+/// class WorkerDeleteRequest
 /// (see individual class documentation for more information)
 
 // System headers
@@ -47,19 +46,19 @@ namespace replica_core {
 
 
 /**
-  * Class WorkerReplicationRequest represents a context and a state of replication
+  * Class WorkerDeleteRequest represents a context and a state of replica deletion
   * requsts within the worker servers. It can also be used for testing the framework
   * operation as its implementation won't make any changes to any files or databases.
   *
   * Real implementations of the request processing must derive from this class.
   */
-class WorkerReplicationRequest
+class WorkerDeleteRequest
     :   public WorkerRequest {
 
 public:
 
     /// Pointer to self
-    typedef std::shared_ptr<WorkerReplicationRequest> pointer;
+    typedef std::shared_ptr<WorkerDeleteRequest> pointer;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -73,12 +72,12 @@ public:
 
     // Default construction and copy semantics are proxibited
 
-    WorkerReplicationRequest () = delete;
-    WorkerReplicationRequest (WorkerReplicationRequest const&) = delete;
-    WorkerReplicationRequest & operator= (WorkerReplicationRequest const&) = delete;
+    WorkerDeleteRequest () = delete;
+    WorkerDeleteRequest (WorkerDeleteRequest const&) = delete;
+    WorkerDeleteRequest & operator= (WorkerDeleteRequest const&) = delete;
 
     /// Destructor
-    ~WorkerReplicationRequest () override;
+    ~WorkerDeleteRequest () override;
 
     // Trivial accessors
 
@@ -90,28 +89,27 @@ private:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequest (int                priority,
-                              const std::string &id,
-                              const std::string &database,
-                              unsigned int       chunk);
+    WorkerDeleteRequest (int                priority,
+                         const std::string &id,
+                         const std::string &database,
+                         unsigned int       chunk);
 private:
 
     std::string  _database;
     unsigned int _chunk;
 };
 
-
 /**
-  * Class WorkerReplicationRequestX provides an actual implementation for
-  * the replication requests using XRootD.
+  * Class WorkerDeleteRequestX provides an actual implementation for
+  * the replica deletion using XRootD.
   */
-class WorkerReplicationRequestX
-    :   public WorkerReplicationRequest {
+class WorkerDeleteRequestX
+    :   public WorkerDeleteRequest {
 
 public:
 
     /// Pointer to self
-    typedef std::shared_ptr<WorkerReplicationRequestX> pointer;
+    typedef std::shared_ptr<WorkerDeleteRequestX> pointer;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -125,12 +123,12 @@ public:
 
     // Default construction and copy semantics are proxibited
 
-    WorkerReplicationRequestX () = delete;
-    WorkerReplicationRequestX (WorkerReplicationRequestX const&) = delete;
-    WorkerReplicationRequestX & operator= (WorkerReplicationRequestX const&) = delete;
+    WorkerDeleteRequestX () = delete;
+    WorkerDeleteRequestX (WorkerDeleteRequestX const&) = delete;
+    WorkerDeleteRequestX & operator= (WorkerDeleteRequestX const&) = delete;
 
     /// Destructor
-    ~WorkerReplicationRequestX () override;
+    ~WorkerDeleteRequestX () override;
 
     /**
      * This method implements the virtual method of the base class
@@ -144,14 +142,12 @@ private:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequestX (int                priority,
-                               const std::string &id,
-                               const std::string &database,
-                               unsigned int       chunk);
+    WorkerDeleteRequestX (int                priority,
+                          const std::string &id,
+                          const std::string &database,
+                          unsigned int       chunk);
 };
-
-
 
 }}} // namespace lsst::qserv::replica_core
 
-#endif // LSST_QSERV_REPLICA_CORE_WORKERREPLICATIONREQUEST_H
+#endif // LSST_QSERV_REPLICA_CORE_WORKERDELETEREQUEST_H

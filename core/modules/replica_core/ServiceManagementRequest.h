@@ -117,11 +117,11 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      */
-    ServiceManagementRequestBase (const ServiceProvider::pointer                     &serviceProvider,
-                                  const char                                         *requestTypeName,
-                                  const std::string                                  &worker,
-                                  boost::asio::io_service                            &io_service,
-                                  lsst::qserv::proto::ReplicationRequestHeader::Type  requestType);
+    ServiceManagementRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+                                  const char                                        *requestTypeName,
+                                  const std::string                                 &worker,
+                                  boost::asio::io_service                           &io_service,
+                                  lsst::qserv::proto::ReplicationServiceRequestType  requestType);
 private:
 
     /**
@@ -150,7 +150,7 @@ private:
 private:
 
     /// Request type
-    lsst::qserv::proto::ReplicationRequestHeader::Type _requestType;
+    lsst::qserv::proto::ReplicationServiceRequestType _requestType;
 
     /// Detailed status of the worker-side service obtained upon completion of
     /// the management request.
@@ -221,12 +221,12 @@ private:
     /**
      * Construct the request
      */
-    ServiceManagementRequest (const ServiceProvider::pointer                     &serviceProvider,
-                              const char                                         *requestTypeName,
-                              const std::string                                  &worker,
-                              boost::asio::io_service                            &io_service,
-                              lsst::qserv::proto::ReplicationRequestHeader::Type  requestType,
-                              callback_type                                       onFinish)
+    ServiceManagementRequest (const ServiceProvider::pointer                    &serviceProvider,
+                              const char                                        *requestTypeName,
+                              const std::string                                 &worker,
+                              boost::asio::io_service                           &io_service,
+                              lsst::qserv::proto::ReplicationServiceRequestType  requestType,
+                              callback_type                                      onFinish)
 
         :   ServiceManagementRequestBase (serviceProvider,
                                           requestTypeName,
@@ -265,6 +265,7 @@ struct ServiceSuspendRequestPolicy {
         return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_SUSPEND;
     }
 };
+typedef ServiceManagementRequest<ServiceSuspendRequestPolicy> ServiceSuspendRequest;
 
 struct ServiceResumeRequestPolicy {
     static const char* requestTypeName () {
@@ -274,6 +275,7 @@ struct ServiceResumeRequestPolicy {
         return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_RESUME;
     }
 };
+typedef ServiceManagementRequest<ServiceResumeRequestPolicy> ServiceResumeRequest;
 
 struct ServiceStatusRequestPolicy {
     static const char* requestTypeName () {
@@ -283,10 +285,7 @@ struct ServiceStatusRequestPolicy {
         return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_STATUS;
     }
 };
-
-typedef ServiceManagementRequest<ServiceSuspendRequestPolicy> ServiceSuspendRequest;
-typedef ServiceManagementRequest<ServiceResumeRequestPolicy>  ServiceResumeRequest;
-typedef ServiceManagementRequest<ServiceStatusRequestPolicy>  ServiceStatusRequest;
+typedef ServiceManagementRequest<ServiceStatusRequestPolicy> ServiceStatusRequest;
 
 
 }}} // namespace lsst::qserv::replica_core

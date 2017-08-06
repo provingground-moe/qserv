@@ -54,13 +54,23 @@ namespace replica_core {
 
 /**
   * Class WorkerServerConnection is used for handling connections from
-  * remote clients. One instance of the class serves one client.
+  * remote clients. One instance of the class serves one client at a time.
+  *
+  * Objects of this class are inistantiated by WorkerServer. After that
+  * the server calls this class's method beginProtocol() which startes
+  * a series of asynchronous operations to communicate with remote client.
+  * When all details of an incoming request are obtained from the client
+  * the connection object forwards this request for actual processing
+  * to an instace of the WorkerProcessor class. A response reseived from
+  * the processor is serialized and sent back (asynchroniously) to
+  * the client.
   */
 class WorkerServerConnection
-    : public std::enable_shared_from_this<WorkerServerConnection> {
+    :   public std::enable_shared_from_this<WorkerServerConnection> {
 
 public:
 
+    /// Shared pointer type for the class
     typedef std::shared_ptr<WorkerServerConnection> pointer;
 
     /**
@@ -82,7 +92,7 @@ public:
     virtual ~WorkerServerConnection ();
 
     /**
-     * Reurn a network socket associated with the connection.
+     * Return a network socket associated with the connection.
      */
     boost::asio::ip::tcp::socket& socket () {
         return _socket;
@@ -96,7 +106,7 @@ public:
      *   -  SYNC: read the request header (request type, etc.)
      *   -  SYNC: read the request body (depends on a type of the request) 
      *   - ASYNC: write a frame header of a reply to the request
-     *            and the reply itself
+     *            then write the reply itself
      *
      * NOTES: A reason why the read phase is split into three steps is
      *        that a client is expected to send all components of the request
@@ -147,8 +157,9 @@ private:
         _bufferPtr->serialize(response);
         send();
     }
+
     /**
-     * Begin writing (asynchronosly) a result
+     * Begin sending (asynchronosly) a result back to a client
      */
     void send ();
 
@@ -167,8 +178,8 @@ private:
 
     boost::asio::ip::tcp::socket _socket;
 
-    // Buffers for data moved over the network
-    
+    /// Buffer management class facilitating serialization/deserialization
+    /// of data sent over the network
     std::shared_ptr<ProtocolBuffer> _bufferPtr;
 };
 

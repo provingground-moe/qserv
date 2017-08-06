@@ -68,15 +68,22 @@ enum ReplicationServiceRequestType {
 //
 message ReplicationRequestHeader {
 
-    enum Type {
-        REPLICA    = 0,
-        MANAGEMENT = 1,
-        SERVICE    = 2
+    enum RequestType {
+        REPLICA = 0,
+        REQUEST = 1,
+        SERVICE = 2
     }
-    required Type                             type           = 1;
-    optional ReplicationReplicaRequestType    replicaType    = 2;
-    optional ReplicationManagementRequestType managementType = 3;
-    optional ReplicationServiceRequestType    serviceType    = 4;
+    
+    // The request type selector determines which class of the below specified
+    // optional subtypes to use
+
+    required RequestType type = 1;
+
+    // Subtypes of requests
+
+    optional ReplicationReplicaRequestType    replica_type    = 2;
+    optional ReplicationManagementRequestType management_type = 3;
+    optional ReplicationServiceRequestType    service_type    = 4;
 }
 
 //
@@ -88,27 +95,30 @@ message ReplicationRequestHeader {
 // its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestReplicate {
-    required string database = 1;
-    required int32  chunk = 2;
-    required string id = 3;
+    required int32  priority = 1;
+    required string id       = 2;
+    required string database = 3;
+    required int32  chunk    = 4;
 }
 
 // This is a replica deletion request. The message defines a scope of the request
 // and its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestDelete {
-    required string database = 1;
-    required int32  chunk = 2;
-    required string id = 3;
+    required int32  priority = 1;
+    required string id       = 2;
+    required string database = 3;
+    required int32  chunk    = 4;
 }
 
 // This is a replica lookup request. The message defines a scope of the request
 // and its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestFind {
-    required string database = 1;
-    required int32  chunk = 2;
-    required string id = 3;
+    required int32  priority = 1;
+    required string id       = 2;
+    required string database = 3;
+    required int32  chunk    = 4;
 }
 
 // This is a replica lookup request for multiple replicas. The message defines
@@ -116,8 +126,9 @@ message ReplicationRequestFind {
 // after the header.
 //
 message ReplicationRequestFindAll {
-    required string database = 1;
-    required string id = 2;
+    required int32  priority = 1;
+    required string id       = 2;
+    required string database = 3;
 }
 
 // This request is sent to stop an on-going replication (if any is still in progress).
@@ -125,7 +136,7 @@ message ReplicationRequestFindAll {
 //
 message ReplicationRequestStop {
 
-    required string id   = 1;    // an identifier of a request to be stopped
+    required string id = 1;    // an identifier of a request to be stopped
 
     // A specific type of the request will affect a choice
     // of the status object returned in response
@@ -138,7 +149,7 @@ message ReplicationRequestStop {
 //
 message ReplicationRequestStatus {
 
-    required string id   = 1;    // an identifier of a request to be inspected
+    required string id = 1;    // an identifier of a request to be inspected
 
     // A specific type of the request will affect a choice
     // of the status object returned in response
@@ -174,12 +185,12 @@ message ReplicationResponseDelete {
     required ReplicationStatus status = 1;
 }
 
-message ReplicaInfo {
+message ReplicationReplicaInfo {
     enum ReplicaStatus {
-        REPLICA_IS_NOT_FOUND  = 0;
-        REPLICA_IS_INCOMPLETE = 1;
-        REPLICA_IS_COMPLETE   = 2;
-        REPLICA_IS_CORRUPT    = 3;
+        REPLICA_NOT_FOUND  = 0;
+        REPLICA_CORRUPT    = 1;
+        REPLICA_INCOMPLETE = 2;
+        REPLICA_COMPLETE   = 3;
     }
     required ReplicaStatus status   = 1;
     required string        database = 2;
@@ -187,13 +198,13 @@ message ReplicaInfo {
 }
 
 message ReplicationResponseFind {
-    required ReplicationStatus status = 1;
-    required ReplicaInfo       info   = 2;
+    required ReplicationStatus      status = 1;
+    required ReplicationReplicaInfo replica_info = 2;
 }
 
 message ReplicationResponseFindAll {
-    required ReplicationStatus status = 1;
-    repeated ReplicaInfo       infos  = 2;
+    required ReplicationStatus      status = 1;
+    repeated ReplicationReplicaInfo replica_info_many = 2;
 }
 
 /////////////////////////////////////////////////////////////////////////
