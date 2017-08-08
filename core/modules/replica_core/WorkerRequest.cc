@@ -66,16 +66,18 @@ WorkerRequest::status2string (CompletionStatus status) {
     throw std::logic_error("WorkerRequest::status2string - unhandled status: " + std::to_string(status));
 }
 
-WorkerRequest::WorkerRequest (int                priority,
+WorkerRequest::WorkerRequest (ServiceProvider   &serviceProvider,
                               const std::string &type,
-                              const std::string &id)
-    :   _priority (priority),
-        _type     (type),
-        _id       (id),
-        _status   (STATUS_NONE),
+                              const std::string &id,
+                              int                priority)
+    :   _serviceProvider (serviceProvider),
+        _type            (type),
+        _id              (id),
+        _priority        (priority),
+        _status          (STATUS_NONE),
 
-        _durationMillisec (0)
-{}
+        _durationMillisec (0) {
+}
 
 WorkerRequest::~WorkerRequest () {
 }
@@ -86,23 +88,6 @@ WorkerRequest::setStatus (CompletionStatus status) {
          << WorkerRequest::status2string(_status) << " -> "
          << WorkerRequest::status2string(status));
     _status = status;
-}
-
-void
-WorkerRequest::beginProgress () {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "beginProgress");
-
-    switch (status()) {
-
-        case STATUS_NONE:
-            setStatus(STATUS_IN_PROGRESS);
-            break;
-
-        default:
-            throw std::logic_error("WorkerRequest::beginProgress not allowed while in status: " +
-                                    WorkerRequest::status2string(status()));
-    }
 }
 
 bool

@@ -45,25 +45,29 @@ namespace replica_core {
 ////////////////////////////////////////////////////////////
 
 WorkerFindRequest::pointer
-WorkerFindRequest::create (int                priority,
+WorkerFindRequest::create (ServiceProvider   &serviceProvider,
                            const std::string &id,
+                           int                priority,
                            const std::string &database,
                            unsigned int       chunk) {
 
     return WorkerFindRequest::pointer (
-        new WorkerFindRequest (priority,
+        new WorkerFindRequest (serviceProvider,
                                id,
+                               priority,
                                database,
                                chunk));
 }
 
-WorkerFindRequest::WorkerFindRequest (int                priority,
+WorkerFindRequest::WorkerFindRequest (ServiceProvider   &serviceProvider,
                                       const std::string &id,
+                                      int                priority,
                                       const std::string &database,
                                       unsigned int       chunk)
-    :   WorkerRequest ("FIND",
-                       priority,
-                       id),
+    :   WorkerRequest (serviceProvider,
+                       "FIND",
+                       id,
+                       priority),
 
         _database (database),
         _chunk    (chunk) {
@@ -77,24 +81,28 @@ WorkerFindRequest::~WorkerFindRequest () {
 /////////////////////////////////////////////////////////////
 
 WorkerFindRequestX::pointer
-WorkerFindRequestX::create (int                priority,
+WorkerFindRequestX::create (ServiceProvider   &serviceProvider,
                             const std::string &id,
+                            int                priority,
                             const std::string &database,
                             unsigned int       chunk) {
 
     return WorkerFindRequestX::pointer (
-        new WorkerFindRequestX (priority,
+        new WorkerFindRequestX (serviceProvider,
                                 id,
+                                priority,
                                 database,
                                 chunk));
 }
 
-WorkerFindRequestX::WorkerFindRequestX (int                priority,
+WorkerFindRequestX::WorkerFindRequestX (ServiceProvider   &serviceProvider,
                                         const std::string &id,
+                                        int                priority,
                                         const std::string &database,
                                         unsigned int       chunk)
-    :   WorkerFindRequest (priority,
+    :   WorkerFindRequest (serviceProvider,
                            id,
+                           priority,
                            database,
                            chunk) {
 }

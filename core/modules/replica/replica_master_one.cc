@@ -32,11 +32,11 @@ bool assertArguments (int argc, int minArgc) {
  * Return the name of any known worker from the server configuration.
  * Throw std::runtime_error if no worker found.
  */
-std::string getAnyWorker (rc::ServiceProvider::pointer provider) {
-    for (const std::string &workerName : provider->workers())
+std::string getAnyWorker (rc::ServiceProvider &provider) {
+    for (const std::string &workerName : provider.workers()) {
         return workerName;
+    }
     throw std::runtime_error ("replica_master: no single worker found in the configuration");
-
 }
 
 template <class T>
@@ -54,9 +54,10 @@ bool test (const std::string &configFileName,
 
     try {
 
-        rc::Configuration  ::pointer config   = rc::Configuration  ::create (configFileName);
-        rc::ServiceProvider::pointer provider = rc::ServiceProvider::create (config);
-        rc::MasterServer   ::pointer server   = rc::MasterServer   ::create (provider);
+        rc::Configuration   config  {configFileName};
+        rc::ServiceProvider provider{config};
+
+        rc::MasterServer::pointer server = rc::MasterServer::create(provider);
 
         // Configure the generator of requests 
 
@@ -90,15 +91,15 @@ bool test (const std::string &configFileName,
         } else if ("STATUS"  == operation) {
             request = server->statusOfReplication (
                 worker, id_or_db,
-                [] (rc::StatusRequest::pointer request) {
-                    printRequest<rc::StatusRequest>(request);
+                [] (rc::StatusReplicationRequest::pointer request) {
+                    printRequest<rc::StatusReplicationRequest>(request);
                 });
 
         } else if ("STOP"  == operation) {
             request = server->stopReplication (
                 worker, id_or_db,
-                [] (rc::StopRequest::pointer request) {
-                    printRequest<rc::StopRequest>(request);
+                [] (rc::StopReplicationRequest::pointer request) {
+                    printRequest<rc::StopReplicationRequest>(request);
                 });
 
         } else {

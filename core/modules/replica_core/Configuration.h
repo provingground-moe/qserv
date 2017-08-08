@@ -29,7 +29,6 @@
 
 // System headers
 
-#include <memory>       // shared_ptr, enable_shared_from_this
 #include <string>
 #include <vector>
 
@@ -55,22 +54,9 @@ namespace replica_core {
   *   - sets default values for the optional parameters
   *   - caches parameters in memory
   */
-class Configuration
-    :   public std::enable_shared_from_this<Configuration>  {
+class Configuration {
 
 public:
-
-    /// The pointer type for instances of the class
-    typedef std::shared_ptr<Configuration> pointer;
-
-    /**
-     * Static factory method is needed to prevent issue with the lifespan
-     * and memory management of instances created otherwise (as values or via
-     * low-level pointers).
-     *
-     * @param configFile - the bname of a configuraiton file
-     */
-    static pointer create (const std::string &configFile);
 
     // Default construction and copy semantics are proxibited
 
@@ -78,6 +64,16 @@ public:
     Configuration (Configuration const&) = delete;
     Configuration & operator= (Configuration const&) = delete;
 
+    /**
+     * Construct the object
+     *
+     * @param configFile - the name of a configuraiton file
+     */
+    explicit Configuration (const std::string &configFile);
+
+    /// Destructor
+    ~Configuration();
+    
     // --------------------------------------------------------------------
     // -- Common configuration parameters of both the master and workers --
     // --------------------------------------------------------------------
@@ -119,11 +115,6 @@ public:
     size_t workerNumProcessingThreads () const { return _workerNumProcessingThreads; }
 
 private:
-
-    /**
-     * Construct the object
-     */
-    Configuration (const std::string &configFile);
 
     /**
      * Analyze the configuration and initialize the cache of parameters.

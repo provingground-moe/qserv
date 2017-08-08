@@ -36,9 +36,7 @@
 
 // Qserv headers
 
-#include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerServerConnection.h"
-#include "replica_core/WorkerProcessor.h"
 
 // Forward declarations
 
@@ -48,6 +46,11 @@
 namespace lsst {
 namespace qserv {
 namespace replica_core {
+
+// Forward declarations
+
+class ServiceProvider;
+class WorkerProcessor;
 
 /**
   * Class WorkerServer is used for handling incomming connections to
@@ -67,11 +70,11 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param port           - a port number to which to bind the service
-     * @param numConnections - the number of connections to be handled simultaneously
+     * @param serviceProvider - for configuration, etc. services
+     * @param processor       - a processor of requests
      */
-    static pointer create (const ServiceProvider::pointer &serviceProvider,
-                           const WorkerProcessor::pointer &processor);
+    static pointer create (ServiceProvider &serviceProvider,
+                           WorkerProcessor &processor);
 
     // Default construction and copy semantics are proxibited
 
@@ -90,9 +93,10 @@ private:
      * Construct the server with the specified configuration.
      *
      * @param serviceProvider - for configuration, etc. services
+     * @param processor       - a processor of requests
      */
-    explicit WorkerServer (const ServiceProvider::pointer &serviceProvider,
-                           const WorkerProcessor::pointer &processor);
+    explicit WorkerServer (ServiceProvider &serviceProvider,
+                           WorkerProcessor &processor);
 
     /**
      * Begin (asynchrnonously) accepting connection requests.
@@ -114,8 +118,8 @@ private:
 
     // Parameters of the object
 
-    ServiceProvider::pointer _serviceProvider;
-    WorkerProcessor::pointer _processor;
+    ServiceProvider &_serviceProvider;
+    WorkerProcessor &_processor;
 
     // The mutable state of the object
 

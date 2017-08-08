@@ -64,7 +64,7 @@ public:
     ProtocolBuffer & operator= (ProtocolBuffer const&) = delete;
 
     /**
-     * Pointer to the data
+     * Pointer to the data blob
      */
     char* data () { return _data; }
 

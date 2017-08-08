@@ -66,8 +66,9 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (int                priority,
+    static pointer create (ServiceProvider   &serviceProvider,
                            const std::string &id,
+                           int                priority,
                            const std::string &database,
                            unsigned int       chunk);
 
@@ -85,13 +86,14 @@ public:
     const std::string& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
 
-private:
+protected:
 
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequest (int                priority,
+    WorkerReplicationRequest (ServiceProvider   &serviceProvider,
                               const std::string &id,
+                              int                priority,
                               const std::string &database,
                               unsigned int       chunk);
 private:
@@ -118,8 +120,9 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (int                priority,
+    static pointer create (ServiceProvider   &serviceProvider,
                            const std::string &id,
+                           int                priority,
                            const std::string &database,
                            unsigned int       chunk);
 
@@ -144,8 +147,9 @@ private:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequestX (int                priority,
+    WorkerReplicationRequestX (ServiceProvider   &serviceProvider,
                                const std::string &id,
+                               int                priority,
                                const std::string &database,
                                unsigned int       chunk);
 };

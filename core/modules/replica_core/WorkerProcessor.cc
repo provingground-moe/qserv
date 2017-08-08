@@ -34,6 +34,12 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
+#include "replica_core/Configuration.h"
+#include "replica_core/ServiceProvider.h"
+#include "replica_core/WorkerDeleteRequest.h"
+#include "replica_core/WorkerFindRequest.h"
+#include "replica_core/WorkerFindAllRequest.h"
+#include "replica_core/WorkerReplicationRequest.h"
 #include "replica_core/WorkerRequestFactory.h"
 
 // This macro to appear witin each block which requires thread safety
@@ -65,7 +71,7 @@ WorkerProcessor::state2string (State state) {
 
 proto::ReplicationStatus
 WorkerProcessor::translateReplicationStatus (WorkerRequest::CompletionStatus status) {
-    switch (ptr->status()) {
+    switch (status) {
         case WorkerRequest::STATUS_NONE:          return proto::ReplicationStatus::QUEUED;
         case WorkerRequest::STATUS_IN_PROGRESS:   return proto::ReplicationStatus::IN_PROGRESS;
         case WorkerRequest::STATUS_IS_CANCELLING: return proto::ReplicationStatus::IS_CANCELLING;
@@ -79,19 +85,13 @@ WorkerProcessor::translateReplicationStatus (WorkerRequest::CompletionStatus sta
     }
 }
 
-WorkerProcessor::pointer
-WorkerProcessor::create (const ServiceProvider::pointer &serviceProvider,
-                         WorkerRequestFactory           &requestFactory) {
-    return pointer (
-        new WorkerProcessor (serviceProvider,
-                             requestFactory));
-}
+WorkerProcessor::WorkerProcessor (ServiceProvider      &serviceProvider,
+                                  WorkerRequestFactory &requestFactory)
 
-WorkerProcessor::WorkerProcessor (const ServiceProvider::pointer &serviceProvider,
-                                  WorkerRequestFactory           &requestFactory)
     :   _serviceProvider (serviceProvider),
         _requestFactory  (requestFactory),
-        _state           (STATE_IS_STOPPED) {
+
+        _state (STATE_IS_STOPPED) {
 }
 
 WorkerProcessor::~WorkerProcessor () {
@@ -106,15 +106,14 @@ WorkerProcessor::run () {
 
         if (_state == STATE_IS_STOPPED) {
 
-            const size_t numThreads = _serviceProvider->config()->workerNumProcessingThreads();
+            const size_t numThreads = _serviceProvider.config().workerNumProcessingThreads();
             if (!numThreads) throw std::out_of_range("the number of procesisng threads can't be 0");
         
             // Create threads if needed
         
             if (_threads.empty()) {
-                WorkerProcessor::pointer self = shared_from_this();
                 for (size_t i=0; i < numThreads; ++i) {
-                    _threads.push_back(WorkerProcessorThread::create(self));
+                    _threads.push_back(WorkerProcessorThread::create(*this));
                 }
             }
         
@@ -169,8 +168,8 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
 
         WorkerRequest::pointer workerRequest =
             _requestFactory.createReplicationRequest (
-                request.priority(),
                 request.id(),
+                request.priority(),
                 request.database(),
                 request.chunk());
 
@@ -196,8 +195,8 @@ WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &requ
 
         WorkerRequest::pointer workerRequest =
             _requestFactory.createDeleteRequest (
-                request.priority(),
                 request.id(),
+                request.priority(),
                 request.database(),
                 request.chunk());
 
@@ -223,8 +222,8 @@ WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
 
         WorkerRequest::pointer workerRequest =
             _requestFactory.createFindRequest (
-                request.priority(),
                 request.id(),
+                request.priority(),
                 request.database(),
                 request.chunk());
 
@@ -250,8 +249,8 @@ WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &requ
 
         WorkerRequest::pointer workerRequest =
             _requestFactory.createFindAllRequest (
-                request.priority(),
                 request.id(),
+                request.priority(),
                 request.database());
 
         _newRequests.push(workerRequest);
@@ -446,7 +445,7 @@ WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &p
                     WorkerRequest::pointer request = _newRequests.top();
                     _newRequests.pop();
 
-                    request->beginProgress();
+                    request->setStatus(WorkerRequest::STATUS_IN_PROGRESS);
                     _inProgressRequests.push_back(request);
 
                     return request;
@@ -469,9 +468,11 @@ WorkerProcessor::processingRefused (const WorkerRequest::pointer &request) {
         << "  id: " << request->id());
     
     THREAD_SAFE_BLOCK {
-        
-        // Move it back into the input queue.
 
+        // Update request's state before moving it back into
+        // the input queue.
+
+        request->setStatus(WorkerRequest::STATUS_NONE);
         _inProgressRequests.remove_if (
             [&request] (const WorkerRequest::pointer &ptr) {
                 return ptr->id() == request->id();
@@ -482,7 +483,7 @@ WorkerProcessor::processingRefused (const WorkerRequest::pointer &request) {
 }
 
 void
-WorkerProcessor::processingFinished (const Workerequest::pointer &request) {
+WorkerProcessor::processingFinished (const WorkerRequest::pointer &request) {
     
     LOGS(_log, LOG_LVL_DEBUG, context() << "processingFinished"
         << "  id: " << request->id()

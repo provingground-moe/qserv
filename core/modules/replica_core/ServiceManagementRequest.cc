@@ -71,7 +71,7 @@ ServiceManagementRequestBase::getServiceState () const {
     
 ServiceManagementRequestBase::ServiceManagementRequestBase (
 
-        const ServiceProvider::pointer       &serviceProvider,
+        ServiceProvider                      &serviceProvider,
         const char                           *requestTypeName,
         const std::string                    &worker,
         boost::asio::io_service              &io_service,
@@ -82,11 +82,11 @@ ServiceManagementRequestBase::ServiceManagementRequestBase (
                  worker,
                  io_service),
 
-        _requestType (requestType)
-{}
+        _requestType (requestType) {
+}
 
-ServiceManagementRequestBase::~ServiceManagementRequestBase ()
-{}
+ServiceManagementRequestBase::~ServiceManagementRequestBase () {
+}
 
 
 void
@@ -100,7 +100,8 @@ ServiceManagementRequestBase::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type(_requestType);
+    hdr.set_type        (proto::ReplicationRequestHeader::SERVICE);
+    hdr.set_service_type(_requestType);
 
     _bufferPtr->serialize(hdr);
 

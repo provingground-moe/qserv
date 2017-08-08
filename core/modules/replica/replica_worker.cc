@@ -24,11 +24,12 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_worker");
 void service (const std::string &configFileName) {
     
     try {
-        rc::Configuration  ::pointer config    = rc::Configuration  ::create (configFileName);
-        rc::ServiceProvider::pointer provider  = rc::ServiceProvider::create (config);
+        rc::Configuration            config        {configFileName};
+        rc::ServiceProvider          provider      {config};
         rc::WorkerRequestFactory     requestFactory{provider};
-        rc::WorkerProcessor::pointer processor = rc::WorkerProcessor::create (provider, requestFactory);
-        rc::WorkerServer   ::pointer server    = rc::WorkerServer   ::create (provider, processor);
+        rc::WorkerProcessor          processor     {provider, requestFactory};
+
+        rc::WorkerServer::pointer server = rc::WorkerServer::create (provider, processor);
 
         std::thread requestsAcceptorThread (
             [&server]() { server->run(); }
@@ -37,11 +38,11 @@ void service (const std::string &configFileName) {
         while (true) {
             blockPost.wait();
             LOGS(_log, LOG_LVL_INFO, "HEARTBEAT"
-                << "  processor: " << rc::WorkerProcessor::state2string(processor->state())
+                << "  processor: " << rc::WorkerProcessor::state2string(processor.state())
                 << "  new, in-progress, finished: "
-                << processor->numNewRequests() << ", "
-                << processor->numInProgressRequests() << ", "
-                << processor->numFinishedRequests());
+                << processor.numNewRequests() << ", "
+                << processor.numInProgressRequests() << ", "
+                << processor.numFinishedRequests());
         }
         requestsAcceptorThread.join();
 

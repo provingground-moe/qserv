@@ -36,6 +36,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
+#include "replica_core/ProtocolBuffer.h"
 #include "replica_core/Request.h"
 
 // This header declarations
@@ -72,7 +73,7 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      */
-    StopRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+    StopRequestBase (ServiceProvider                                   &serviceProvider,
                      const char                                        *requestTypeName,
                      const std::string                                 &worker,
                      boost::asio::io_service                           &io_service,
@@ -171,7 +172,7 @@ public:
     }
 
     /// Return request-specific extended data reported upon completion of the request
-    const POLICY::responseDataType& responseData () const {
+    const typename POLICY::responseDataType& responseData () const {
         return _responseData;
     }
 
@@ -192,7 +193,7 @@ private:
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      */
-    static pointer create (const ServiceProvider::pointer  &serviceProvider,
+    static pointer create (ServiceProvider                 &serviceProvider,
                            const std::string               &worker,
                            boost::asio::io_service         &io_service,
                            const std::string               &targetRequestId,
@@ -212,7 +213,7 @@ private:
     /**
      * Construct the request
      */
-    StopRequest (const ServiceProvider::pointer                    &serviceProvider,
+    StopRequest (ServiceProvider                                   &serviceProvider,
                  const char                                        *requestTypeName,
                  const std::string                                 &worker,
                  boost::asio::io_service                           &io_service,
@@ -280,9 +281,9 @@ private:
 
 // Customizations for specific request types require dedicated policies
 
-struct StopReplicateRequestPolicy {
+struct StopReplicationRequestPolicy {
 
-    static const char* requestTypeName () { return "REPLICA_CREATE"; } 
+    static const char* requestTypeName () { return "STOP::REPLICA_CREATE"; } 
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_CREATE; }
@@ -293,12 +294,12 @@ struct StopReplicateRequestPolicy {
 
     static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
 };
-typedef StopRequest<StopReplicateRequestPolicy> StopReplicateRequest;
+typedef StopRequest<StopReplicationRequestPolicy> StopReplicationRequest;
 
 
 struct StopDeleteRequestPolicy {
 
-    static const char* requestTypeName () { return "REPLICA_DELETE"; }
+    static const char* requestTypeName () { return "STOP::REPLICA_DELETE"; }
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }

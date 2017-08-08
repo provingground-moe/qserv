@@ -42,6 +42,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
+#include "replica_core/ProtocolBuffer.h"
 #include "replica_core/Request.h"
 
 // This header declarations
@@ -79,7 +80,7 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      */
-    StatusRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+    StatusRequestBase (ServiceProvider                                   &serviceProvider,
                        const char                                        *requestTypeName,
                        const std::string                                 &worker,
                        boost::asio::io_service                           &io_service,
@@ -156,7 +157,7 @@ public:
     }
 
     /// Return request-specific extended data reported upon completion of the request
-    const POLICY::responseDataType& responseData () const {
+    const typename POLICY::responseDataType& responseData () const {
         return _responseData;
     }
 
@@ -177,11 +178,11 @@ private:
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      */
-    static pointer create (const ServiceProvider::pointer  &serviceProvider,
-                           const std::string               &worker,
-                           boost::asio::io_service         &io_service,
-                           const std::string               &targetRequestId,
-                           callback_type                    onFinish) {
+    static pointer create (ServiceProvider         &serviceProvider,
+                           const std::string       &worker,
+                           boost::asio::io_service &io_service,
+                           const std::string       &targetRequestId,
+                           callback_type            onFinish) {
 
         return StatusRequest<POLICY>::pointer (
             new StatusRequest<POLICY> (
@@ -197,7 +198,7 @@ private:
     /**
      * Construct the request
      */
-    StatusRequest (const ServiceProvider::pointer                    &serviceProvider,
+    StatusRequest (ServiceProvider                                   &serviceProvider,
                    const char                                        *requestTypeName,
                    const std::string                                 &worker,
                    boost::asio::io_service                           &io_service,
@@ -265,9 +266,9 @@ private:
 
 // Customizations for specific request types require dedicated policies
 
-struct StatusReplicateRequestPolicy {
+struct StatusReplicationRequestPolicy {
 
-    static const char* requestTypeName () { return "REPLICA_CREATE"; } 
+    static const char* requestTypeName () { return "STATUS::REPLICA_CREATE"; } 
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_CREATE; }
@@ -278,12 +279,12 @@ struct StatusReplicateRequestPolicy {
 
     static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
 };
-typedef StatusRequest<StatusReplicateRequestPolicy> StatusReplicateRequest;
+typedef StatusRequest<StatusReplicationRequestPolicy> StatusReplicationRequest;
 
 
 struct StatusDeleteRequestPolicy {
 
-    static const char* requestTypeName () { return "REPLICA_DELETE"; }
+    static const char* requestTypeName () { return "STATUS::REPLICA_DELETE"; }
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }

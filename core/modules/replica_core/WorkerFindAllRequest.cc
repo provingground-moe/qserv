@@ -46,22 +46,26 @@ namespace replica_core {
 ///////////////////////////////////////////////////////////////
 
 WorkerFindAllRequest::pointer
-WorkerFindAllRequest::create (int                priority,
+WorkerFindAllRequest::create (ServiceProvider   &serviceProvider,
                               const std::string &id,
+                              int                priority,
                               const std::string &database) {
 
     return WorkerFindAllRequest::pointer (
-        new WorkerFindAllRequest (priority,
+        new WorkerFindAllRequest (serviceProvider,
                                   id,
+                                  priority,
                                   database));
 }
 
-WorkerFindAllRequest::WorkerFindAllRequest (int                priority,
+WorkerFindAllRequest::WorkerFindAllRequest (ServiceProvider   &serviceProvider,
                                             const std::string &id,
+                                            int                priority,
                                             const std::string &database)
-    :   WorkerRequest ("FIND-ALL",
-                       priority,
-                       id),
+    :   WorkerRequest (serviceProvider,
+                       "FIND-ALL",
+                       id,
+                       priority),
 
         _database (database) {
 }
@@ -75,21 +79,25 @@ WorkerFindAllRequest::~WorkerFindAllRequest () {
 ////////////////////////////////////////////////////////////////
 
 WorkerFindAllRequestX::pointer
-WorkerFindAllRequestX::create (int                priority,
+WorkerFindAllRequestX::create (ServiceProvider   &serviceProvider,
                                const std::string &id,
+                               int                priority,
                                const std::string &database) {
 
     return WorkerFindAllRequestX::pointer (
-        new WorkerFindAllRequestX (priority,
+        new WorkerFindAllRequestX (serviceProvider,
                                    id,
+                                   priority,
                                    database));
 }
 
-WorkerFindAllRequestX::WorkerFindAllRequestX (int                priority,
+WorkerFindAllRequestX::WorkerFindAllRequestX (ServiceProvider   &serviceProvider,
                                               const std::string &id,
+                                              int                priority,
                                               const std::string &database)
-    :   WorkerFindAllRequest (priority,
+    :   WorkerFindAllRequest (serviceProvider,
                               id,
+                              priority,
                               database) {
 }
 

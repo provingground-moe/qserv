@@ -4,6 +4,7 @@
 #include <string>
 
 #include "lsst/log/Log.h"
+#include "proto/replication.pb.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/MasterServer.h"
@@ -22,11 +23,11 @@ const char* usage = "Usage: <config> {SUSPEND | RESUME | STATUS}";
  * Return the name of any known worker from the server configuration.
  * Throw std::runtime_error if no worker found.
  */
-std::string getAnyWorker (rc::ServiceProvider::pointer provider) {
-    for (const std::string &workerName : provider->workers())
+std::string getAnyWorker (rc::ServiceProvider &provider) {
+    for (const std::string &workerName : provider.workers()) {
         return workerName;
+    }
     throw std::runtime_error ("replica_master: no single worker found in the configuration");
-
 }
 
 /**
@@ -53,9 +54,10 @@ void test (const std::string &configFileName,
 
     try {
 
-        rc::Configuration  ::pointer config   = rc::Configuration  ::create (configFileName);
-        rc::ServiceProvider::pointer provider = rc::ServiceProvider::create (config);
-        rc::MasterServer   ::pointer server   = rc::MasterServer   ::create (provider);
+        rc::Configuration   config  {configFileName};
+        rc::ServiceProvider provider{config};
+
+        rc::MasterServer::pointer server = rc::MasterServer::create(provider);
 
         // Configure the generator of requests 
 
@@ -110,6 +112,11 @@ void test (const std::string &configFileName,
 }
 
 int main (int argc, const char* const argv[]) {
+
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     if (argc != 3) {
         std::cerr << ::usage << std::endl;

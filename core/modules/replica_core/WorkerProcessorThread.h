@@ -35,8 +35,6 @@
 
 // Qserv headers
 
-#include "replica_core/WorkerReplicationRequest.h"
-
 // Forward declarations
 
 // This header declarations
@@ -48,6 +46,7 @@ namespace replica_core {
 
 /// Forward declaration for the class
 class WorkerProcessor;
+class WorkerRequest;
 
 /**
   * Class WorkerProcessorThread is a thread-based request processing engine
@@ -58,17 +57,20 @@ class WorkerProcessorThread
 
 public:
 
+    /// Smart reference to objects of the class
     typedef std::shared_ptr<WorkerProcessorThread> pointer;
-    typedef std::shared_ptr<WorkerProcessor>       WorkerProcessor_pointer;
+
+    /// Forwad declaration for the smart pointer to requests
+    typedef std::shared_ptr<WorkerRequest> WorkerRequest_pointer;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      * 
-     * @param processor - a pointer to the repository of requests to be processed
+     * @param processor - a reference to the repository of requests to be processed
      */
-    static pointer create (const WorkerProcessor_pointer &processor);
+    static pointer create (WorkerProcessor &processor);
 
     // Default construction and copy semantics are proxibited
 
@@ -109,11 +111,11 @@ private:
     /**
      * The constructor of the class.
      *
-     * @param processor - a pointer to the repository of requests to be processed
-     * @param id - a unique identifier of this object
+     * @param processor - a reference to the repository of requests to be processed
+     * @param id        - a unique identifier of this object
      */
-    explicit WorkerProcessorThread (const WorkerProcessor_pointer &processor,
-                                    unsigned int                   id);
+    WorkerProcessorThread (WorkerProcessor &processor,
+                           unsigned int     id);
 
     /**
      * Event handler called by the thread when it's about to stop
@@ -123,12 +125,12 @@ private:
     /**
      * Event handler called by the thread when a request is cancelled
      */
-    void cancelled (const WorkerReplicationRequest::pointer &request);
+    void cancelled (const WorkerRequest_pointer &request);
  
 private:
 
     /// The processor
-    WorkerProcessor_pointer _processor;
+    WorkerProcessor &_processor;
 
     /// The identifier of this thread object   
     unsigned int _id;

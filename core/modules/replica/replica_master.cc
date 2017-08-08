@@ -35,10 +35,10 @@ public:
     typedef std::vector<rc::ReplicationRequest::pointer> replication_requests;
 
     /// A collection of STATUS requsts
-    typedef std::vector<rc::StatusRequest::pointer> status_requests;
+    typedef std::vector<rc::StatusReplicationRequest::pointer> status_requests;
 
     /// A collection of STOP requsts
-    typedef std::vector<rc::StopRequest::pointer> stop_requests;
+    typedef std::vector<rc::StopReplicationRequest::pointer> stop_requests;
 
     // Default construction and copy semantics are proxibited
 
@@ -125,9 +125,9 @@ public:
                 _server->statusOfReplication (
                     request->worker(),
                     request->id(),
-                    [] (rc::StatusRequest::pointer request) {
+                    [] (rc::StatusReplicationRequest::pointer request) {
                         LOGS(_log, LOG_LVL_INFO, request->context() << "** DONE **"
-                            << "  replicationRequestId: " << request->replicationRequestId());
+                            << "  targetRequestId: " << request->targetRequestId());
                     }
                 )
             );
@@ -151,9 +151,9 @@ public:
                 _server->stopReplication (
                     request->worker(),
                     request->id(),
-                    [] (rc::StopRequest::pointer request) {
+                    [] (rc::StopReplicationRequest::pointer request) {
                         LOGS(_log, LOG_LVL_INFO, request->context() << "** DONE **"
-                            << "  replicationRequestId: " << request->replicationRequestId());
+                            << "  targetRequestId: " << request->targetRequestId());
                     }
                 )
             );
@@ -176,11 +176,11 @@ private:
  * Return the name of any known worker from the server configuration.
  * Throw std::runtime_error if no worker found.
  */
-std::string getAnyWorker (rc::ServiceProvider::pointer provider) {
-    for (const std::string &workerName : provider->workers())
+std::string getAnyWorker (rc::ServiceProvider &provider) {
+    for (const std::string &workerName : provider.workers()) {
         return workerName;
+    }
     throw std::runtime_error ("replica_master: no single worker found in the configuration");
-
 }
 
 /**
@@ -201,9 +201,10 @@ void test (const std::string &configFileName) {
 
         rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between operations
 
-        rc::Configuration  ::pointer config   = rc::Configuration  ::create (configFileName);
-        rc::ServiceProvider::pointer provider = rc::ServiceProvider::create (config);
-        rc::MasterServer   ::pointer server   = rc::MasterServer   ::create (provider);
+        rc::Configuration   config  {configFileName};
+        rc::ServiceProvider provider{config};
+
+        rc::MasterServer::pointer server = rc::MasterServer::create(provider);
 
         // Configure the generator of requests 
 
@@ -239,18 +240,19 @@ void test (const std::string &configFileName) {
         //       integrating the server into a larger application.
 
         reportServerStatus(server);
-        server->stop();
+        //server->stop();
         reportServerStatus(server);
 
-        server->run();
+        //server->run();
         reportServerStatus(server);
+
+        //requestGenerator.replicate(1000, 100, &blockPost);
 
         // Launch another thread which will test injecting requests from there.
         // 
         // NOTE: The thread may (and will) finish when the specified number of
         // requests will be launched because the requests are execured in
         // a context of the server thread.
-        
         std::thread another (
             [&requestGenerator, &blockPost] () {
 
@@ -286,8 +288,13 @@ void test (const std::string &configFileName) {
         // This should block the current thread indefinitively or
         // untill the server is cancelled.
 
+        while (true) {
+            blockPost.wait();
+            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT  numActiveReplications: " << server->numActiveReplications());
+        }
         LOGS(_log, LOG_LVL_INFO, "waiting for: server->join()");
         server->join();
+        LOGS(_log, LOG_LVL_INFO, "past: server->join()");
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

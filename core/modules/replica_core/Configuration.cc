@@ -61,11 +61,6 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-Configuration::pointer
-Configuration::create (const std::string &configFile) {
-    return Configuration::pointer(new Configuration(configFile));
-}
-
 Configuration::Configuration (const std::string &configFile)
     :   _configFile                (configFile),
         _workers                   {},
@@ -77,9 +72,12 @@ Configuration::Configuration (const std::string &configFile)
         _workerSvcPort             (50000),
         _workerXrootdPort          (1094),
         _workerNumConnectionsLimit (16),
-        _workerNumProcessingThreads(1)
-{
+        _workerNumProcessingThreads(1) {
+
     loadConfiguration();
+}
+
+Configuration::~Configuration () {
 }
 
 void

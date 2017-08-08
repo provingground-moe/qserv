@@ -32,7 +32,7 @@
 
 #include <algorithm>
 #include <list>
-#include <memory>       // shared_ptr, enable_shared_from_this
+#include <memory>       // shared_ptr
 #include <mutex>
 #include <queue>
 #include <stdexcept>
@@ -43,7 +43,6 @@
 
 #include "proto/replication.pb.h"
 
-#include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerProcessorThread.h"
 #include "replica_core/WorkerRequest.h"
 
@@ -59,22 +58,19 @@ namespace replica_core {
 
 // Forward declarations
 
+class ServiceProvider;
 class WorkerRequestFactory;
 
 /**
   * Class WorkerProcessor is a front-end interface for processing
   * requests fro connected clients.
   */
-class WorkerProcessor
-    :   public std::enable_shared_from_this<WorkerProcessor> {
+class WorkerProcessor {
 
 public:
 
     // The thread-based processor class is allowed to access the internal API
     friend class WorkerProcessorThread;
-
-    /// The pointer type for self
-    typedef std::shared_ptr<WorkerProcessor> pointer;
 
     /// The priority queue for pointers to the new (unprocessed) requests.
     /// Using inheritance to get access to the protected data members 'c'
@@ -125,19 +121,17 @@ public:
     /// Return the string representation of the status
     static std::string state2string (State state);
 
-    /**
-     * Static factory method is needed to prevent issue with the lifespan
-     * and memory management of instances created otherwise (as values or via
-     * low-level pointers).
-     */
-    static pointer create (const ServiceProvider::pointer &serviceProvider,
-                           WorkerRequestFactory           &requestFactory);
-
     // Default construction and copy semantics are proxibited
 
     WorkerProcessor () = delete;
     WorkerProcessor (WorkerProcessor const&) = delete;
     WorkerProcessor & operator= (WorkerProcessor const&) = delete;
+
+    /**
+     * The constructor of the class.
+     */
+    WorkerProcessor (ServiceProvider      &serviceProvider,
+                     WorkerRequestFactory &requestFactory);
 
     /// Destructor
     virtual ~WorkerProcessor ();
@@ -204,10 +198,10 @@ public:
      *                   to be sent back to the client
      */
     template <typename RESPONSE_MSG_TYPE>
-    void dequeueOrCancel (const proto::ReplicationRequestStop &request
+    void dequeueOrCancel (const proto::ReplicationRequestStop &request,
                           RESPONSE_MSG_TYPE                   &response) {
 
-        WorkerRequest::pointer ptr = dequeueOrCancelImpl(request->id());
+        WorkerRequest::pointer ptr = dequeueOrCancelImpl(request.id());
         if (!ptr) {
             response.set_status(proto::ReplicationStatus::BAD);
             return;
@@ -241,10 +235,10 @@ public:
      *                   to be sent back to the client
      */
     template <typename RESPONSE_MSG_TYPE>
-    void checkStatus (const proto::ReplicationRequestStatus &request
+    void checkStatus (const proto::ReplicationRequestStatus &request,
                       RESPONSE_MSG_TYPE                     &response) {
 
-        WorkerRequest::pointer ptr = checkStatusImpl(request->id());
+        WorkerRequest::pointer ptr = checkStatusImpl(request.id());
         if (!ptr) {
             response.set_status(proto::ReplicationStatus::BAD);
             return;
@@ -292,12 +286,6 @@ private:
      */
     static proto::ReplicationStatus translateReplicationStatus (
             WorkerRequest::CompletionStatus status);
-
-    /**
-     * The constructor of the class.
-     */
-    WorkerProcessor (const ServiceProvider::pointer &serviceProvider,
-                     WorkerRequestFactory           &requestFactory);
 
     /**
      * Return the next request which is ready to be pocessed
@@ -374,9 +362,9 @@ private:
 private:
 
     /// Services used by the processor
-    ServiceProvider::pointer _serviceProvider;
+    ServiceProvider &_serviceProvider;
 
-
+    /// A factory of request objects
     WorkerRequestFactory &_requestFactory;
 
     /// Current state of the processor

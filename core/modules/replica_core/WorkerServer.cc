@@ -30,6 +30,9 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Configuration.h"
+#include "replica_core/ServiceProvider.h"
+#include "replica_core/WorkerProcessor.h"
 
 namespace {
 
@@ -42,17 +45,18 @@ namespace qserv {
 namespace replica_core {
 
 WorkerServer::pointer
-WorkerServer::create (const ServiceProvider::pointer &serviceProvider,
-                      const WorkerProcessor::pointer &processor)
-{
+WorkerServer::create (ServiceProvider &serviceProvider,
+                      WorkerProcessor &processor) {
+
     return WorkerServer::pointer (
         new WorkerServer (
             serviceProvider,
             processor));
 }
 
-WorkerServer::WorkerServer (const ServiceProvider::pointer &serviceProvider,
-                            const WorkerProcessor::pointer &processor)
+WorkerServer::WorkerServer (ServiceProvider &serviceProvider,
+                            WorkerProcessor &processor)
+
     :   _serviceProvider (serviceProvider),
         _processor       (processor),
         _io_service (),
@@ -60,10 +64,8 @@ WorkerServer::WorkerServer (const ServiceProvider::pointer &serviceProvider,
             _io_service,
             boost::asio::ip::tcp::endpoint (
                 boost::asio::ip::tcp::v4(),
-                _serviceProvider->config()->workerSvcPort()
-            )
-        )
-{
+                _serviceProvider.config().workerSvcPort())) {
+
     // Set the socket reuse option to allow recycling ports after catastrifc
     // failures.
 
@@ -75,12 +77,12 @@ WorkerServer::run () {
 
     // Start the processor to allow processing requests.
 
-    _processor->run();
+    _processor.run();
 
     // Begin accepting the specified number of connections simultaneously.
     // The run the service to allow asynchronous operations.
 
-    for (size_t i = 0; i < _serviceProvider->config()->workerNumConnectionsLimit(); ++i) {
+    for (size_t i = 0; i < _serviceProvider.config().workerNumConnectionsLimit(); ++i) {
         beginAccept();
     }
     _io_service.run();

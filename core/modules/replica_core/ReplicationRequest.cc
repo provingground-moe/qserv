@@ -34,6 +34,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
+#include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerInfo.h"
 
 namespace proto = lsst::qserv::proto;
@@ -49,14 +50,14 @@ namespace qserv {
 namespace replica_core {
 
 ReplicationRequest::pointer
-ReplicationRequest::create (const ServiceProvider::pointer &serviceProvider,
-                            const std::string              &database,
-                            unsigned int                    chunk,
-                            const std::string              &sourceWorker,
-                            const std::string              &destinationWorker,
-                            boost::asio::io_service        &io_service,
-                            callback_type                   onFinish,
-                            int                             priority) {
+ReplicationRequest::create (ServiceProvider         &serviceProvider,
+                            const std::string       &database,
+                            unsigned int             chunk,
+                            const std::string       &sourceWorker,
+                            const std::string       &destinationWorker,
+                            boost::asio::io_service &io_service,
+                            callback_type            onFinish,
+                            int                      priority) {
 
     return ReplicationRequest::pointer (
         new ReplicationRequest (
@@ -70,16 +71,16 @@ ReplicationRequest::create (const ServiceProvider::pointer &serviceProvider,
             priority));
 }
 
-ReplicationRequest::ReplicationRequest (const ServiceProvider::pointer &serviceProvider,
-                                        const std::string              &database,
-                                        unsigned int                    chunk,
-                                        const std::string              &sourceWorker,
-                                        const std::string              &destinationWorker,
-                                        boost::asio::io_service        &io_service,
-                                        callback_type                   onFinish,
-                                        int                             priority)
+ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider,
+                                        const std::string       &database,
+                                        unsigned int             chunk,
+                                        const std::string       &sourceWorker,
+                                        const std::string       &destinationWorker,
+                                        boost::asio::io_service &io_service,
+                                        callback_type            onFinish,
+                                        int                      priority)
     :   Request(serviceProvider,
-                "REPLICATE",
+                "REPLICA_CREATE",
                 destinationWorker,
                 io_service,
                 priority),
@@ -87,9 +88,9 @@ ReplicationRequest::ReplicationRequest (const ServiceProvider::pointer &serviceP
         _database            (database),
         _chunk               (chunk),
         _sourceWorker        (sourceWorker),
-        _sourceWorkerInfoPtr (serviceProvider->workerInfo(sourceWorker)),
-        _onFinish            (onFinish)
-{}
+        _sourceWorkerInfoPtr (serviceProvider.workerInfo(sourceWorker)),
+        _onFinish            (onFinish) {
+}
 
 ReplicationRequest::~ReplicationRequest ()
 {
@@ -262,8 +263,8 @@ ReplicationRequest::sendStatus () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type       (proto::ReplicationRequestHeader::REQUEST);
-    hdr.management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
+    hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
+    hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 
