@@ -32,7 +32,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/WorkerProcessor.h"
-#include "replica_core/WorkerReplicationRequest.h"
+#include "replica_core/WorkerRequest.h"
 
 namespace {
 
@@ -45,19 +45,20 @@ namespace qserv {
 namespace replica_core {
     
 WorkerProcessorThread::pointer
-WorkerProcessorThread::create (const WorkerProcessor_pointer &processor) {
+WorkerProcessorThread::create (WorkerProcessor &processor) {
     static unsigned int id = 0;
     return WorkerProcessorThread::pointer (
         new WorkerProcessorThread (processor, id++)
     );
 }
 
-WorkerProcessorThread::WorkerProcessorThread (const WorkerProcessor_pointer &processor,
-                                              unsigned int                   id)
-    :   _processor(processor),
-        _id       (id),
-        _stop     (false)
-{}
+WorkerProcessorThread::WorkerProcessorThread (WorkerProcessor &processor,
+                                              unsigned int     id)
+    :   _processor (processor),
+
+        _id   (id),
+        _stop (false) {
+}
 
 WorkerProcessorThread::~WorkerProcessorThread () {
 }
@@ -84,18 +85,16 @@ WorkerProcessorThread::run () {
             // or the specified timeout expires. In either case this thread has a chance
             // to re-evaluate the stopping condition.
 
-            WorkerReplicationRequest::pointer request = self->_processor->fetchNextForProcessing(self, 1000);
+            WorkerRequest::pointer request = self->_processor.fetchNextForProcessing(self, 1000);
 
             if (self->_stop) {
-                if (request) self->_processor->processingRefused(request);
+                if (request) self->_processor.processingRefused(request);
                 continue;
             }
             if (request) {
                 
                 LOGS(_log, LOG_LVL_DEBUG, self->context() << "begin processing"
-                    << "  id: " << request->id()
-                    << "  db: " << request->database()
-                    << "  chunk: " << request->chunk());
+                    << "  id: " << request->id());
 
                 bool finished = false;   // just to report the request completion
 
@@ -106,12 +105,10 @@ WorkerProcessorThread::run () {
                         if (self->_stop) {
 
                             LOGS(_log, LOG_LVL_DEBUG, self->context() << "rollback processing"
-                                << "  id: " << request->id()
-                                << "  db: " << request->database()
-                                << "  chunk: " << request->chunk());
+                                << "  id: " << request->id());
  
                             request->rollback();
-                            self->_processor->processingRefused(request);
+                            self->_processor.processingRefused(request);
  
                             break;
                         }
@@ -120,21 +117,17 @@ WorkerProcessorThread::run () {
                 } catch (const WorkerRequestCancelled &ex) {
 
                     LOGS(_log, LOG_LVL_DEBUG, self->context() << "cancel processing"
-                        << "  id: " << request->id()
-                        << "  db: " << request->database()
-                        << "  chunk: " << request->chunk());
+                        << "  id: " << request->id());
  
-                    self->_processor->processingFinished(request);
+                    self->_processor.processingFinished(request);
                 }
                 if (finished) {
 
                     LOGS(_log, LOG_LVL_DEBUG, self->context() << "finish processing"
                         << "  id: " << request->id()
-                        << "  db: " << request->database()
-                        << "  chunk: " << request->chunk()
-                        << "  status: " << WorkerReplicationRequest::status2string(request->status()));
+                        << "  status: " << WorkerRequest::status2string(request->status()));
     
-                    self->_processor->processingFinished(request);
+                    self->_processor.processingFinished(request);
                 }
             }
         }
@@ -155,7 +148,7 @@ WorkerProcessorThread::stopped () {
     _stop = false;
     _thread->detach();
     _thread = nullptr;
-    _processor->processorThreadStopped(shared_from_this());
+    _processor.processorThreadStopped(shared_from_this());
 }
 
 }}} // namespace lsst::qserv::replica_core

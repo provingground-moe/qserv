@@ -21,10 +21,13 @@
  */
 
 // Class header
+
 #include "replica_core/ServiceProvider.h"
-#include "replica_core/WorkerInfo.h"
 
 // System headers
+
+#include "replica_core/Configuration.h"
+#include "replica_core/WorkerInfo.h"
 
 // Qserv headers
 
@@ -32,17 +35,15 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-ServiceProvider::pointer
-ServiceProvider::create (Configuration::pointer configuration) {
-    return pointer(new ServiceProvider(configuration));
+
+ServiceProvider::ServiceProvider (Configuration &configuration)
+    :   _configuration(configuration) {
 }
 
-ServiceProvider::ServiceProvider (Configuration::pointer configuration)
-    :   _configuration(configuration)
-{}
-
 std::vector<std::string>
-ServiceProvider::workers () const { return config()->workers(); }
+ServiceProvider::workers () const {
+    return _configuration.workers();
+}
 
 std::shared_ptr<WorkerInfo>
 ServiceProvider::workerInfo (const std::string& workerName) const {
@@ -52,14 +53,11 @@ ServiceProvider::workerInfo (const std::string& workerName) const {
     std::shared_ptr<WorkerInfo> info(new WorkerInfo (
         workerName,
         workerHost,
-        std::to_string(config()->workerSvcPort()),
+        std::to_string(_configuration.workerSvcPort()),
         workerHost,
-        std::to_string(config()->workerSvcPort()))
+        std::to_string(_configuration.workerSvcPort()))
     );
     return info;
 }
-Configuration::pointer
-ServiceProvider::config () const {  return _configuration; }
-
 
 }}} // namespace lsst::qserv::replica_core

@@ -69,9 +69,9 @@ enum ReplicationServiceRequestType {
 message ReplicationRequestHeader {
 
     enum RequestType {
-        REPLICA = 0,
-        REQUEST = 1,
-        SERVICE = 2
+        REPLICA = 0;
+        REQUEST = 1;
+        SERVICE = 2;
     }
     
     // The request type selector determines which class of the below specified
@@ -95,8 +95,8 @@ message ReplicationRequestHeader {
 // its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestReplicate {
-    required int32  priority = 1;
-    required string id       = 2;
+    required string id       = 1;
+    required int32  priority = 2;
     required string database = 3;
     required int32  chunk    = 4;
 }
@@ -105,8 +105,8 @@ message ReplicationRequestReplicate {
 // and its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestDelete {
-    required int32  priority = 1;
-    required string id       = 2;
+    required string id       = 1;
+    required int32  priority = 2;
     required string database = 3;
     required int32  chunk    = 4;
 }
@@ -115,8 +115,8 @@ message ReplicationRequestDelete {
 // and its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestFind {
-    required int32  priority = 1;
-    required string id       = 2;
+    required string id       = 1;
+    required int32  priority = 2;
     required string database = 3;
     required int32  chunk    = 4;
 }
@@ -126,8 +126,8 @@ message ReplicationRequestFind {
 // after the header.
 //
 message ReplicationRequestFindAll {
-    required int32  priority = 1;
-    required string id       = 2;
+    required string id       = 1;
+    required int32  priority = 2;
     required string database = 3;
 }
 

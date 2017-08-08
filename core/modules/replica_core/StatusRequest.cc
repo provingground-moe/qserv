@@ -21,7 +21,7 @@
  */
 
 // Class header
-#include "replica_core/StatusRequestBase.h"
+#include "replica_core/StatusRequest.h"
 
 // System headers
 
@@ -34,6 +34,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
+#include "replica_core/ServiceProvider.h"
 
 namespace proto = lsst::qserv::proto;
 
@@ -48,7 +49,7 @@ namespace qserv {
 namespace replica_core {
 
 
-StatusRequestBase::StatusRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+StatusRequestBase::StatusRequestBase (ServiceProvider                                   &serviceProvider,
                                       const char                                        *requestTypeName,
                                       const std::string                                 &worker,
                                       boost::asio::io_service                           &io_service,
@@ -60,11 +61,11 @@ StatusRequestBase::StatusRequestBase (const ServiceProvider::pointer            
                 io_service),
 
         _targetRequestId (targetRequestId),
-        _requestType     (requestType)
-{}
+        _requestType     (requestType) {
+}
 
-StatusRequestBase::~StatusRequestBase ()
-{}
+StatusRequestBase::~StatusRequestBase () {
+}
 
 void
 StatusRequestBase::beginProtocol () {
@@ -77,8 +78,8 @@ StatusRequestBase::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type       (proto::ReplicationRequestHeader::REQUEST);
-    hdr.management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
+    hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
+    hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 

@@ -37,10 +37,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
-
 #include "replica_core/ProtocolBuffer.h"
-#include "replica_core/ServiceProvider.h"
-#include "replica_core/WorkerProcessor.h"
 
 namespace proto = lsst::qserv::proto;
 
@@ -51,6 +48,11 @@ namespace proto = lsst::qserv::proto;
 namespace lsst {
 namespace qserv {
 namespace replica_core {
+
+// Forward declarations
+
+class ServiceProvider;
+class WorkerProcessor;
 
 /**
   * Class WorkerServerConnection is used for handling connections from
@@ -78,9 +80,9 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (const ServiceProvider::pointer &serviceProvider,
-                           const WorkerProcessor::pointer &processor,
-                           boost::asio::io_service        &io_service);
+    static pointer create (ServiceProvider         &serviceProvider,
+                           WorkerProcessor         &processor,
+                           boost::asio::io_service &io_service);
 
     // Default construction and copy semantics are proxibited
 
@@ -130,9 +132,9 @@ private:
     /**
      * The constructor of the class.
      */
-    explicit WorkerServerConnection (const ServiceProvider::pointer &serviceProvider,
-                                     const WorkerProcessor::pointer &processor,
-                                     boost::asio::io_service        &io_service);
+    WorkerServerConnection (ServiceProvider         &serviceProvider,
+                            WorkerProcessor         &processor,
+                            boost::asio::io_service &io_service);
 
     /**
      * Begin reading (asynchronosly) the frame header of a new request
@@ -147,6 +149,15 @@ private:
      */
     void received (const boost::system::error_code &ec,
                    size_t bytes_transferred);
+
+    /// Process replication requests (REPLICATE, DELETE, FIND, FIND-ALL)
+    void processRequest (proto::ReplicationReplicaRequestType type);
+
+    /// Process requests about replication requests (STOP, STATUS)
+    void processRequest (proto::ReplicationManagementRequestType type);
+
+    /// Process requests affecting the service
+    void processRequest (proto::ReplicationServiceRequestType type);
 
     /**
      * Serrialize a protobuf object and send it back to a client.
@@ -173,8 +184,8 @@ private:
 
     // Parameters of the object
 
-    ServiceProvider::pointer _serviceProvider;
-    WorkerProcessor::pointer _processor;
+    ServiceProvider &_serviceProvider;
+    WorkerProcessor &_processor;
 
     boost::asio::ip::tcp::socket _socket;
 

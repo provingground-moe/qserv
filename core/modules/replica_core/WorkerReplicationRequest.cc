@@ -46,25 +46,29 @@ namespace replica_core {
 ///////////////////////////////////////////////////////////////////
 
 WorkerReplicationRequest::pointer
-WorkerReplicationRequest::create (int                priority,
+WorkerReplicationRequest::create (ServiceProvider   &serviceProvider,
                                   const std::string &id,
+                                  int                priority,
                                   const std::string &database,
                                   unsigned int       chunk) {
 
     return WorkerReplicationRequest::pointer (
-        new WorkerReplicationRequest (priority,
+        new WorkerReplicationRequest (serviceProvider,
                                       id,
+                                      priority,
                                       database,
                                       chunk));
 }
 
-WorkerReplicationRequest::WorkerReplicationRequest (int                priority,
+WorkerReplicationRequest::WorkerReplicationRequest (ServiceProvider   &serviceProvider,
                                                     const std::string &id,
+                                                    int                priority,
                                                     const std::string &database,
                                                     unsigned int       chunk)
-    :   WorkerRequest ("REPLICATE",
-                       priority,
-                       id),
+    :   WorkerRequest (serviceProvider,
+                       "REPLICATE",
+                       id,
+                       priority),
 
         _database (database),
         _chunk    (chunk) {
@@ -80,24 +84,28 @@ WorkerReplicationRequest::~WorkerReplicationRequest () {
 ////////////////////////////////////////////////////////////////////
 
 WorkerReplicationRequestX::pointer
-WorkerReplicationRequestX::create (int                priority,
+WorkerReplicationRequestX::create (ServiceProvider   &serviceProvider,
                                    const std::string &id,
+                                   int                priority,
                                    const std::string &database,
                                    unsigned int       chunk) {
 
     return WorkerReplicationRequestX::pointer (
-        new WorkerReplicationRequestX (priority,
+        new WorkerReplicationRequestX (serviceProvider,
                                        id,
+                                       priority,
                                        database,
                                        chunk));
 }
 
-WorkerReplicationRequestX::WorkerReplicationRequestX (int                priority,
+WorkerReplicationRequestX::WorkerReplicationRequestX (ServiceProvider   &serviceProvider,
                                                       const std::string &id,
+                                                      int                priority,
                                                       const std::string &database,
                                                       unsigned int       chunk)
-    :   WorkerReplicationRequest (priority,
+    :   WorkerReplicationRequest (serviceProvider,
                                   id,
+                                  priority,
                                   database,
                                   chunk) {
 }

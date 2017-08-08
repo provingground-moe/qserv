@@ -65,8 +65,9 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (int                priority,
+    static pointer create (ServiceProvider   &serviceProvider,
                            const std::string &id,
+                           int                priority,
                            const std::string &database);
 
     // Default construction and copy semantics are proxibited
@@ -82,13 +83,14 @@ public:
 
     const std::string& database () const { return _database; }
 
-private:
+protected:
 
     /**
      * The normal constructor of the class.
      */
-    WorkerFindAllRequest (int                priority,
+    WorkerFindAllRequest (ServiceProvider   &serviceProvider,
                           const std::string &id,
+                          int                priority,
                           const std::string &database);
 private:
 
@@ -113,8 +115,9 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (int                priority,
+    static pointer create (ServiceProvider   &serviceProvider,
                            const std::string &id,
+                           int                priority,
                            const std::string &database);
 
     // Default construction and copy semantics are proxibited
@@ -138,8 +141,9 @@ private:
     /**
      * The normal constructor of the class.
      */
-    WorkerFindAllRequestX (int                priority,
+    WorkerFindAllRequestX (ServiceProvider   &serviceProvider,
                            const std::string &id,
+                           int                priority,
                            const std::string &database);
 };
 

@@ -32,6 +32,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/ReplicationRequest.h"
+#include "replica_core/ServiceProvider.h"
 
 // This macro to appear witin each block which requires thread safety
 
@@ -49,23 +50,19 @@ namespace qserv {
 namespace replica_core {
 
 MasterServer::pointer
-MasterServer::create (ServiceProvider::pointer serviceProvider)
-{
+MasterServer::create (ServiceProvider &serviceProvider) {
     return pointer (
-        new MasterServer (
-            serviceProvider
-        )
-    );
+        new MasterServer(serviceProvider));
 }
 
-MasterServer::MasterServer (ServiceProvider::pointer serviceProvider)
+MasterServer::MasterServer (ServiceProvider &serviceProvider)
     :   _serviceProvider (serviceProvider),
         _io_service (),
-        _work       (nullptr),
-        _thread     (nullptr),
-        _requestsRegistry (std::make_shared<RequestsRegistry>())
-{}
-    
+        _work   (nullptr),
+        _thread (nullptr),
+        _requestsRegistry (std::make_shared<RequestsRegistry>()) {
+}
+
 void
 MasterServer::run () {
 
@@ -83,8 +80,8 @@ MasterServer::run () {
                 [server] () {
         
                     // This will prevent the I/O service from existing the .run()
-                    // method event when it will run ourt of any requess to process.
-                    // Unless the service will explicitly stopped.
+                    // method event when it will run out of any requess to process.
+                    // Unless the service will be explicitly stopped.
     
                     server->_io_service.run();
                     
@@ -143,7 +140,7 @@ MasterServer::replicate (const std::string                 &database,
                          unsigned int                      chunk,
                          const std::string                 &sourceWorkerName,
                          const std::string                 &destinationWorkerName,
-                         ReplicationRequest::callback_type onFinish) {
+                         ReplicationRequest::callback_type  onFinish) {
 
     assertIsRunning();
 
@@ -186,24 +183,31 @@ MasterServer::activeReplications () const {
     }
 }
 
+size_t
+MasterServer::numActiveReplications () const {
+    THREAD_SAFE_BLOCK {
+        return numRequestsByType<ReplicationRequest>();
+    }
+}
 
-StopRequest::pointer
-MasterServer::stopReplication (const std::string          &workerName,
-                               const std::string          &replicationRequestId,
-                               StopRequest::callback_type onFinish) {
+
+StopReplicationRequest::pointer
+MasterServer::stopReplication (const std::string                     &workerName,
+                               const std::string                     &replicationRequestId,
+                               StopReplicationRequest::callback_type  onFinish) {
     assertIsRunning();
 
     THREAD_SAFE_BLOCK {
 
         MasterServer::pointer server = shared_from_this();
 
-        StopRequest::pointer request =
-            StopRequest::create (
+        StopReplicationRequest::pointer request =
+            StopReplicationRequest::create (
                 _serviceProvider,
                 workerName,
                 _io_service,
                 replicationRequestId,
-                [server] (StopRequest::pointer request) {
+                [server] (StopReplicationRequest::pointer request) {
                     server->finish(request->id());
                 }
             );
@@ -213,7 +217,7 @@ MasterServer::stopReplication (const std::string          &workerName,
         // be automatically removed from the Registry.
     
         (*_requestsRegistry)[request->id()] =
-            std::make_shared<RequestWrapperImpl<StopRequest>> (request, onFinish);
+            std::make_shared<RequestWrapperImpl<StopReplicationRequest>> (request, onFinish);
     
         // Initiate the request
 
@@ -223,18 +227,18 @@ MasterServer::stopReplication (const std::string          &workerName,
     }
 }
 
-std::vector<StopRequest::pointer>
+std::vector<StopReplicationRequest::pointer>
 MasterServer::activeStopReplications () const {
     THREAD_SAFE_BLOCK {
-        return requestsByType<StopRequest>();
+        return requestsByType<StopReplicationRequest>();
     };       
 }
 
 
-StatusRequest::pointer
-MasterServer::statusOfReplication (const std::string            &workerName,
-                                   const std::string            &replicationRequestId,
-                                   StatusRequest::callback_type onFinish) {
+StatusReplicationRequest::pointer
+MasterServer::statusOfReplication (const std::string                       &workerName,
+                                   const std::string                       &replicationRequestId,
+                                   StatusReplicationRequest::callback_type  onFinish) {
     assertIsRunning();
 
     THREAD_SAFE_BLOCK {
@@ -243,13 +247,13 @@ MasterServer::statusOfReplication (const std::string            &workerName,
 
         MasterServer::pointer server = shared_from_this();
 
-        StatusRequest::pointer request =
-            StatusRequest::create (
+        StatusReplicationRequest::pointer request =
+            StatusReplicationRequest::create (
                 _serviceProvider,
                 workerName,
                 _io_service,
                 replicationRequestId,
-                [server] (StatusRequest::pointer request) {
+                [server] (StatusReplicationRequest::pointer request) {
                     server->finish(request->id());
                 }
             );
@@ -259,7 +263,7 @@ MasterServer::statusOfReplication (const std::string            &workerName,
         // be automatically removed from the Registry.
     
         (*_requestsRegistry)[request->id()] =
-            std::make_shared<RequestWrapperImpl<StatusRequest>> (request, onFinish);
+            std::make_shared<RequestWrapperImpl<StatusReplicationRequest>> (request, onFinish);
     
         // Initiate the request
 
@@ -270,10 +274,10 @@ MasterServer::statusOfReplication (const std::string            &workerName,
 }
 
 
-std::vector<StatusRequest::pointer>
+std::vector<StatusReplicationRequest::pointer>
 MasterServer::activeStatusInqueries () const {
     THREAD_SAFE_BLOCK {
-        return requestsByType<StatusRequest>();
+        return requestsByType<StatusReplicationRequest>();
     }
 }
 

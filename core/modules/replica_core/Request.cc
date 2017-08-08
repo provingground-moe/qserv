@@ -37,7 +37,9 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Configuration.h"
 #include "replica_core/ProtocolBuffer.h"
+#include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerInfo.h"
 
 namespace {
@@ -84,11 +86,11 @@ Request::generateId () {
     return boost::uuids::to_string(id);
 }
 
-Request::Request (const ServiceProvider::pointer &serviceProvider,
-                  const std::string              &type,
-                  const std::string              &worker,
-                  boost::asio::io_service        &io_service,
-                  int                             priority)
+Request::Request (ServiceProvider         &serviceProvider,
+                  const std::string       &type,
+                  const std::string       &worker,
+                  boost::asio::io_service &io_service,
+                  int                      priority)
 
     :   _serviceProvider (serviceProvider),
 
@@ -101,15 +103,15 @@ Request::Request (const ServiceProvider::pointer &serviceProvider,
         _state         (CREATED),
         _extendedState (NONE),
 
-        _bufferPtr     (new ProtocolBuffer(serviceProvider->config()->requestBufferSizeBytes())),
-        _workerInfoPtr (serviceProvider->workerInfo(worker)),
-        _timerIvalSec  (serviceProvider->config()->defaultRetryTimeoutSec()),
+        _bufferPtr     (new ProtocolBuffer(serviceProvider.config().requestBufferSizeBytes())),
+        _workerInfoPtr (serviceProvider.workerInfo(worker)),
+        _timerIvalSec  (serviceProvider.config().defaultRetryTimeoutSec()),
 
         _resolver (io_service),
         _socket   (io_service),
         _timer    (io_service),
 
-        _requestExpirationIvalSec (serviceProvider->config()->masterRequestTimeoutSec()),
+        _requestExpirationIvalSec (serviceProvider.config().masterRequestTimeoutSec()),
         _requestExpirationTimer   (io_service)
 {}
 

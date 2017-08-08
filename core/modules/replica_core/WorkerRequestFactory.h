@@ -36,8 +36,6 @@
 
 // Qserv headers
 
-#include "replica_core/ServiceProvider.h"
-
 // Forward declarations
 
 // This header declarations
@@ -48,6 +46,7 @@ namespace replica_core {
 
 // Forward declarations
 
+class ServiceProvider;
 class WorkerReplicationRequest;
 class WorkerDeleteRequest;
 class WorkerFindRequest;
@@ -65,10 +64,10 @@ public:
 
     // Pointers to specific request types
 
-    using WorkerReplicationRequest_pointer = std::shared_ptr<WorkerReplicationRequest>;
-    using WorkerDeleteRequest_pointer      = std::shared_ptr<WorkerDeleteRequest>;
-    using WorkerFindRequest_pointer        = std::shared_ptr<WorkerFindRequest>;
-    using WorkerFindAllRequest_pointer     = std::shared_ptr<WorkerFindAllRequest>;
+    typedef std::shared_ptr<WorkerReplicationRequest> WorkerReplicationRequest_pointer;
+    typedef std::shared_ptr<WorkerDeleteRequest>      WorkerDeleteRequest_pointer;
+    typedef std::shared_ptr<WorkerFindRequest>        WorkerFindRequest_pointer;
+    typedef std::shared_ptr<WorkerFindAllRequest>     WorkerFindAllRequest_pointer;
 
     // Default construction and copy semantics are proxibited
 
@@ -79,7 +78,7 @@ public:
     /**
      * The constructor of the class.
      */
-    explicit WorkerRequestFactory (const ServiceProvider::pointer &serviceProvider);
+    explicit WorkerRequestFactory (ServiceProvider &serviceProvider);
 
     /// Destructor
     virtual ~WorkerRequestFactory ();
@@ -92,8 +91,8 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerReplicationRequest_pointer createReplicationRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database,
             unsigned int       chunk);
 
@@ -105,8 +104,8 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerDeleteRequest_pointer createDeleteRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database,
             unsigned int       chunk);
 
@@ -118,8 +117,8 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerFindRequest_pointer createFindRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database,
             unsigned int       chunk);
 
@@ -131,15 +130,15 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerFindAllRequest_pointer createFindAllRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database);
 
 protected:
 
     // Parameters of the object
 
-    ServiceProvider::pointer _serviceProvider;
+    ServiceProvider &_serviceProvider;
 };
 
 
@@ -147,7 +146,8 @@ protected:
   * Class WorkerRequestFactoryX creates request objects based on the XRootD
   * implementation of the file system operations.
   */
-class WorkerRequestFactoryX {
+class WorkerRequestFactoryX
+    :   WorkerRequestFactory {
 
 public:
 
@@ -160,7 +160,7 @@ public:
     /**
      * The constructor of the class.
      */
-    explicit WorkerRequestFactoryX (const ServiceProvider::pointer &serviceProvider);
+    explicit WorkerRequestFactoryX (ServiceProvider &serviceProvider);
 
     /// Destructor
     ~WorkerRequestFactoryX () override;
@@ -173,8 +173,8 @@ public:
      * @return a pointer to the newely created object
      */
     WorkerReplicationRequest_pointer createReplicationRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database,
             unsigned int       chunk) override;
 
@@ -186,8 +186,8 @@ public:
      * @return a pointer to the newely created object
      */
     WorkerDeleteRequest_pointer createDeleteRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database,
             unsigned int       chunk) override;
 
@@ -199,8 +199,8 @@ public:
      * @return a pointer to the newely created object
      */
     WorkerFindRequest_pointer createFindRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database,
             unsigned int       chunk) override;
 
@@ -212,8 +212,8 @@ public:
      * @return a pointer to the newely created object
      */
     WorkerFindAllRequest_pointer createFindAllRequest (
-            int                priority,
             const std::string &id,
+            int                priority,
             const std::string &database) override;
 };
 

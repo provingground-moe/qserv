@@ -93,27 +93,28 @@ private:
      *                            at a destination of the chunk
      * @param onFinish          - an optional callback function to be called upon a completion of
      *                            the request.
+     * @param priority          - a priority level of the request
      */
-    static pointer create (const ServiceProvider::pointer &serviceProvider,
-                           const std::string              &database,
-                           unsigned int                    chunk,
-                           const std::string              &sourceWorker,
-                           const std::string              &destinationWorker,
-                           boost::asio::io_service        &io_service,
-                           callback_type                   onFinish,
-                           int                             priority=0);
+    static pointer create (ServiceProvider          &serviceProvider,
+                           const std::string        &database,
+                           unsigned int              chunk,
+                           const std::string        &sourceWorker,
+                           const std::string        &destinationWorker,
+                           boost::asio::io_service  &io_service,
+                           callback_type             onFinish,
+                           int                       priority=0);
 
     /**
      * Construct the request with the pointer to the services provider.
      */
-    ReplicationRequest (const ServiceProvider::pointer &serviceProvider,
-                        const std::string              &database,
-                        unsigned int                    chunk,
-                        const std::string              &sourceWorker,
-                        const std::string              &destinationWorker,
-                        boost::asio::io_service         &io_service,
-                        callback_type                   onFinish,
-                        int                             priority=0);
+    ReplicationRequest (ServiceProvider         &serviceProvider,
+                        const std::string       &database,
+                        unsigned int             chunk,
+                        const std::string       &sourceWorker,
+                        const std::string       &destinationWorker,
+                        boost::asio::io_service &io_service,
+                        callback_type            onFinish,
+                        int                      priority=0);
 
     /**
       * This method is called when a connection is established and
@@ -127,14 +128,14 @@ private:
     
     /// Callback handler for the asynchronious operation
     void requestSent (const boost::system::error_code &ec,
-                      size_t bytes_transferred);
+                      size_t                           bytes_transferred);
 
     /// Start receiving the response from the destination worker
     void receiveResponse ();
 
     /// Callback handler for the asynchronious operation
     void responseReceived (const boost::system::error_code &ec,
-                           size_t bytes_transferred);
+                           size_t                           bytes_transferred);
 
     /// Start the timer before attempting the previously failed
     /// or successfull (if a status check is needed) step.
@@ -148,14 +149,14 @@ private:
 
     /// Callback handler for the asynchronious operation
     void statusSent (const boost::system::error_code &ec,
-                     size_t bytes_transferred);
+                     size_t                           bytes_transferred);
 
     /// Start receiving the status response from the destination worker
     void receiveStatus ();
 
     /// Callback handler for the asynchronious operation
     void statusReceived (const boost::system::error_code &ec,
-                         size_t bytes_transferred);
+                         size_t                           bytes_transferred);
 
     /// Process the completion of the requested operation
     void analyze (lsst::qserv::proto::ReplicationStatus status);

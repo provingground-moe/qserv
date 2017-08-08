@@ -44,6 +44,10 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+
+// Forward declarations
+class ServiceProvider;
+
 /// Exception thrown when a replication request is cancelled
 struct WorkerRequestCancelled
     :   std::exception {
@@ -92,21 +96,21 @@ public:
 
     // Trivial accessors
 
-    int priority () const { return _priority; }
+    ServiceProvider& serviceProvider () { return _serviceProvider; }
 
     const std::string& type () const { return _type; }
     const std::string& id   () const { return _id; }
 
+    int priority () const { return _priority; }
+
     CompletionStatus  status () const { return _status; }
 
-    /**
-     * This method is called to indicate a transtion of the request
-     * into STATUS_IN_PROGRESS.
+    /** Set the status
      *
-     * HOW TO OVERRIDE THIS METHOD: if a subclass chooses to override this method
-     * the subclass should call this (the base class's) method as well.
+     * ATTENTION: this method needs to be called witin a thread-safe context
+     * when moving requests between different queues.
      */
-    virtual void beginProgress ();
+    void setStatus (CompletionStatus status);
 
     /**
      * This method should be invoked (repeatedly) to execute the request until
@@ -169,19 +173,19 @@ protected:
     /**
      * The normal constructor of the class.
      */
-    WorkerRequest (int                priority,
+    WorkerRequest (ServiceProvider   &serviceProvider,
                    const std::string &type,
-                   const std::string &id);
-
-    /// Set the status
-    void setStatus (CompletionStatus status);
+                   const std::string &id,
+                   int                priority);
 
 private:
 
-    int _priority;
+    ServiceProvider  &_serviceProvider;
 
     std::string _type;
     std::string _id;
+
+    int _priority;
     
     CompletionStatus _status;
 

@@ -42,7 +42,6 @@
 
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceManagementRequest.h"
-#include "replica_core/ServiceProvider.h"
 #include "replica_core/StatusRequest.h"
 #include "replica_core/StopRequest.h"
 
@@ -55,6 +54,9 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+// Forward declarations
+class ServiceProvider;
+
 /**
  * The base class for implementing a polymorphic collection of active requests.
  */
@@ -62,6 +64,9 @@ struct RequestWrapper {
 
     /// The pointer type for instances of the class
     typedef std::shared_ptr<RequestWrapper> pointer;
+
+    /// Destructor
+    virtual ~RequestWrapper() {}
 
     /// This method will be called upon a completion of a request
     /// to notify a subscriber on the event.
@@ -89,6 +94,9 @@ struct RequestWrapperImpl
         :   _request  (request),
             _onFinish (onFinish)
     {}
+
+    /// Destructor
+    virtual ~RequestWrapperImpl() {}
 
     virtual std::shared_ptr<Request> request () const { return _request; }
 
@@ -118,9 +126,9 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param serviceProvider - for configuration, etc. services
+     * @param serviceProvider - for configuration, other services
      */
-    static pointer create (ServiceProvider::pointer serviceProvider);
+    static pointer create (ServiceProvider &serviceProvider);
 
     // Default construction and copy semantics are proxibited
 
@@ -129,9 +137,7 @@ public:
     MasterServer & operator= (MasterServer const&) = delete;
 
     /// Return the Service Provider used by the server
-    ServiceProvider::pointer serviceProvider () {
-        return _serviceProvider;
-    }
+    ServiceProvider& serviceProvider () { return _serviceProvider; }
 
     /**
      * Run the server in a dedicated thread unless it's already running.
@@ -189,12 +195,15 @@ public:
                                            unsigned int                      chunk,
                                            const std::string                 &sourceWorkerName,
                                            const std::string                 &destinationWorkerName,
-                                           ReplicationRequest::callback_type onFinish=nullptr);
+                                           ReplicationRequest::callback_type  onFinish=nullptr);
 
     /**
      * Return a list of the on-going replication requests.
      */
     std::vector<ReplicationRequest::pointer> activeReplications () const;
+
+    /// Return the number of the active replication requests
+    size_t numActiveReplications () const;
 
     /**
      * Stop an outstanding replication request.
@@ -208,14 +217,14 @@ public:
      *
      * @return a pointer to the stop request
      */
-    StopRequest::pointer stopReplication (const std::string          &workerName,
-                                          const std::string          &replicationRequestId,
-                                          StopRequest::callback_type onFinish=nullptr);
+    StopReplicationRequest::pointer stopReplication (const std::string                     &workerName,
+                                                     const std::string                     &replicationRequestId,
+                                                     StopReplicationRequest::callback_type  onFinish=nullptr);
 
     /**
      * Return a list of the on-going stop requests.
      */
-    std::vector<StopRequest::pointer> activeStopReplications () const;
+    std::vector<StopReplicationRequest::pointer> activeStopReplications () const;
 
     /**
      * Check the on-going status of an outstanding replication request.
@@ -229,14 +238,14 @@ public:
      *
      * @return a pointer to the status inquery request
      */
-    StatusRequest::pointer statusOfReplication (const std::string            &workerName,
-                                                const std::string            &replicationRequestId,
-                                                StatusRequest::callback_type onFinish=nullptr);
+    StatusReplicationRequest::pointer statusOfReplication (const std::string                       &workerName,
+                                                           const std::string                       &replicationRequestId,
+                                                           StatusReplicationRequest::callback_type  onFinish=nullptr);
 
     /**
      * Return a list of the on-going status inquery requests.
      */
-    std::vector<StatusRequest::pointer> activeStatusInqueries () const;
+    std::vector<StatusReplicationRequest::pointer> activeStatusInqueries () const;
  
     /**
      * Tell the worker-side service to temporarily suspend processing requests
@@ -300,9 +309,9 @@ private:
     /**
      * Construct the server with the specified configuration.
      *
-     * @param serviceProvider - for configuration, etc. services
+     * @param serviceProvider - for configuration, other services
      */
-    explicit MasterServer (ServiceProvider::pointer serviceProvider);
+    explicit MasterServer (ServiceProvider &serviceProvider);
 
     /**
      * Finalize the completion of the request. This method will notify
@@ -336,6 +345,30 @@ private:
     }
 
     /**
+     * Return the number of of requests filtered by type.
+     *
+     * ATTENTION: This is implementation is not thread-safe. It needs
+     * to be used from the thread-safe code only.
+     */
+    template <class T>
+    size_t numRequestsByType () const {
+
+        size_t result{0};
+
+        for (auto itr : (*_requestsRegistry)) {
+        
+            // Filter the request by leaving the ones of the desired type
+
+            typename T::pointer request =
+                std::dynamic_pointer_cast<T>(itr.second->request());
+
+            if (request)
+                ++result;
+        }
+        return result;
+    }
+
+    /**
      * Make sure the server is runnning. Otherwise throw std::runtime_error.
      */
     void assertIsRunning () const;
@@ -344,7 +377,7 @@ private:
 
     // Parameters of the object
 
-    ServiceProvider::pointer _serviceProvider;
+    ServiceProvider &_serviceProvider;
 
     // Communication and synchronization context
 

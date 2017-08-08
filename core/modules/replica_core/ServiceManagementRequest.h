@@ -117,7 +117,7 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      */
-    ServiceManagementRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+    ServiceManagementRequestBase (ServiceProvider                                   &serviceProvider,
                                   const char                                        *requestTypeName,
                                   const std::string                                 &worker,
                                   boost::asio::io_service                           &io_service,
@@ -203,7 +203,7 @@ private:
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      */
-    static pointer create (const ServiceProvider::pointer  &serviceProvider,
+    static pointer create (ServiceProvider                 &serviceProvider,
                            const std::string               &worker,
                            boost::asio::io_service         &io_service,
                            callback_type                    onFinish) {
@@ -221,7 +221,7 @@ private:
     /**
      * Construct the request
      */
-    ServiceManagementRequest (const ServiceProvider::pointer                    &serviceProvider,
+    ServiceManagementRequest (ServiceProvider                                   &serviceProvider,
                               const char                                        *requestTypeName,
                               const std::string                                 &worker,
                               boost::asio::io_service                           &io_service,
@@ -261,8 +261,8 @@ struct ServiceSuspendRequestPolicy {
     static const char* requestTypeName () {
         return "SERVICE_SUSPEND";
     } 
-    static lsst::qserv::proto::ReplicationRequestHeader::Type requestType () {
-        return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_SUSPEND;
+    static lsst::qserv::proto::ReplicationServiceRequestType requestType () {
+        return lsst::qserv::proto::ReplicationServiceRequestType::SERVICE_SUSPEND;
     }
 };
 typedef ServiceManagementRequest<ServiceSuspendRequestPolicy> ServiceSuspendRequest;
@@ -271,8 +271,8 @@ struct ServiceResumeRequestPolicy {
     static const char* requestTypeName () {
         return "SERVICE_RESUME";
     }   
-    static lsst::qserv::proto::ReplicationRequestHeader::Type requestType () {
-        return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_RESUME;
+    static lsst::qserv::proto::ReplicationServiceRequestType requestType () {
+        return lsst::qserv::proto::ReplicationServiceRequestType::SERVICE_RESUME;
     }
 };
 typedef ServiceManagementRequest<ServiceResumeRequestPolicy> ServiceResumeRequest;
@@ -281,8 +281,8 @@ struct ServiceStatusRequestPolicy {
     static const char* requestTypeName () {
         return "SERVICE_STATUS";
     } 
-    static lsst::qserv::proto::ReplicationRequestHeader::Type requestType () {
-        return lsst::qserv::proto::ReplicationRequestHeader::SERVICE_STATUS;
+    static lsst::qserv::proto::ReplicationServiceRequestType requestType () {
+        return lsst::qserv::proto::ReplicationServiceRequestType::SERVICE_STATUS;
     }
 };
 typedef ServiceManagementRequest<ServiceStatusRequestPolicy> ServiceStatusRequest;

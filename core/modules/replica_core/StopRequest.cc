@@ -34,6 +34,8 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
+#include "replica_core/ServiceProvider.h"
+
 
 namespace proto = lsst::qserv::proto;
 
@@ -47,7 +49,7 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-StopRequestBase::StopRequestBase (const ServiceProvider::pointer                    &serviceProvider,
+StopRequestBase::StopRequestBase (ServiceProvider                                   &serviceProvider,
                                   const char                                        *requestTypeName,
                                   const std::string                                 &worker,
                                   boost::asio::io_service                           &io_service,
@@ -55,15 +57,14 @@ StopRequestBase::StopRequestBase (const ServiceProvider::pointer                
                                   lsst::qserv::proto::ReplicationReplicaRequestType  requestType)
     :   Request(serviceProvider,
                 requestTypeName,
-                workerr,
+                worker,
                 io_service),
 
         _targetRequestId (targetRequestId),
-        _onFinish         (onFinish)
-{}
+        _requestType     (requestType) {
+}
 
-StopRequestBase::~StopRequestBase ()
-{
+StopRequestBase::~StopRequestBase () {
 }
 
 void
@@ -77,8 +78,8 @@ StopRequestBase::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type       (proto::ReplicationRequestHeader::REQUEST);
-    hdr.management_type(proto::ReplicationManagementRequestType::REQUEST_STOP);
+    hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
+    hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STOP);
 
     _bufferPtr->serialize(hdr);
 
@@ -229,8 +230,8 @@ StopRequestBase::sendStatus () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
-    hdr.set_type       (proto::ReplicationRequestHeader::REQUEST);
-    hdr.management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
+    hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
+    hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 

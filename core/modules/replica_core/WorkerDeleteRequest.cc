@@ -46,25 +46,29 @@ namespace replica_core {
 //////////////////////////////////////////////////////////////
 
 WorkerDeleteRequest::pointer
-WorkerDeleteRequest::create (int                priority,
+WorkerDeleteRequest::create (ServiceProvider   &serviceProvider,
                              const std::string &id,
+                             int                priority,
                              const std::string &database,
                              unsigned int       chunk) {
 
     return WorkerDeleteRequest::pointer (
-        new WorkerDeleteRequest (priority,
+        new WorkerDeleteRequest (serviceProvider,
                                  id,
+                                 priority,
                                  database,
                                  chunk));
 }
 
-WorkerDeleteRequest::WorkerDeleteRequest (int                priority,
+WorkerDeleteRequest::WorkerDeleteRequest (ServiceProvider   &serviceProvider,
                                           const std::string &id,
+                                          int                priority,
                                           const std::string &database,
                                           unsigned int       chunk)
-    :   WorkerRequest ("DELETE",
-                       priority,
-                       id),
+    :   WorkerRequest (serviceProvider,
+                       "DELETE",
+                       id,
+                       priority),
 
         _database (database),
         _chunk    (chunk) {
@@ -79,24 +83,28 @@ WorkerDeleteRequest::~WorkerDeleteRequest () {
 ///////////////////////////////////////////////////////////////
 
 WorkerDeleteRequestX::pointer
-WorkerDeleteRequestX::create (int                priority,
+WorkerDeleteRequestX::create (ServiceProvider   &serviceProvider,
                               const std::string &id,
+                              int                priority,
                               const std::string &database,
                               unsigned int       chunk) {
 
     return WorkerDeleteRequestX::pointer (
-        new WorkerDeleteRequestX (priority,
+        new WorkerDeleteRequestX (serviceProvider,
                                   id,
+                                  priority,
                                   database,
                                   chunk));
 }
 
-WorkerDeleteRequestX::WorkerDeleteRequestX (int                priority,
+WorkerDeleteRequestX::WorkerDeleteRequestX (ServiceProvider   &serviceProvider,
                                             const std::string &id,
+                                            int                priority,
                                             const std::string &database,
                                             unsigned int       chunk)
-    :   WorkerDeleteRequest (priority,
+    :   WorkerDeleteRequest (serviceProvider,
                              id,
+                             priority,
                              database,
                              chunk) {
 }

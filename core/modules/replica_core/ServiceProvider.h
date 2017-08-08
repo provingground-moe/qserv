@@ -35,8 +35,6 @@
 
 // Qserv headers
 
-#include "replica_core/Configuration.h"
-
 // Forward declarations
 
 // This header declarations
@@ -45,27 +43,15 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+class Configuration;
 class WorkerInfo;
 
 /**
   * Class ServiceProvider hosts various serviceses for the master server.
   */
-class ServiceProvider
-    :   public std::enable_shared_from_this<ServiceProvider>  {
+class ServiceProvider {
 
 public:
-
-    /// The pointer type for instances of the class
-    typedef std::shared_ptr<ServiceProvider> pointer;
-
-    /**
-     * Static factory method is needed to prevent issue with the lifespan
-     * and memory management of instances created otherwise (as values or via
-     * low-level pointers).
-     *
-     * @param configuration - the configuration service
-     */
-    static pointer create (Configuration::pointer configuration);
 
     // Default construction and copy semantics are proxibited
 
@@ -74,9 +60,16 @@ public:
     ServiceProvider & operator= (ServiceProvider const&) = delete;
 
     /**
-     * Return a pointer to the configuration service
+     * Construct the object.
+     *
+     * @param configuration - the configuration service
      */
-    Configuration::pointer config () const;
+    explicit ServiceProvider (Configuration &configuration);
+
+    /**
+     * Return a reference to the configuration service
+     */
+    Configuration& config () const { return _configuration; }
 
     /**
      * Return the names of known workers.
@@ -90,16 +83,7 @@ public:
 
 private:
 
-    /**
-     * Construct the object with the pointer to the configuration service.
-     *
-     * @param configuration - the configuration service
-     */
-    ServiceProvider (Configuration::pointer configuration);
-
-private:
-
-    Configuration::pointer _configuration;
+    Configuration& _configuration;
 };
 
 }}} // namespace lsst::qserv::replica_core

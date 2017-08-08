@@ -37,8 +37,6 @@
 
 // Qserv headers
 
-#include "replica_core/ServiceProvider.h"
-
 // Forward declarations
 
 // This header declarations
@@ -47,7 +45,11 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+// Forward declarations
+
 class ProtocolBuffer;
+class ServiceProvider;
+class WorkerInfo;
 
 /**
   * Class Request is a base class for a family of requests within
@@ -136,8 +138,8 @@ public:
     /// Destructor
     virtual ~Request ();
 
-    /// Return a pointer to the service provider,
-    ServiceProvider::pointer serviceProvider() { return _serviceProvider; }
+    /// Return a reference to the service provider,
+    ServiceProvider& serviceProvider() { return _serviceProvider; }
 
     /// Return a string representing a type of a request.
     const std::string& type () const { return _type; }
@@ -146,7 +148,7 @@ public:
     const std::string& id () const { return _id; }
 
     /// Return the priority level of the request
-    int priority () const { return _id; }
+    int priority () const { return _priority; }
 
     /// Return a unique identifier of the request
     const std::string& worker () const { return _worker; }
@@ -190,7 +192,7 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      *
-     * @param serviceProvider - the pointer to the provider of serviceses
+     * @param serviceProvider - a provider of various services
      * @param type            - its type name (used informally for debugging)
      * @param worker          - the name of a worker
      * @io_service            - BOOST ASIO service
@@ -198,11 +200,11 @@ protected:
      *                          the worker service. Higher number means higher
      *                          priority.
      */
-    Request (const ServiceProvider::pointer &serviceProvider,
-             const std::string              &type,
-             const std::string              &worker,
-             boost::asio::io_service        &io_service,
-             int                             priority=0);
+    Request (ServiceProvider         &serviceProvider,
+             const std::string       &type,
+             const std::string       &worker,
+             boost::asio::io_service &io_service,
+             int                      priority=0);
 
     /**
      * Reset the state (if needed) and begin processing the request.
@@ -311,7 +313,7 @@ protected:
 
     // Parameters of the object
 
-    ServiceProvider::pointer _serviceProvider;
+    ServiceProvider &_serviceProvider;
 
     std::string _type;
     std::string _id;
