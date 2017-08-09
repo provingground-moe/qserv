@@ -31,8 +31,14 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/DeleteRequest.h"
+#include "replica_core/FindRequest.h"
+#include "replica_core/FindAllRequest.h"
 #include "replica_core/ReplicationRequest.h"
+#include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/ServiceProvider.h"
+#include "replica_core/StatusRequest.h"
+#include "replica_core/StopRequest.h"
 
 // This macro to appear witin each block which requires thread safety
 
@@ -48,6 +54,66 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.MasterServer");
 namespace lsst {
 namespace qserv {
 namespace replica_core {
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////  RequestWrapper  //////////////////////////
+//////////////////////////////////////////////////////////////////////
+
+/**
+ * The base class for implementing a polymorphic collection of active requests.
+ */
+struct RequestWrapper {
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<RequestWrapper> pointer;
+
+    /// Destructor
+    virtual ~RequestWrapper() {}
+
+    /// This method will be called upon a completion of a request
+    /// to notify a subscriber on the event.
+    virtual void notify ()=0;
+
+    /// Return a pointer to the stored request object
+    virtual std::shared_ptr<Request> request () const=0;
+};
+
+
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////  RequestWrapperImpl  //////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * Request-type specific wrappers
+ */
+template <class  T>
+struct RequestWrapperImpl
+    :   RequestWrapper {
+
+    /// The implementation of the vurtual method defined in the base class
+    virtual void notify () {
+        if (_onFinish == nullptr) return;
+        _onFinish(_request);
+    }
+
+    RequestWrapperImpl(typename T::pointer request,
+                       typename T::callback_type onFinish)
+        :   _request  (request),
+            _onFinish (onFinish)
+    {}
+
+    /// Destructor
+    virtual ~RequestWrapperImpl() {}
+
+    virtual std::shared_ptr<Request> request () const { return _request; }
+
+private:
+
+    // The context of the operation
+    
+    typename T::pointer       _request;
+    typename T::callback_type _onFinish;
+};
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -85,8 +151,8 @@ public:
      * @param targetRequestId - an identifier of a request to be affected
      * @param onFinish        - a callback function to be called upon completion of the operation
      */
-    static
     template <class REQUEST_TYPE>
+    static
     typename REQUEST_TYPE::pointer requestManagementOperation (
             MasterServer::pointer                 server, 
             const std::string                    &workerName,
@@ -111,7 +177,7 @@ public:
         // be automatically removed from the Registry.
     
         (server->_registry)[request->id()] =
-            std::make_shared<MasterServer::RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);
+            std::make_shared<RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);
     
         // Initiate the request
 
@@ -127,8 +193,8 @@ public:
      * @param workerName - the name of a worker node where the service is run
      * @param onFinish   - a callback function to be called upon completion of the operation
      */
-    static
     template <class REQUEST_TYPE>
+    static
     typename REQUEST_TYPE::pointer serviceManagementOperation (
             MasterServer::pointer                 server, 
             const std::string                    &workerName,
@@ -151,7 +217,7 @@ public:
         // be automatically removed from the Registry.
     
         (server->_registry)[request->id()] =
-            std::make_shared<MasterServer::RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);
+            std::make_shared<RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);
     
         // Initiate the request
 
@@ -163,13 +229,13 @@ public:
     /**
      * Return a collection of requests filtered by type.
      */
-    static
     template <class REQUEST_TYPE>
+    static
     std::vector<typename REQUEST_TYPE::pointer> requestsByType (MasterServer::pointer server) {
     
         std::vector<typename REQUEST_TYPE::pointer> result;
     
-        for (auto itr : server->registry) {
+        for (auto itr : server->_registry) {
         
             typename REQUEST_TYPE::pointer request =
                 std::dynamic_pointer_cast<REQUEST_TYPE>(itr.second->request());
@@ -182,13 +248,13 @@ public:
     /**
      * Return the number of of requests filtered by type.
      */
-    static
     template <class REQUEST_TYPE>
+    static
     size_t numRequestsByType (MasterServer::pointer server) {
     
         size_t result{0};
     
-        for (auto itr : server->registry) {
+        for (auto itr : server->_registry) {
         
             typename REQUEST_TYPE::pointer request =
                 std::dynamic_pointer_cast<REQUEST_TYPE>(itr.second->request());
@@ -345,7 +411,7 @@ DeleteRequest::pointer
 MasterServer::deleteReplica (const std::string            &database,
                              unsigned int                  chunk,
                              const std::string            &workerName,
-                             DeleteRequest::callback_type  onFinish=nullptr) {
+                             DeleteRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
 
         assertIsRunning();
@@ -383,7 +449,7 @@ FindRequest::pointer
 MasterServer::findReplica (const std::string          &database,
                            unsigned int                chunk,
                            const std::string          &workerName,
-                           FindRequest::callback_type  onFinish=nullptr) {
+                           FindRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
 
         assertIsRunning();
@@ -420,7 +486,7 @@ MasterServer::findReplica (const std::string          &database,
 FindAllRequest::pointer
 MasterServer::findAllReplicas (const std::string             &database,
                                const std::string             &workerName,
-                               FindAllRequest::callback_type  onFinish=nullptr) {
+                               FindAllRequest::callback_type  onFinish) {
     THREAD_SAFE_BLOCK {
 
         assertIsRunning();
@@ -616,7 +682,7 @@ MasterServer::statusOfWorkerService (const std::string                   &worker
     LOGS(_log, LOG_LVL_DEBUG, "statusOfWorkerService  workerName: " << workerName);
 
     THREAD_SAFE_BLOCK {
-        return MasterServerImpl::serviceManagementOperation<ServiceResumeRequest> (
+        return MasterServerImpl::serviceManagementOperation<ServiceStatusRequest> (
             shared_from_this(),
             workerName,
             onFinish);
@@ -624,90 +690,90 @@ MasterServer::statusOfWorkerService (const std::string                   &worker
 }
 
 std::vector<ReplicationRequest::pointer>
-MasterServer::activeReplicationRequests () const {
+MasterServer::activeReplicationRequests () {
     THREAD_SAFE_BLOCK {
-        return MasterServerImpl::requestsByType<ServiceStatusRequest>(shared_from_this());
+        return MasterServerImpl::requestsByType<ReplicationRequest>(shared_from_this());
     }
 }
 
 std::vector<DeleteRequest::pointer>
-MasterServer::activeDeleteRequests () const {
+MasterServer::activeDeleteRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<DeleteRequest>(shared_from_this());
     }
 }
 std::vector<FindRequest::pointer>
-MasterServer::activeFindRequests () const {
+MasterServer::activeFindRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<FindRequest>(shared_from_this());
     }
 }
 
 std::vector<FindAllRequest::pointer>
-MasterServer::activeFindAllRequests () const {
+MasterServer::activeFindAllRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<FindAllRequest>(shared_from_this());
     }
 }
 
 std::vector<StopReplicationRequest::pointer>
-MasterServer::activeStopReplicationRequests () const {
+MasterServer::activeStopReplicationRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StopReplicationRequest>(shared_from_this());
     };       
 }
 
 std::vector<StopDeleteRequest::pointer>
-MasterServer::activeStopDeleteRequests () const {
+MasterServer::activeStopDeleteRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StopDeleteRequest>(shared_from_this());
     };       
 }
 
 std::vector<StopFindRequest::pointer>
-MasterServer::activeStopFindRequests () const {
+MasterServer::activeStopFindRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StopFindRequest>(shared_from_this());
     };       
 }
 
 std::vector<StopFindAllRequest::pointer>
-MasterServer::activeStopFindAllRequests () const {
+MasterServer::activeStopFindAllRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StopFindAllRequest>(shared_from_this());
     };       
 }
 
 std::vector<StatusReplicationRequest::pointer>
-MasterServer::activeStatusReplicationRequests () const {
+MasterServer::activeStatusReplicationRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StatusReplicationRequest>(shared_from_this());
     }
 }
 
 std::vector<StatusDeleteRequest::pointer>
-MasterServer::activeStatusDeleteRequests () const {
+MasterServer::activeStatusDeleteRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StatusDeleteRequest>(shared_from_this());
     }
 }
 
 std::vector<StatusFindRequest::pointer>
-MasterServer::activeStatusFindRequests () const {
+MasterServer::activeStatusFindRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StatusFindRequest>(shared_from_this());
     }
 }
 
 std::vector<StatusFindAllRequest::pointer>
-MasterServer::activeStatusFindAllRequests () const {
+MasterServer::activeStatusFindAllRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<StatusFindAllRequest>(shared_from_this());
     }
 }
 
 std::vector<ServiceSuspendRequest::pointer>
-MasterServer::activeServiceSuspendRequests () const {
+MasterServer::activeServiceSuspendRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<ServiceSuspendRequest>(shared_from_this());
     }
@@ -715,7 +781,7 @@ MasterServer::activeServiceSuspendRequests () const {
 
 
 std::vector<ServiceResumeRequest::pointer>
-MasterServer::activeServiceResumeRequests () const {
+MasterServer::activeServiceResumeRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<ServiceResumeRequest>(shared_from_this());
     }
@@ -723,7 +789,7 @@ MasterServer::activeServiceResumeRequests () const {
 
 
 std::vector<ServiceStatusRequest::pointer>
-MasterServer::activeServiceStatusRequests () const {
+MasterServer::activeServiceStatusRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::requestsByType<ServiceStatusRequest>(shared_from_this());
     }
@@ -731,7 +797,7 @@ MasterServer::activeServiceStatusRequests () const {
 
 
 size_t
-MasterServer::numActiveReplicationRequests () const {
+MasterServer::numActiveReplicationRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<ReplicationRequest>(shared_from_this());
     }
@@ -739,98 +805,98 @@ MasterServer::numActiveReplicationRequests () const {
 
 
 size_t
-MasterServer::numActiveDeleteRequests () const {
+MasterServer::numActiveDeleteRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<DeleteRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveFindRequests () const {
+MasterServer::numActiveFindRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<FindRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveFindAllRequests () const {
+MasterServer::numActiveFindAllRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<FindAllRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStopReplicationRequests () const {
+MasterServer::numActiveStopReplicationRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StopReplicationRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStopDeleteRequests () const {
+MasterServer::numActiveStopDeleteRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StopDeleteRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStopFindRequests () const {
+MasterServer::numActiveStopFindRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StopFindRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStopFindAllRequests () const {
+MasterServer::numActiveStopFindAllRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StopFindAllRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStatusReplicationRequests () const {
+MasterServer::numActiveStatusReplicationRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StatusReplicationRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStatusDeleteRequests () const {
+MasterServer::numActiveStatusDeleteRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StatusDeleteRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStatusFindRequests () const {
+MasterServer::numActiveStatusFindRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StatusFindRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveStatusFindAllRequests () const {
+MasterServer::numActiveStatusFindAllRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<StatusFindAllRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveServiceSuspendRequests () const {
+MasterServer::numActiveServiceSuspendRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<ServiceSuspendRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveServiceResumeRequests () const {
+MasterServer::numActiveServiceResumeRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<ServiceResumeRequest>(shared_from_this());
     }
 }
 
 size_t
-MasterServer::numActiveServiceStatusRequests () const {
+MasterServer::numActiveServiceStatusRequests () {
     THREAD_SAFE_BLOCK {
         return MasterServerImpl::numRequestsByType<ServiceStatusRequest>(shared_from_this());
     }

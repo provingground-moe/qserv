@@ -53,9 +53,6 @@ class DeleteRequest
 
 public:
 
-    /// The only class which is allowed to instantiate and manage replications
-    friend class MasterServer;
-
     /// The pointer type for instances of the class
     typedef std::shared_ptr<DeleteRequest> pointer;
 
@@ -75,8 +72,6 @@ public:
  
     const std::string& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
-
-private:
 
     /**
      * Create a new request with specified parameters.
@@ -102,6 +97,8 @@ private:
                            boost::asio::io_service &io_service,
                            callback_type            onFinish,
                            int                      priority=0);
+
+private:
 
     /**
      * Construct the request with the pointer to the services provider.

@@ -152,9 +152,6 @@ class StopRequest
 
 public:
 
-    /// The only class which is allowed to instantiate and manage replications
-    friend class MasterServer;
-
     /// The pointer type for instances of the class
     typedef std::shared_ptr<StopRequest<POLICY>> pointer;
 
@@ -175,8 +172,6 @@ public:
     const typename POLICY::responseDataType& responseData () const {
         return _responseData;
     }
-
-private:
 
     /**
      * Create a new request with specified parameters.
@@ -209,6 +204,8 @@ private:
                 POLICY::requestType(),
                 onFinish));
     }
+
+private:
 
     /**
      * Construct the request
@@ -304,13 +301,44 @@ struct StopDeleteRequestPolicy {
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }
 
-    using responseMessageType = lsst::qserv::proto::ReplicationResponseReplicate;
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseDelete;
 
     struct responseDataType {};
 
     static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
 };
 typedef StopRequest<StopDeleteRequestPolicy> StopDeleteRequest;
+
+
+struct StopFindRequestPolicy {
+
+    static const char* requestTypeName () { return "STOP::REPLICA_FIND"; }
+
+    static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
+        return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND; }
+
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseFind;
+
+    struct responseDataType {};
+
+    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+};
+typedef StopRequest<StopFindRequestPolicy> StopFindRequest;
+
+struct StopFindAllRequestPolicy {
+
+    static const char* requestTypeName () { return "STOP::REPLICA_FIND_ALL"; }
+
+    static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
+        return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL; }
+
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseFindAll;
+
+    struct responseDataType {};
+
+    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+};
+typedef StopRequest<StopFindAllRequestPolicy> StopFindAllRequest;
 
 
 }}} // namespace lsst::qserv::replica_core

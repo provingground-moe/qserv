@@ -160,6 +160,14 @@ public:
     ExtendedState extendedState () const { return _extendedState; }
 
     /**
+     * Reset the state (if needed) and begin processing the request.
+     *
+     * This is supposed to be the first operation to be called upon a creation
+     * of the request.
+     */
+    void start ();
+
+    /**
      * Explicitly cancel any asynchronous operation(s) and put the object into
      * the FINISHED::CANCELLED state. This operation is very similar to the
      * timeout-based request expiration, except it's requested explicitly.
@@ -205,14 +213,6 @@ protected:
              const std::string       &worker,
              boost::asio::io_service &io_service,
              int                      priority=0);
-
-    /**
-     * Reset the state (if needed) and begin processing the request.
-     *
-     * This is supposed to be the first operation to be called upon a creation
-     * of the request.
-     */
-    void start ();
 
     /**
      * Request expiration timer's handler. The expiration interval (if any)
