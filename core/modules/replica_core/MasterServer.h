@@ -40,6 +40,9 @@
 
 // Qserv headers
 
+#include "replica_core/DeleteRequest.h"
+#include "replica_core/FindRequest.h"
+#include "replica_core/FindAllRequest.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/StatusRequest.h"
@@ -55,6 +58,8 @@ namespace qserv {
 namespace replica_core {
 
 // Forward declarations
+
+class MasterServerImpl;
 class ServiceProvider;
 
 /**
@@ -112,14 +117,33 @@ private:
   * Class MasterServer is used for pushing replication (etc.) requests
   * to the worker replication services. Only one instance of this class is
   * allowed per a thread.
+  *
+  * NOTES:
+  * - all methods launching, stopping or checking status of requests
+  *   require that the server was runinng. Otherwise it will throw
+  *   std::runtime_error. The current implementation of the server
+  *   doesn't support (yet?) amn operation queuing mechanism.
   */
 class MasterServer
     : public std::enable_shared_from_this<MasterServer>  {
 
 public:
 
+    /// Friend class behind this implementation must have access to
+    /// the private methods
+    friend class MasterServerImpl;
+
     /// The pointer type for instances of the class
     typedef std::shared_ptr<MasterServer> pointer;
+
+    /**
+     * The registry of requests
+     *
+     * IMPLEMENTATION NOTE: this type is placed into the public area of
+     * the class to allow using it outside of the class within a compilation
+     * unit matching this header.
+     */
+    typedef std::map<std::string,RequestWrapper::pointer> Registry;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -135,6 +159,9 @@ public:
     MasterServer () = delete;
     MasterServer (MasterServer const&) = delete;
     MasterServer & operator= (MasterServer const&) = delete;
+ 
+    /// Destructor
+    virtual ~MasterServer();
 
     /// Return the Service Provider used by the server
     ServiceProvider& serviceProvider () { return _serviceProvider; }
@@ -170,22 +197,15 @@ public:
      * a larger multi-threaded application which may require a proper
      * synchronization between threads.
      */
-    void join () {
-        if (_thread) _thread->join();
-    }
+    void join ();
 
     /**
      * Initiate a new replication request.
      *
-     * IMPORTANT: this operation requires that the server was runing.
-     * Otherwise if will throw exception std::runtime_error.
-     *
      * @param database              - database name
      * @param chunk                 - the chunk number
-     * @param sourceWorkerName      - the name of a worker node from which to copy
-     *                                the chunk
-     * @param destinationWorkerName - the name of a worker node where the replica
-     *                                will be created
+     * @param sourceWorkerName      - the name of a worker node from which to copy the chunk
+     * @param destinationWorkerName - the name of a worker node where the replica will be created
      * @param onFinish              - an optional callback function to be called upon
      *                                the completion of the request
      *
@@ -198,60 +218,159 @@ public:
                                            ReplicationRequest::callback_type  onFinish=nullptr);
 
     /**
-     * Return a list of the on-going replication requests.
+     * Initiate a new replica deletion request.
+     *
+     * @param database   - database name
+     * @param chunk      - the chunk number
+     * @param workerName - the name of a worker node where the replica will be deleted
+     * @param onFinish   - an optional callback function to be called upon
+     *                     the completion of the request
+     *
+     * @return a pointer to the replication request
      */
-    std::vector<ReplicationRequest::pointer> activeReplications () const;
+    DeleteRequest::pointer deleteReplica (const std::string            &database,
+                                          unsigned int                  chunk,
+                                          const std::string            &workerName,
+                                          DeleteRequest::callback_type  onFinish=nullptr);
 
-    /// Return the number of the active replication requests
-    size_t numActiveReplications () const;
+    /**
+     * Initiate a new replica lookup request.
+     *
+     * @param database   - database name
+     * @param chunk      - the chunk number
+     * @param workerName - the name of a worker node where the replica is located
+     * @param onFinish   - an optional callback function to be called upon
+     *                     the completion of the request
+     *
+     * @return a pointer to the replication request
+     */
+    FindRequest::pointer findReplica (const std::string          &database,
+                                      unsigned int                chunk,
+                                      const std::string          &workerName,
+                                      FindRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Initiate a new replicas lookup request.
+     *
+     * @param database   - database name
+     * @param chunk      - the chunk number
+     * @param workerName - the name of a worker node where the replicas are located
+     * @param onFinish   - an optional callback function to be called upon
+     *                     the completion of the request
+     *
+     * @return a pointer to the replication request
+     */
+    FindAllRequest::pointer findAllReplicas (const std::string             &database,
+                                             unsigned int                   chunk,
+                                             const std::string             &workerName,
+                                             FindAllRequest::callback_type  onFinish=nullptr);
 
     /**
      * Stop an outstanding replication request.
      *
-     * IMPORTANT: this operation requires that the server was running.
-     *            Otherwise it will throw std::runtime_error.
-     *
-     * @param workerName           - the name of a worker node where the request was launched
-     * @param replicationRequestId - an identifier of a request to be stopped
-     * @param onFinish             - a callback function to be called upon completion of the operation
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be stopped
+     * @param onFinish        - a callback function to be called upon completion of the operation
      *
      * @return a pointer to the stop request
      */
     StopReplicationRequest::pointer stopReplication (const std::string                     &workerName,
-                                                     const std::string                     &replicationRequestId,
+                                                     const std::string                     &targetRequestId,
                                                      StopReplicationRequest::callback_type  onFinish=nullptr);
 
     /**
-     * Return a list of the on-going stop requests.
+     * Stop an outstanding replica deletion request.
+     *
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be stopped
+     * @param onFinish        - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the stop request
      */
-    std::vector<StopReplicationRequest::pointer> activeStopReplications () const;
+    StopDeleteRequest::pointer stopReplicaDelete (const std::string                &workerName,
+                                                  const std::string                &targetRequestId,
+                                                  StopDeleteRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Stop an outstanding replica lookup request.
+     *
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be stopped
+     * @param onFinish        - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the stop request
+     */
+    StopFindRequest::pointer stopReplicaFind (const std::string              &workerName,
+                                              const std::string              &targetRequestId,
+                                              StopFindRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Stop an outstanding replicas lookup request.
+     *
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be stopped
+     * @param onFinish        - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the stop request
+     */
+    StopFindAllRequest::pointer stopReplicaFindAll (const std::string                 &workerName,
+                                                    const std::string                 &targetRequestId,
+                                                    StopFindAllRequest::callback_type  onFinish=nullptr);
 
     /**
      * Check the on-going status of an outstanding replication request.
      *
-     * IMPORTANT: this operation requires that the server was runinng.
-     *            Otherwise it will throw std::runtime_error.
-     *
-     * @param workerName           - the name of a worker node where the request was launched
-     * @param replicationRequestId - an identifier of a request to be inspected
-     * @param onFinish             - a callback function to be called upon completion of the operation
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be inspected
+     * @param onFinish        - a callback function to be called upon completion of the operation
      *
      * @return a pointer to the status inquery request
      */
     StatusReplicationRequest::pointer statusOfReplication (const std::string                       &workerName,
-                                                           const std::string                       &replicationRequestId,
+                                                           const std::string                       &targetRequestId,
                                                            StatusReplicationRequest::callback_type  onFinish=nullptr);
-
-    /**
-     * Return a list of the on-going status inquery requests.
-     */
-    std::vector<StatusReplicationRequest::pointer> activeStatusInqueries () const;
  
     /**
-     * Tell the worker-side service to temporarily suspend processing requests
+     * Check the on-going status of an outstanding replica deletion request.
      *
-     * IMPORTANT: this operation requires that the server was runinng.
-     *            Otherwise it will throw std::runtime_error.
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be inspected
+     * @param onFinish        - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the status inquery request
+     */
+    StatusDeleteRequest::pointer statusOfDelete (const std::string                  &workerName,
+                                                 const std::string                  &targetRequestId,
+                                                 StatusDeleteRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Check the on-going status of an outstanding replica lookup request.
+     *
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be inspected
+     * @param onFinish        - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the status inquery request
+     */
+    StatusFindRequest::pointer statusOfFind (const std::string                &workerName,
+                                             const std::string                &targetRequestId,
+                                             StatusFindRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Check the on-going status of an outstanding (multiple) replicas lookup request.
+     *
+     * @param workerName      - the name of a worker node where the request was launched
+     * @param targetRequestId - an identifier of a request to be inspected
+     * @param onFinish        - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the status inquery request
+     */
+    StatusFindAllRequest::pointer statusOfFindAll (const std::string                   &workerName,
+                                                   const std::string                   &targetRequestId,
+                                                   StatusFindAllRequest::callback_type  onFinish=nullptr);
+
+    /**
+     * Tell the worker-side service to temporarily suspend processing requests
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
@@ -262,15 +381,7 @@ public:
                                                          ServiceSuspendRequest::callback_type  onFinish=nullptr);
 
     /**
-     * Return a list of the on-going requests.
-     */
-    std::vector<ServiceSuspendRequest::pointer> activeServiceSuspendRequests () const;
-
-    /**
      * Tell the worker-side service to resume processing requests
-     *
-     * IMPORTANT: this operation requires that the server was runinng.
-     *            Otherwise it will throw std::runtime_error.
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
@@ -279,17 +390,8 @@ public:
      */
     ServiceResumeRequest::pointer resumeWorkerService (const std::string                   &workerName,
                                                        ServiceResumeRequest::callback_type  onFinish=nullptr);
-
-    /**
-     * Return a list of the on-going requests.
-     */
-    std::vector<ServiceResumeRequest::pointer> activeServiceResumeRequests () const;
-
     /**
      * Request the current status of the worker-side service
-     *
-     * IMPORTANT: this operation requires that the server was runinng.
-     *            Otherwise it will throw std::runtime_error.
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
@@ -298,11 +400,48 @@ public:
      */
     ServiceStatusRequest::pointer statusOfWorkerService (const std::string                   &workerName,
                                                          ServiceStatusRequest::callback_type  onFinish=nullptr);
+                                                         
+    // Filters for active requests
 
-    /**
-     * Return a list of the on-going requests.
-     */
-    std::vector<ServiceStatusRequest::pointer> activeServiceStatusRequests () const;
+    std::vector<ReplicationRequest::pointer>       activeReplicationRequests       () const;
+    std::vector<DeleteRequest::pointer>            activeDeleteRequests            () const;
+    std::vector<FindRequest::pointer>              activeFindRequests              () const;
+    std::vector<FindAllRequest::pointer>           activeFindAllRequests           () const;
+
+    std::vector<StopReplicationRequest::pointer>   activeStopReplicationRequests   () const;
+    std::vector<StopDeleteRequest::pointer>        activeStopDeleteRequests        () const;
+    std::vector<StopFindRequest::pointer>          activeStopFindRequests          () const;
+    std::vector<StopFindAllRequest::pointer>       activeStopFindAllRequests       () const;
+
+    std::vector<StatusReplicationRequest::pointer> activeStatusReplicationRequests () const;
+    std::vector<StatusDeleteRequest::pointer>      activeStatusDeleyeRequests      () const;
+    std::vector<StatusFindRequest::pointer>        activeStatusFindRequests        () const;
+    std::vector<StatusFindAllRequest::pointer>     activeStatusFindAllRequests     () const;
+
+    std::vector<ServiceSuspendRequest::pointer>    activeServiceSuspendRequests    () const;
+    std::vector<ServiceResumeRequest::pointer>     activeServiceResumeRequests     () const;
+    std::vector<ServiceStatusRequest::pointer>     activeServiceStatusRequests     () const;
+
+    // Counters of active requests
+
+    size_t numActiveReplicationRequests       () const;
+    size_t numActiveDeleteRequests            () const;
+    size_t numActiveFindRequests              () const;
+    size_t numActiveFindAllRequests           () const;
+
+    size_t numActiveStopReplicationRequests   () const;
+    size_t numActiveStopDeleteRequests        () const;
+    size_t numActiveStopFindRequests          () const;
+    size_t numActiveStopFindAllRequests       () const;
+
+    size_t numActiveStatusReplicationRequests () const;
+    size_t numActiveStatusDeleteRequests      () const;
+    size_t numActiveStatusFindRequests        () const;
+    size_t numActiveStatusFindAllRequests     () const;
+
+    size_t numActiveServiceSuspendRequests    () const;
+    size_t numActiveServiceResumeRequests     () const;
+    size_t numActiveServiceStatusRequests     () const;
 
 private:
 
@@ -319,54 +458,6 @@ private:
      * remove the request from the server's registry.
      */
     void finish (const std::string &id);
-
-    /**
-     * Return a collection of requests filtered by type.
-     *
-     * ATTENTION: This is implementation is not thread-safe. It needs
-     * to be used from the thread-safe code only.
-     */
-    template <class T>
-    std::vector<typename T::pointer> requestsByType () const {
-
-        std::vector<typename T::pointer> result;
-
-        for (auto itr : (*_requestsRegistry)) {
-        
-            // Filter the request by leaving the ones of the desired type
-
-            typename T::pointer request =
-                std::dynamic_pointer_cast<T>(itr.second->request());
-
-            if (request)
-                result.push_back(request);
-        }
-        return result;
-    }
-
-    /**
-     * Return the number of of requests filtered by type.
-     *
-     * ATTENTION: This is implementation is not thread-safe. It needs
-     * to be used from the thread-safe code only.
-     */
-    template <class T>
-    size_t numRequestsByType () const {
-
-        size_t result{0};
-
-        for (auto itr : (*_requestsRegistry)) {
-        
-            // Filter the request by leaving the ones of the desired type
-
-            typename T::pointer request =
-                std::dynamic_pointer_cast<T>(itr.second->request());
-
-            if (request)
-                ++result;
-        }
-        return result;
-    }
 
     /**
      * Make sure the server is runnning. Otherwise throw std::runtime_error.
@@ -393,9 +484,7 @@ private:
 
     // The registry of the on-going requests.
 
-    typedef std::map<std::string,RequestWrapper::pointer> RequestsRegistry;
-
-    std::shared_ptr<RequestsRegistry> _requestsRegistry;
+    Registry _requestsRegistry;
 };
 
 }}} // namespace lsst::qserv::replica_core

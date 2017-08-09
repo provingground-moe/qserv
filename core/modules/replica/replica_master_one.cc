@@ -6,6 +6,9 @@
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
+#include "replica_core/DeleteRequest.h"
+#include "replica_core/FindRequest.h"
+#include "replica_core/FindAllRequest.h"
 #include "replica_core/MasterServer.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceProvider.h"
@@ -18,7 +21,15 @@ namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_master_one");
 
-const char* usage = "Usage: <config> {REPLICATE <db> <chunk> | REPLICATE_AND_CANCEL <db> <chunk> | STATUS <id> | STOP <id>}";
+const char* usage =
+    "Usage:"
+    "  <config> REPLICATE            <db> <chunk>"
+    "  <config> REPLICATE_AND_CANCEL <db> <chunk>"
+    "  <config> DELETE_REPLICA       <db> <chunk>"
+    "  <config> FIND_REPLICA         <db> <chunk>"
+    "  <config> FIND_ALL_REPLICAS    <db>"
+    "  <config> REPLICATION_STATUS   <id>"
+    "  <config> STOP_REPLICATION     <id>";
 
 bool assertArguments (int argc, int minArgc) {
     if (argc < minArgc) {
@@ -88,14 +99,35 @@ bool test (const std::string &configFileName,
 
             request->cancel();
 
-        } else if ("STATUS"  == operation) {
+        } else if ("DELETE_REPLICA" == operation) {
+            request = server->deleteReplica (
+                id_or_db, chunk, worker,
+                [] (rc::DeleteRequest::pointer request) {
+                    printRequest<rc::DeleteRequest>(request);
+                });
+
+        } else if ("FIND_REPLICA" == operation) {
+            request = server->findReplica (
+                id_or_db, chunk, worker,
+                [] (rc::FindRequest::pointer request) {
+                    printRequest<rc::FindRequest>(request);
+                });
+
+        } else if ("FIND_ALL_REPLICAS" == operation) {
+            request = server->findAllReplicas (
+                id_or_db, worker,
+                [] (rc::FindAllRequest::pointer request) {
+                    printRequest<rc::FindAllRequest>(request);
+                });
+
+        } else if ("REPLICATION_STATUS"  == operation) {
             request = server->statusOfReplication (
                 worker, id_or_db,
                 [] (rc::StatusReplicationRequest::pointer request) {
                     printRequest<rc::StatusReplicationRequest>(request);
                 });
 
-        } else if ("STOP"  == operation) {
+        } else if ("STOP_REPLICATION"  == operation) {
             request = server->stopReplication (
                 worker, id_or_db,
                 [] (rc::StopReplicationRequest::pointer request) {
@@ -136,14 +168,30 @@ int main (int argc, const char* const argv[]) {
     const std::string operation      (argv[2]);
     const std::string id_or_db       (argv[3]);
     
-    if     (("REPLICATE" == operation) || ("REPLICATE_AND_CANCEL" == operation))
+    if      ("REPLICATE" == operation)
         ::assertArguments (argc, 5) &&
         ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
 
-    else if ("STATUS"   == operation)
+    else if ("REPLICATE_AND_CANCEL" == operation)
+        ::assertArguments (argc, 5) &&
+        ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
+
+    else if ("DELETE_REPLICA" == operation)
+        ::assertArguments (argc, 5) &&
+        ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
+
+    else if ("FIND_REPLICA" == operation)
+        ::assertArguments (argc, 5) &&
+        ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
+
+    else if ("FIND_ALL_REPLICAS" == operation)
+        ::assertArguments (argc, 4) &&
         ::test (configFileName, operation, id_or_db);
 
-    else if ("STOP"     == operation)
+    else if ("REPLICATION_STATUS" == operation)
+        ::test (configFileName, operation, id_or_db);
+
+    else if ("STOP_REPLICATION" == operation)
         ::test (configFileName, operation, id_or_db);
 
     else {

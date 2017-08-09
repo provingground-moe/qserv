@@ -45,8 +45,8 @@ namespace qserv {
 namespace replica_core {
 
 /**
-  * Class ReplicationRequest is a base class for a family of requests.
-  * It represents a transient state of a request witi the master service.
+  * Class ReplicationRequest represents a transient state of requests
+  * within the master controller for creating reolicas.
   */
 class ReplicationRequest
     :   public Request  {
@@ -71,10 +71,11 @@ public:
     /// Destructor
     ~ReplicationRequest () final;
 
-    
+    // Trivial acccessors
+
     const std::string& database     () const { return _database; }
     unsigned int       chunk        () const { return _chunk; }
-    const std::string& sourceWorker () const { return  _sourceWorker; }
+    const std::string& sourceWorker () const { return _sourceWorker; }
 
 private:
 
@@ -95,14 +96,14 @@ private:
      *                            the request.
      * @param priority          - a priority level of the request
      */
-    static pointer create (ServiceProvider          &serviceProvider,
-                           const std::string        &database,
-                           unsigned int              chunk,
-                           const std::string        &sourceWorker,
-                           const std::string        &destinationWorker,
-                           boost::asio::io_service  &io_service,
-                           callback_type             onFinish,
-                           int                       priority=0);
+    static pointer create (ServiceProvider         &serviceProvider,
+                           const std::string       &database,
+                           unsigned int             chunk,
+                           const std::string       &sourceWorker,
+                           const std::string       &destinationWorker,
+                           boost::asio::io_service &io_service,
+                           callback_type            onFinish,
+                           int                      priority=0);
 
     /**
      * Construct the request with the pointer to the services provider.
@@ -176,11 +177,6 @@ private:
     std::string  _database;
     unsigned int _chunk;
     std::string  _sourceWorker;
-    
-    // To be initialized from a configuration via the ServiceProvider
-    // then cached for the lifespan of the object.
-
-    std::shared_ptr<WorkerInfo> _sourceWorkerInfoPtr;
     
     // Registered callback to be called when the operation finishes
 

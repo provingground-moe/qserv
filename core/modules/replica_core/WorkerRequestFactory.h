@@ -94,7 +94,8 @@ public:
             const std::string &id,
             int                priority,
             const std::string &database,
-            unsigned int       chunk);
+            unsigned int       chunk,
+            const std::string &worker);
 
    /**
      * Create an instance of the replica deletion request
@@ -176,7 +177,8 @@ public:
             const std::string &id,
             int                priority,
             const std::string &database,
-            unsigned int       chunk) override;
+            unsigned int       chunk,
+            const std::string &worker) override;
 
    /**
      * Create an instance of the replica deletion request

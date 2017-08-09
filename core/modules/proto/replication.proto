@@ -99,6 +99,7 @@ message ReplicationRequestReplicate {
     required int32  priority = 2;
     required string database = 3;
     required int32  chunk    = 4;
+    required string worker   = 5;
 }
 
 // This is a replica deletion request. The message defines a scope of the request

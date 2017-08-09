@@ -50,28 +50,32 @@ WorkerReplicationRequest::create (ServiceProvider   &serviceProvider,
                                   const std::string &id,
                                   int                priority,
                                   const std::string &database,
-                                  unsigned int       chunk) {
+                                  unsigned int       chunk,
+                                  const std::string &worker) {
 
     return WorkerReplicationRequest::pointer (
         new WorkerReplicationRequest (serviceProvider,
                                       id,
                                       priority,
                                       database,
-                                      chunk));
+                                      chunk,
+                                      worker));
 }
 
 WorkerReplicationRequest::WorkerReplicationRequest (ServiceProvider   &serviceProvider,
                                                     const std::string &id,
                                                     int                priority,
                                                     const std::string &database,
-                                                    unsigned int       chunk)
+                                                    unsigned int       chunk,
+                                                    const std::string &worker)
     :   WorkerRequest (serviceProvider,
                        "REPLICATE",
                        id,
                        priority),
 
         _database (database),
-        _chunk    (chunk) {
+        _chunk    (chunk),
+        _worker   (worker) {
 }
 
 
@@ -88,26 +92,29 @@ WorkerReplicationRequestX::create (ServiceProvider   &serviceProvider,
                                    const std::string &id,
                                    int                priority,
                                    const std::string &database,
-                                   unsigned int       chunk) {
+                                   unsigned int       chunkconst std::string &worker) {
 
     return WorkerReplicationRequestX::pointer (
         new WorkerReplicationRequestX (serviceProvider,
                                        id,
                                        priority,
                                        database,
-                                       chunk));
+                                       chunk,
+                                       worker));
 }
 
 WorkerReplicationRequestX::WorkerReplicationRequestX (ServiceProvider   &serviceProvider,
                                                       const std::string &id,
                                                       int                priority,
                                                       const std::string &database,
-                                                      unsigned int       chunk)
+                                                      unsigned int       chunk,
+                                                      const std::string &worker)
     :   WorkerReplicationRequest (serviceProvider,
                                   id,
                                   priority,
                                   database,
-                                  chunk) {
+                                  chunk,
+                                  worker) {
 }
 
 WorkerReplicationRequestX::~WorkerReplicationRequestX () {
@@ -117,8 +124,9 @@ bool
 WorkerReplicationRequestX::execute (bool incremental) {
 
    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  db: "    << database()
-         << "  chunk: " << chunk());
+         << "  db: "     << database()
+         << "  chunk: "  << chunk()
+         << "  worker: " << worker());
 
     // TODO: provide the actual implementation instead of the dummy one.
 
