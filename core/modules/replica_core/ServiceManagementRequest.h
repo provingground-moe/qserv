@@ -168,9 +168,6 @@ class ServiceManagementRequest
 
 public:
 
-    /// The only class which is allowed to instantiate and manage replications
-    friend class MasterServer;
-
     /// The pointer type for instances of the class
     typedef std::shared_ptr<ServiceManagementRequest<POLICY>> pointer;
 
@@ -186,9 +183,6 @@ public:
     /// Destructor
     ~ServiceManagementRequest () final {
     }
-
-
-private:
 
     /**
      * Create a new request with specified parameters.
@@ -217,6 +211,8 @@ private:
                 POLICY::requestType(),
                 onFinish));
     }
+
+private:
 
     /**
      * Construct the request

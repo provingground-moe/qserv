@@ -137,9 +137,6 @@ class StatusRequest
 
 public:
 
-    /// The only class which is allowed to instantiate and manage replications
-    friend class MasterServer;
-
     /// The pointer type for instances of the class
     typedef std::shared_ptr<StatusRequest<POLICY>> pointer;
 
@@ -160,8 +157,6 @@ public:
     const typename POLICY::responseDataType& responseData () const {
         return _responseData;
     }
-
-private:
 
     /**
      * Create a new request with specified parameters.
@@ -194,6 +189,8 @@ private:
                 POLICY::requestType(),
                 onFinish));
     }
+
+private:
 
     /**
      * Construct the request
@@ -289,13 +286,43 @@ struct StatusDeleteRequestPolicy {
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }
 
-    using responseMessageType = lsst::qserv::proto::ReplicationResponseReplicate;
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseDelete;
 
     struct responseDataType {};
 
     static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
 };
 typedef StatusRequest<StatusDeleteRequestPolicy> StatusDeleteRequest;
+
+struct StatusFindRequestPolicy {
+
+    static const char* requestTypeName () { return "STATUS::REPLICA_FIND"; }
+
+    static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
+        return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND; }
+
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseFind;
+
+    struct responseDataType {};
+
+    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+};
+typedef StatusRequest<StatusFindRequestPolicy> StatusFindRequest;
+
+struct StatusFindAllRequestPolicy {
+
+    static const char* requestTypeName () { return "STATUS::REPLICA_FIND_ALL"; }
+
+    static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
+        return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL; }
+
+    using responseMessageType = lsst::qserv::proto::ReplicationResponseFindAll;
+
+    struct responseDataType {};
+
+    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+};
+typedef StatusRequest<StatusFindAllRequestPolicy> StatusFindAllRequest;
 
 
 }}} // namespace lsst::qserv::replica_core

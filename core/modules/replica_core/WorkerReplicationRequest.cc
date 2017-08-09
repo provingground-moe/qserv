@@ -92,7 +92,8 @@ WorkerReplicationRequestX::create (ServiceProvider   &serviceProvider,
                                    const std::string &id,
                                    int                priority,
                                    const std::string &database,
-                                   unsigned int       chunkconst std::string &worker) {
+                                   unsigned int       chunk,
+                                   const std::string &worker) {
 
     return WorkerReplicationRequestX::pointer (
         new WorkerReplicationRequestX (serviceProvider,
