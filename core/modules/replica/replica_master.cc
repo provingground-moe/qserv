@@ -290,7 +290,7 @@ void test (const std::string &configFileName) {
 
         while (true) {
             blockPost.wait();
-            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT  numActiveReplications: " << server->numActiveReplications());
+            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT  active replications: " << server->numActiveReplicationRequests());
         }
         LOGS(_log, LOG_LVL_INFO, "waiting for: server->join()");
         server->join();

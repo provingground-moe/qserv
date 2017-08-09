@@ -35,7 +35,6 @@
 #include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
-#include "replica_core/WorkerInfo.h"
 
 namespace proto = lsst::qserv::proto;
 
@@ -85,15 +84,13 @@ ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider
                 io_service,
                 priority),
  
-        _database            (database),
-        _chunk               (chunk),
-        _sourceWorker        (sourceWorker),
-        _sourceWorkerInfoPtr (serviceProvider.workerInfo(sourceWorker)),
-        _onFinish            (onFinish) {
+        _database     (database),
+        _chunk        (chunk),
+        _sourceWorker (sourceWorker),
+        _onFinish     (onFinish) {
 }
 
-ReplicationRequest::~ReplicationRequest ()
-{
+ReplicationRequest::~ReplicationRequest () {
 }
 
 void
@@ -113,10 +110,11 @@ ReplicationRequest::beginProtocol () {
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestReplicate message;
-    message.set_priority (priority());
-    message.set_id       (id());
-    message.set_database (database());
-    message.set_chunk    (chunk());
+    message.set_priority (priority    ());
+    message.set_id       (id          ());
+    message.set_database (database    ());
+    message.set_chunk    (chunk       ());
+    message.set_worker   (sourceWorker());
 
     _bufferPtr->serialize(message);
 

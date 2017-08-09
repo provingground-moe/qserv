@@ -70,7 +70,8 @@ public:
                            const std::string &id,
                            int                priority,
                            const std::string &database,
-                           unsigned int       chunk);
+                           unsigned int       chunk,
+                           const std::string &worker);
 
     // Default construction and copy semantics are proxibited
 
@@ -85,6 +86,7 @@ public:
 
     const std::string& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
+    const std::string& worker   () const { return _worker; }
 
 protected:
 
@@ -95,11 +97,13 @@ protected:
                               const std::string &id,
                               int                priority,
                               const std::string &database,
-                              unsigned int       chunk);
+                              unsigned int       chunk,
+                              const std::string &worker);
 private:
 
     std::string  _database;
     unsigned int _chunk;
+    std::string  _worker;
 };
 
 
@@ -124,7 +128,8 @@ public:
                            const std::string &id,
                            int                priority,
                            const std::string &database,
-                           unsigned int       chunk);
+                           unsigned int       chunk,
+                           const std::string &worker);
 
     // Default construction and copy semantics are proxibited
 
@@ -151,7 +156,8 @@ private:
                                const std::string &id,
                                int                priority,
                                const std::string &database,
-                               unsigned int       chunk);
+                               unsigned int       chunk,
+                               const std::string &worker);
 };
 
 

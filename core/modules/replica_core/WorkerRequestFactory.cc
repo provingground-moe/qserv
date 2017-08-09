@@ -65,9 +65,10 @@ WorkerRequestFactory::WorkerReplicationRequest_pointer
 WorkerRequestFactory::createReplicationRequest (const std::string &id,
                                                 int                priority,
                                                 const std::string &database,
-                                                unsigned int       chunk) {
+                                                unsigned int       chunk,
+                                                const std::string &worker) {
     return WorkerReplicationRequest::create (
-        _serviceProvider, id, priority, database, chunk);
+        _serviceProvider, id, priority, database, chunk, worker);
 }
 
 WorkerRequestFactory::WorkerDeleteRequest_pointer
@@ -112,9 +113,10 @@ WorkerRequestFactory::WorkerReplicationRequest_pointer
 WorkerRequestFactoryX::createReplicationRequest (const std::string &id,
                                                  int                priority,
                                                  const std::string &database,
-                                                 unsigned int       chunk) {
+                                                 unsigned int       chunk,
+                                                 const std::string &worker) {
     return WorkerReplicationRequestX::create (
-        _serviceProvider, id, priority, database, chunk);
+        _serviceProvider, id, priority, database, chunk, worker);
 }
 
 WorkerRequestFactory::WorkerDeleteRequest_pointer

@@ -156,9 +156,10 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
                                         proto::ReplicationResponseReplicate      &response) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForReplication"
-        << "  id: "    << request.id()
-        << "  db: "    << request.database()
-        << "  chunk: " << request.chunk());
+        << "  id: "     << request.id()
+        << "  db: "     << request.database()
+        << "  chunk: "  << request.chunk(),
+        << "  worker: " << request.worker());
 
     THREAD_SAFE_BLOCK {
     
@@ -171,7 +172,8 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
                 request.id(),
                 request.priority(),
                 request.database(),
-                request.chunk());
+                request.chunk(),
+                request.worker());
 
         _newRequests.push(workerRequest);
         
