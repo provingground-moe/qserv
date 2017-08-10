@@ -96,11 +96,14 @@ struct RequestWrapperImpl
         _onFinish(_request);
     }
 
-    RequestWrapperImpl(typename T::pointer request,
-                       typename T::callback_type onFinish)
-        :   _request  (request),
-            _onFinish (onFinish)
-    {}
+    RequestWrapperImpl(const typename T::pointer &request,
+                       typename T::callback_type  onFinish)
+
+        :   RequestWrapper(),
+
+            _request  (request),
+            _onFinish (onFinish) {
+    }
 
     /// Destructor
     virtual ~RequestWrapperImpl() {}
@@ -177,7 +180,7 @@ public:
         // be automatically removed from the Registry.
     
         (server->_registry)[request->id()] =
-            std::make_shared<RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);
+            std::make_shared<RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);  
     
         // Initiate the request
 
@@ -215,10 +218,10 @@ public:
         // Register the request (along with its callback) by its unique
         // identifier in the local registry. Once it's complete it'll
         // be automatically removed from the Registry.
-    
+
         (server->_registry)[request->id()] =
             std::make_shared<RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);
-    
+
         // Initiate the request
 
         request->start ();
@@ -395,10 +398,10 @@ MasterServer::replicate (const std::string                 &database,
         // Register the request (along with its callback) by its unique
         // identifier in the local registry. Once it's complete it'll
         // be automatically removed from the Registry.
-    
+
         _registry[request->id()] =
             std::make_shared<RequestWrapperImpl<ReplicationRequest>> (request, onFinish);
-    
+
         // Initiate the request
 
         request->start ();
@@ -433,10 +436,10 @@ MasterServer::deleteReplica (const std::string            &database,
         // Register the request (along with its callback) by its unique
         // identifier in the local registry. Once it's complete it'll
         // be automatically removed from the Registry.
-    
+
         _registry[request->id()] =
             std::make_shared<RequestWrapperImpl<DeleteRequest>> (request, onFinish);
-    
+
         // Initiate the request
 
         request->start ();
@@ -471,10 +474,10 @@ MasterServer::findReplica (const std::string          &database,
         // Register the request (along with its callback) by its unique
         // identifier in the local registry. Once it's complete it'll
         // be automatically removed from the Registry.
-    
+
         _registry[request->id()] =
             std::make_shared<RequestWrapperImpl<FindRequest>> (request, onFinish);
-    
+
         // Initiate the request
 
         request->start ();
@@ -507,10 +510,10 @@ MasterServer::findAllReplicas (const std::string             &database,
         // Register the request (along with its callback) by its unique
         // identifier in the local registry. Once it's complete it'll
         // be automatically removed from the Registry.
-    
+
         _registry[request->id()] =
             std::make_shared<RequestWrapperImpl<FindAllRequest>> (request, onFinish);
-    
+
         // Initiate the request
 
         request->start ();
@@ -795,6 +798,13 @@ MasterServer::activeServiceStatusRequests () {
     }
 }
 
+size_t
+MasterServer::numActiveRequests () {
+    THREAD_SAFE_BLOCK {
+        return _registry.size();
+    }
+}
+
 
 size_t
 MasterServer::numActiveReplicationRequests () {
@@ -917,11 +927,13 @@ MasterServer::finish (const std::string &id) {
     //   - it will reduce the server API dead-time due to a prolonged
     //     execution time of of the callback function.
 
-    _registry[id]->notify();
-
+    RequestWrapper::pointer request;
+    
     THREAD_SAFE_BLOCK {
+        request = _registry[id];
         _registry.erase(id);
     }
+    request->notify();
 }
 
 void

@@ -357,6 +357,9 @@ public:
 
     // Counters of active requests
 
+    /// Total number of request sof all kinds
+    size_t numActiveRequests ();
+
     size_t numActiveReplicationRequests ();
     size_t numActiveDeleteRequests ();
     size_t numActiveFindRequests ();
@@ -412,8 +415,8 @@ private:
     std::unique_ptr<std::thread> _thread;   // this thread will run the asynchronous prosessing
                                             // of the requests.
 
-    mutable std::mutex _requestPocessingMtx;    // for thread safety of the implementation of
-                                                // this class's public API and internal operations.
+    std::mutex _requestPocessingMtx;        // for thread safety of the implementation of
+                                            // this class's public API and internal operations.
 
     /// The registry of the on-going requests.
     std::map<std::string,std::shared_ptr<RequestWrapper>> _registry;
