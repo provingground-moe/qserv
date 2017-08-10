@@ -237,6 +237,9 @@ FindAllRequest::awaken (const boost::system::error_code &ec) {
 
     if (isAborted(ec)) return;
 
+    // Also ignore this event if the request expired
+    if (_state== State::FINISHED) return;
+
     sendStatus();
 }
 

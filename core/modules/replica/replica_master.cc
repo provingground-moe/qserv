@@ -199,7 +199,7 @@ void test (const std::string &configFileName) {
 
     try {
 
-        rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between operations
+        rc::BlockPost blockPost (0, 100);  // for random delays (milliseconds) between operations
 
         rc::Configuration   config  {configFileName};
         rc::ServiceProvider provider{config};
@@ -290,7 +290,7 @@ void test (const std::string &configFileName) {
 
         while (true) {
             blockPost.wait();
-            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT  active replications: " << server->numActiveReplicationRequests());
+            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT  active requests: " << server->numActiveRequests());
         }
         LOGS(_log, LOG_LVL_INFO, "waiting for: server->join()");
         server->join();
