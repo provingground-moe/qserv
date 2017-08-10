@@ -253,7 +253,7 @@ Request::resolved (const boost::system::error_code          &ec,
 
     if (isAborted(ec)) return;
 
-    if (ec) restart();
+    if (ec) waitBeforeRestart();
     else    connect(iter);
 }
 
@@ -282,8 +282,38 @@ Request::connected (const boost::system::error_code          &ec,
 
     if (isAborted(ec)) return;
 
-    if (ec) restart();
+    if (ec) waitBeforeRestart();
     else    beginProtocol();
+}
+
+void
+Request::waitBeforeRestart () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "waitBeforeRestart");
+
+    // Allways need to set the interval before launching the timer.
+    
+    _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
+    _timer.async_wait (
+        boost::bind (
+            &Request::awakenForRestart,
+            shared_from_this(),
+            boost::asio::placeholders::error
+        )
+    );
+}
+
+void
+Request::awakenForRestart (const boost::system::error_code &ec) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "awakenForRestart");
+
+    if (isAborted(ec)) return;
+
+    // Also ignore this event if the request expired
+    if (_state== State::FINISHED) return;
+
+    restart();
 }
 
 bool

@@ -22,14 +22,17 @@ namespace {
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_master_one");
 
 const char* usage =
-    "Usage:"
-    "  <config> REPLICATE            <db> <chunk>"
-    "  <config> REPLICATE_AND_CANCEL <db> <chunk>"
-    "  <config> DELETE_REPLICA       <db> <chunk>"
-    "  <config> FIND_REPLICA         <db> <chunk>"
-    "  <config> FIND_ALL_REPLICAS    <db>"
-    "  <config> REPLICATION_STATUS   <id>"
-    "  <config> STOP_REPLICATION     <id>";
+    "Usage:\n"
+    "  <config> <operation> [<parameters>]\n"
+    "\n"
+    "Supported operations:\n"
+    "  REPLICATE            <db> <chunk>\n"
+    "  REPLICATE_AND_CANCEL <db> <chunk>\n"
+    "  DELETE_REPLICA       <db> <chunk>\n"
+    "  FIND_REPLICA         <db> <chunk>\n"
+    "  FIND_ALL_REPLICAS    <db>\n"
+    "  REPLICATION_STATUS   <id>\n"
+    "  STOP_REPLICATION     <id>";
 
 bool assertArguments (int argc, int minArgc) {
     if (argc < minArgc) {

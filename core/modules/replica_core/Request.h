@@ -250,6 +250,12 @@ protected:
     void connected (const boost::system::error_code &ec,
                     boost::asio::ip::tcp::resolver::iterator iter);
 
+    /// Start a timeout before attempting to restart the connection
+    void waitBeforeRestart ();
+
+    /// Callback handler fired for restarting the connection
+    void awakenForRestart (const boost::system::error_code &ec);
+
     /**
      * Finalize request processing (as reported by subclasses)
      *
