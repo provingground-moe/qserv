@@ -74,9 +74,9 @@ public:
     /// Destructor
     ~Configuration();
     
-    // --------------------------------------------------------------------
-    // -- Common configuration parameters of both the master and workers --
-    // --------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // -- Common configuration parameters of both the controller and workers --
+    // ------------------------------------------------------------------------
 
     /// The names of known workers.
     std::vector<std::string> workers () const { return _workers; }
@@ -87,17 +87,17 @@ public:
     /// Default timeout in seconds for the network retry operations
     unsigned int defaultRetryTimeoutSec () const { return _defaultRetryTimeoutSec; }
 
-    // ----------------------------------------------------
-    // -- Configuration parameters of the master service --
-    // ----------------------------------------------------
+    // --------------------------------------------------------
+    // -- Configuration parameters of the controller service --
+    // --------------------------------------------------------
 
-    /// The port number for the master's HTTP server
-    uint16_t masterHttpPort () const { return _masterHttpPort; }
+    /// The port number for the controller's HTTP server
+    uint16_t controllerHttpPort () const { return _controllerHttpPort; }
 
-    /// The number of threads to run within the master's HTTP server
-    size_t masterHttpThreads () const { return _masterHttpThreads; }
+    /// The number of threads to run within the controller's HTTP server
+    size_t controllerHttpThreads () const { return _controllerHttpThreads; }
 
-    unsigned int masterRequestTimeoutSec () const { return _masterRequestTimeoutSec; }
+    unsigned int controllerRequestTimeoutSec () const { return _controllerRequestTimeoutSec; }
 
     // -----------------------------------------------------
     // -- Configuration parameters of the worker services --
@@ -139,9 +139,9 @@ private:
     size_t       _requestBufferSizeBytes;
     unsigned int _defaultRetryTimeoutSec;
 
-    uint16_t     _masterHttpPort;
-    size_t       _masterHttpThreads;
-    unsigned int _masterRequestTimeoutSec;
+    uint16_t     _controllerHttpPort;
+    size_t       _controllerHttpThreads;
+    unsigned int _controllerRequestTimeoutSec;
 
     uint16_t     _workerSvcPort;
     uint16_t     _workerXrootdPort;

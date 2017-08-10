@@ -9,7 +9,7 @@
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FindAllRequest.h"
-#include "replica_core/MasterServer.h"
+#include "replica_core/Controller.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/StatusRequest.h"
@@ -19,7 +19,7 @@ namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_master_one");
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_controller_cmd");
 
 const char* usage =
     "Usage:\n"
@@ -43,14 +43,14 @@ bool assertArguments (int argc, int minArgc) {
 }
 
 /**
- * Return the name of any known worker from the server configuration.
+ * Return the name of any known worker from the controller configuration.
  * Throw std::runtime_error if no worker found.
  */
 std::string getAnyWorker (rc::ServiceProvider &provider) {
     for (const std::string &workerName : provider.workers()) {
         return workerName;
     }
-    throw std::runtime_error ("replica_master: no single worker found in the configuration");
+    throw std::runtime_error ("getAnyWorker: no single worker found in the configuration");
 }
 
 template <class T>
@@ -71,27 +71,27 @@ bool test (const std::string &configFileName,
         rc::Configuration   config  {configFileName};
         rc::ServiceProvider provider{config};
 
-        rc::MasterServer::pointer server = rc::MasterServer::create(provider);
+        rc::Controller::pointer controller = rc::Controller::create(provider);
 
         // Configure the generator of requests 
 
         const std::string worker = getAnyWorker(provider);
 
-        // Start the server in its own thread before injecting any requests
+        // Start the controller in its own thread before injecting any requests
 
-        server->run();
+        controller->run();
 
         rc::Request::pointer request;
 
         if ("REPLICATE" == operation) {
-            request = server->replicate (
+            request = controller->replicate (
                 id_or_db, chunk, worker, worker,
                 [] (rc::ReplicationRequest::pointer request) {
                     printRequest<rc::ReplicationRequest>(request);
                 });
 
         } else if ("REPLICATE_AND_CANCEL" == operation) {
-            request = server->replicate (
+            request = controller->replicate (
                 id_or_db, chunk, worker, worker,
                 [] (rc::ReplicationRequest::pointer request) {
                     printRequest<rc::ReplicationRequest>(request);
@@ -103,35 +103,35 @@ bool test (const std::string &configFileName,
             request->cancel();
 
         } else if ("DELETE_REPLICA" == operation) {
-            request = server->deleteReplica (
+            request = controller->deleteReplica (
                 id_or_db, chunk, worker,
                 [] (rc::DeleteRequest::pointer request) {
                     printRequest<rc::DeleteRequest>(request);
                 });
 
         } else if ("FIND_REPLICA" == operation) {
-            request = server->findReplica (
+            request = controller->findReplica (
                 id_or_db, chunk, worker,
                 [] (rc::FindRequest::pointer request) {
                     printRequest<rc::FindRequest>(request);
                 });
 
         } else if ("FIND_ALL_REPLICAS" == operation) {
-            request = server->findAllReplicas (
+            request = controller->findAllReplicas (
                 id_or_db, worker,
                 [] (rc::FindAllRequest::pointer request) {
                     printRequest<rc::FindAllRequest>(request);
                 });
 
         } else if ("REPLICATION_STATUS"  == operation) {
-            request = server->statusOfReplication (
+            request = controller->statusOfReplication (
                 worker, id_or_db,
                 [] (rc::StatusReplicationRequest::pointer request) {
                     printRequest<rc::StatusReplicationRequest>(request);
                 });
 
         } else if ("STOP_REPLICATION"  == operation) {
-            request = server->stopReplication (
+            request = controller->stopReplication (
                 worker, id_or_db,
                 [] (rc::StopReplicationRequest::pointer request) {
                     printRequest<rc::StopReplicationRequest>(request);
@@ -142,19 +142,19 @@ bool test (const std::string &configFileName,
         }
 
 
-        // Wait before the request is finished. Then stop the master server
+        // Wait before the request is finished. Then stop the master controller
 
         rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between iterations
 
         while (request->state() != rc::Request::State::FINISHED) {
             blockPost.wait();
         }
-        server->stop();
+        controller->stop();
 
-        // Block the current thread indefinitively or untill the server is cancelled.
+        // Block the current thread indefinitively or untill the controller is cancelled.
 
-        LOGS(_log, LOG_LVL_INFO, "waiting for: server->join()");
-        server->join();
+        LOGS(_log, LOG_LVL_INFO, "waiting for: controller->join()");
+        controller->join();
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

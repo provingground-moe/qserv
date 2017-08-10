@@ -8,7 +8,7 @@
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
-#include "replica_core/MasterServer.h"
+#include "replica_core/Controller.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/StatusRequest.h"
@@ -18,7 +18,7 @@ namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_master");
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_controller_test");
 
 /**
  * The helper class for generating various requests. The main purpose
@@ -50,16 +50,16 @@ public:
     /**
      * The normal constructor.
      *
-     * @param server            - the server API for initiating requests
+     * @param controller        - the controller API for initiating requests
      * @param database          - the database which is a subject of teh replication
      * @param sourceWorker      - the name of a worker node for chunks to be replicated
      * @param destinationWorker - the name of a worker node for new replicas
      */
-    RequestGenerator (rc::MasterServer::pointer  server,
+    RequestGenerator (rc::Controller::pointer    controller,
                       const std::string         &database,
                       const std::string         &sourceWorker,
                       const std::string         &destinationWorker) noexcept
-        :   _server            (server),
+        :   _controller        (controller),
             _database          (database),
             _sourceWorker      (sourceWorker),
             _destinationWorker (destinationWorker)
@@ -94,7 +94,7 @@ public:
             if (blockPost) blockPost->wait();
 
             rc::ReplicationRequest::pointer request =
-                _server->replicate (
+                _controller->replicate (
                     _database,
                     chunk++,
                     _sourceWorker,
@@ -122,7 +122,7 @@ public:
 
         for (auto request : replicationRequests)
             requests.push_back (
-                _server->statusOfReplication (
+                _controller->statusOfReplication (
                     request->worker(),
                     request->id(),
                     [] (rc::StatusReplicationRequest::pointer request) {
@@ -148,7 +148,7 @@ public:
 
         for (auto request : replicationRequests)
             requests.push_back (
-                _server->stopReplication (
+                _controller->stopReplication (
                     request->worker(),
                     request->id(),
                     [] (rc::StopReplicationRequest::pointer request) {
@@ -165,7 +165,7 @@ private:
 
     // Parameters of the object
 
-    rc::MasterServer::pointer _server;
+    rc::Controller::pointer _controller;
 
     std::string _database;        
     std::string _sourceWorker;
@@ -173,21 +173,21 @@ private:
 };
 
 /**
- * Return the name of any known worker from the server configuration.
+ * Return the name of any known worker from the controller configuration.
  * Throw std::runtime_error if no worker found.
  */
 std::string getAnyWorker (rc::ServiceProvider &provider) {
     for (const std::string &workerName : provider.workers()) {
         return workerName;
     }
-    throw std::runtime_error ("replica_master: no single worker found in the configuration");
+    throw std::runtime_error ("getAnyWorker: no single worker found in the configuration");
 }
 
 /**
- * Print a status of the server
+ * Print a status of the controller
  */
-void reportServerStatus (rc::MasterServer::pointer server) {
-    LOGS(_log, LOG_LVL_INFO, "server is " << (server->isRunning() ? "" : "NOT ") << "running");
+void reportControllerStatus (rc::Controller::pointer controller) {
+    LOGS(_log, LOG_LVL_INFO, "controller is " << (controller->isRunning() ? "" : "NOT ") << "running");
 }
 
 /**
@@ -204,21 +204,21 @@ void test (const std::string &configFileName) {
         rc::Configuration   config  {configFileName};
         rc::ServiceProvider provider{config};
 
-        rc::MasterServer::pointer server = rc::MasterServer::create(provider);
+        rc::Controller::pointer controller = rc::Controller::create(provider);
 
         // Configure the generator of requests 
 
         RequestGenerator requestGenerator (
-            server,
+            controller,
             "wise_00",
             getAnyWorker(provider),
             getAnyWorker(provider));
         
-        // Start the server in its own thread before injecting any requests
+        // Start the controller in its own thread before injecting any requests
 
-        reportServerStatus(server);
-        server->run();
-        reportServerStatus(server);
+        reportControllerStatus(controller);
+        controller->run();
+        reportControllerStatus(controller);
 
         // Create the first bunch of requests which are to be launched
         // right away.
@@ -234,17 +234,17 @@ void test (const std::string &configFileName) {
         // the service will guarantee that all outstanding opeations will finish
         // and not aborted.
         //
-        // NOTE: Joining to the server's thread is not needed because
+        // NOTE: Joining to the controller's thread is not needed because
         //       this will always be done internally inside the stop method.
         //       The only reason for joining would be for having an option of
-        //       integrating the server into a larger application.
+        //       integrating the controller into a larger application.
 
-        reportServerStatus(server);
-        //server->stop();
-        reportServerStatus(server);
+        reportControllerStatus(controller);
+        //controller->stop();
+        reportControllerStatus(controller);
 
-        //server->run();
-        reportServerStatus(server);
+        //controller->run();
+        reportControllerStatus(controller);
 
         //requestGenerator.replicate(1000, 100, &blockPost);
 
@@ -252,7 +252,7 @@ void test (const std::string &configFileName) {
         // 
         // NOTE: The thread may (and will) finish when the specified number of
         // requests will be launched because the requests are execured in
-        // a context of the server thread.
+        // a context of the controller thread.
         std::thread another (
             [&requestGenerator, &blockPost] () {
 
@@ -281,20 +281,20 @@ void test (const std::string &configFileName) {
 
         // Wait before the request launching thread finishes
 
-        reportServerStatus(server);
+        reportControllerStatus(controller);
         LOGS(_log, LOG_LVL_INFO, "waiting for: another.join()");
         another.join();
         
         // This should block the current thread indefinitively or
-        // untill the server is cancelled.
+        // untill the controller is cancelled.
 
         while (true) {
             blockPost.wait();
-            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT  active requests: " << server->numActiveRequests());
+            LOGS(_log, LOG_LVL_INFO, "HEARTBEAT  active requests: " << controller->numActiveRequests());
         }
-        LOGS(_log, LOG_LVL_INFO, "waiting for: server->join()");
-        server->join();
-        LOGS(_log, LOG_LVL_INFO, "past: server->join()");
+        LOGS(_log, LOG_LVL_INFO, "waiting for: controller->join()");
+        controller->join();
+        LOGS(_log, LOG_LVL_INFO, "past: controller->join()");
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

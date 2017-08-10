@@ -21,7 +21,7 @@
  */
 
 // Class header
-#include "replica_core/MasterServer.h"
+#include "replica_core/Controller.h"
 
 // System headers
 
@@ -47,7 +47,7 @@ std::lock_guard<std::mutex> lock(_requestPocessingMtx)
 
 namespace {
 
-LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.MasterServer");
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.Controller");
 
 } /// namespace
 
@@ -119,32 +119,32 @@ private:
 };
 
 
-////////////////////////////////////////////////////////////////////////
-//////////////////////////  MasterServerImpl  //////////////////////////
-////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////  ControllerImpl  //////////////////////////
+//////////////////////////////////////////////////////////////////////
 
 
 /**
  * The utiliy class implementing operations on behalf of certain
- * methods of class MasterServer.
+ * methods of class Controller.
  * 
  * THREAD SAFETY NOTE: Methods implemented witin the class are NOT thread-safe.
  *                     They must be called from the thread-safe code only.
  */
-class MasterServerImpl {
+class ControllerImpl {
 
 public:
 
     /// Default constructor
-    MasterServerImpl () {}
+    ControllerImpl () {}
 
     // Default copy semantics is proxibited
 
-    MasterServerImpl (MasterServerImpl const&) = delete;
-    MasterServerImpl & operator= (MasterServerImpl const&) = delete;
+    ControllerImpl (ControllerImpl const&) = delete;
+    ControllerImpl & operator= (ControllerImpl const&) = delete;
 
     /// Destructor
-    ~MasterServerImpl () {}
+    ~ControllerImpl () {}
 
     /**
      * Generic method for managing requests such as stopping an outstanding
@@ -157,21 +157,21 @@ public:
     template <class REQUEST_TYPE>
     static
     typename REQUEST_TYPE::pointer requestManagementOperation (
-            MasterServer::pointer                 server, 
+            Controller::pointer                   controller, 
             const std::string                    &workerName,
             const std::string                    &targetRequestId,
             typename REQUEST_TYPE::callback_type  onFinish) {
 
-        server->assertIsRunning();
+        controller->assertIsRunning();
 
         typename REQUEST_TYPE::pointer request =
             REQUEST_TYPE::create (
-                server->_serviceProvider,
+                controller->_serviceProvider,
                 workerName,
-                server->_io_service,
+                controller->_io_service,
                 targetRequestId,
-                [server] (typename REQUEST_TYPE::pointer request) {
-                    server->finish(request->id());
+                [controller] (typename REQUEST_TYPE::pointer request) {
+                    controller->finish(request->id());
                 }
             );
     
@@ -179,7 +179,7 @@ public:
         // identifier in the local registry. Once it's complete it'll
         // be automatically removed from the Registry.
     
-        (server->_registry)[request->id()] =
+        (controller->_registry)[request->id()] =
             std::make_shared<RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);  
     
         // Initiate the request
@@ -199,19 +199,19 @@ public:
     template <class REQUEST_TYPE>
     static
     typename REQUEST_TYPE::pointer serviceManagementOperation (
-            MasterServer::pointer                 server, 
+            Controller::pointer                   controller, 
             const std::string                    &workerName,
             typename REQUEST_TYPE::callback_type  onFinish) {
 
-        server->assertIsRunning();
+        controller->assertIsRunning();
 
         typename REQUEST_TYPE::pointer request =
             REQUEST_TYPE::create (
-                server->_serviceProvider,
+                controller->_serviceProvider,
                 workerName,
-                server->_io_service,
-                [server] (typename REQUEST_TYPE::pointer request) {
-                    server->finish(request->id());
+                controller->_io_service,
+                [controller] (typename REQUEST_TYPE::pointer request) {
+                    controller->finish(request->id());
                 }
             );
     
@@ -219,7 +219,7 @@ public:
         // identifier in the local registry. Once it's complete it'll
         // be automatically removed from the Registry.
 
-        (server->_registry)[request->id()] =
+        (controller->_registry)[request->id()] =
             std::make_shared<RequestWrapperImpl<REQUEST_TYPE>> (request, onFinish);
 
         // Initiate the request
@@ -234,11 +234,11 @@ public:
      */
     template <class REQUEST_TYPE>
     static
-    std::vector<typename REQUEST_TYPE::pointer> requestsByType (MasterServer::pointer server) {
+    std::vector<typename REQUEST_TYPE::pointer> requestsByType (Controller::pointer controller) {
     
         std::vector<typename REQUEST_TYPE::pointer> result;
     
-        for (auto itr : server->_registry) {
+        for (auto itr : controller->_registry) {
         
             typename REQUEST_TYPE::pointer request =
                 std::dynamic_pointer_cast<REQUEST_TYPE>(itr.second->request());
@@ -253,11 +253,11 @@ public:
      */
     template <class REQUEST_TYPE>
     static
-    size_t numRequestsByType (MasterServer::pointer server) {
+    size_t numRequestsByType (Controller::pointer controller) {
     
         size_t result{0};
     
-        for (auto itr : server->_registry) {
+        for (auto itr : controller->_registry) {
         
             typename REQUEST_TYPE::pointer request =
                 std::dynamic_pointer_cast<REQUEST_TYPE>(itr.second->request());
@@ -269,18 +269,18 @@ public:
 };
 
 
-////////////////////////////////////////////////////////////////////
-//////////////////////////  MasterServer  //////////////////////////
-////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
+//////////////////////////  Controller  //////////////////////////
+//////////////////////////////////////////////////////////////////
 
 
-MasterServer::pointer
-MasterServer::create (ServiceProvider &serviceProvider) {
-    return MasterServer::pointer (
-        new MasterServer(serviceProvider));
+Controller::pointer
+Controller::create (ServiceProvider &serviceProvider) {
+    return Controller::pointer (
+        new Controller(serviceProvider));
 }
 
-MasterServer::MasterServer (ServiceProvider &serviceProvider)
+Controller::Controller (ServiceProvider &serviceProvider)
     :   _serviceProvider (serviceProvider),
 
         _io_service (),
@@ -289,35 +289,35 @@ MasterServer::MasterServer (ServiceProvider &serviceProvider)
         _registry   () {
 }
 
-MasterServer::~MasterServer () {
+Controller::~Controller () {
 }
 
 void
-MasterServer::run () {
+Controller::run () {
 
     LOCK_GUARD;
 
     if (!isRunning()) {
 
-        MasterServer::pointer server = shared_from_this();
+        Controller::pointer controller = shared_from_this();
      
         _work.reset (
             new boost::asio::io_service::work(_io_service)
         );
         _thread.reset (
             new std::thread (
-                [server] () {
+                [controller] () {
         
                     // This will prevent the I/O service from existing the .run()
                     // method event when it will run out of any requess to process.
                     // Unless the service will be explicitly stopped.
     
-                    server->_io_service.run();
+                    controller->_io_service.run();
                     
                     // Always reset the object in a preparation for its further
                     // usage.
     
-                    server->_io_service.reset();
+                    controller->_io_service.reset();
                 }
             )
         );
@@ -325,12 +325,12 @@ MasterServer::run () {
 }
 
 bool
-MasterServer::isRunning () const {
+Controller::isRunning () const {
     return _thread.get() != nullptr;
 }
 
 void
-MasterServer::stop () {
+Controller::stop () {
 
     if (!isRunning()) return;
 
@@ -361,25 +361,25 @@ MasterServer::stop () {
     // Double check that the collection of requests is empty.
     
     if (!_registry.empty())
-        throw std::logic_error ("MasterServer::stop() the collection of outstanding requests is not empty");
+        throw std::logic_error ("Controller::stop() the collection of outstanding requests is not empty");
 }
 
 void
-MasterServer::join () {
+Controller::join () {
     if (_thread) _thread->join();
 }
 
 ReplicationRequest::pointer
-MasterServer::replicate (const std::string                 &database,
-                         unsigned int                      chunk,
-                         const std::string                 &sourceWorkerName,
-                         const std::string                 &destinationWorkerName,
-                         ReplicationRequest::callback_type  onFinish) {
+Controller::replicate (const std::string                 &database,
+                       unsigned int                      chunk,
+                       const std::string                 &sourceWorkerName,
+                       const std::string                 &destinationWorkerName,
+                       ReplicationRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     assertIsRunning();
 
-    MasterServer::pointer server = shared_from_this();
+    Controller::pointer controller = shared_from_this();
 
     ReplicationRequest::pointer request =
         ReplicationRequest::create (
@@ -389,8 +389,8 @@ MasterServer::replicate (const std::string                 &database,
             sourceWorkerName,
             destinationWorkerName,
             _io_service,
-            [server] (ReplicationRequest::pointer request) {
-                server->finish(request->id());
+            [controller] (ReplicationRequest::pointer request) {
+                controller->finish(request->id());
             }
         );
 
@@ -409,15 +409,15 @@ MasterServer::replicate (const std::string                 &database,
 }
 
 DeleteRequest::pointer
-MasterServer::deleteReplica (const std::string            &database,
-                             unsigned int                  chunk,
-                             const std::string            &workerName,
-                             DeleteRequest::callback_type  onFinish) {
+Controller::deleteReplica (const std::string            &database,
+                           unsigned int                  chunk,
+                           const std::string            &workerName,
+                           DeleteRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     assertIsRunning();
 
-    MasterServer::pointer server = shared_from_this();
+    Controller::pointer controller = shared_from_this();
 
     DeleteRequest::pointer request =
         DeleteRequest::create (
@@ -426,8 +426,8 @@ MasterServer::deleteReplica (const std::string            &database,
             chunk,
             workerName,
             _io_service,
-            [server] (DeleteRequest::pointer request) {
-                server->finish(request->id());
+            [controller] (DeleteRequest::pointer request) {
+                controller->finish(request->id());
             }
         );
 
@@ -446,15 +446,15 @@ MasterServer::deleteReplica (const std::string            &database,
 }
 
 FindRequest::pointer
-MasterServer::findReplica (const std::string          &database,
-                           unsigned int                chunk,
-                           const std::string          &workerName,
-                           FindRequest::callback_type  onFinish) {
+Controller::findReplica (const std::string          &database,
+                         unsigned int                chunk,
+                         const std::string          &workerName,
+                         FindRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     assertIsRunning();
 
-    MasterServer::pointer server = shared_from_this();
+    Controller::pointer controller = shared_from_this();
 
     FindRequest::pointer request =
         FindRequest::create (
@@ -463,8 +463,8 @@ MasterServer::findReplica (const std::string          &database,
             chunk,
             workerName,
             _io_service,
-            [server] (FindRequest::pointer request) {
-                server->finish(request->id());
+            [controller] (FindRequest::pointer request) {
+                controller->finish(request->id());
             }
         );
 
@@ -483,14 +483,14 @@ MasterServer::findReplica (const std::string          &database,
 }
 
 FindAllRequest::pointer
-MasterServer::findAllReplicas (const std::string             &database,
-                               const std::string             &workerName,
-                               FindAllRequest::callback_type  onFinish) {
+Controller::findAllReplicas (const std::string             &database,
+                             const std::string             &workerName,
+                             FindAllRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     assertIsRunning();
 
-    MasterServer::pointer server = shared_from_this();
+    Controller::pointer controller = shared_from_this();
 
     FindAllRequest::pointer request =
         FindAllRequest::create (
@@ -498,8 +498,8 @@ MasterServer::findAllReplicas (const std::string             &database,
             database,
             workerName,
             _io_service,
-            [server] (FindAllRequest::pointer request) {
-                server->finish(request->id());
+            [controller] (FindAllRequest::pointer request) {
+                controller->finish(request->id());
             }
         );
 
@@ -518,14 +518,14 @@ MasterServer::findAllReplicas (const std::string             &database,
 }
 
 StopReplicationRequest::pointer
-MasterServer::stopReplication (const std::string                     &workerName,
-                               const std::string                     &targetRequestId,
-                               StopReplicationRequest::callback_type  onFinish) {
+Controller::stopReplication (const std::string                     &workerName,
+                             const std::string                     &targetRequestId,
+                             StopReplicationRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplication  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StopReplicationRequest> (
+    return ControllerImpl::requestManagementOperation<StopReplicationRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -533,14 +533,14 @@ MasterServer::stopReplication (const std::string                     &workerName
 }
 
 StopDeleteRequest::pointer
-MasterServer::stopReplicaDelete (const std::string                &workerName,
-                                 const std::string                &targetRequestId,
-                                 StopDeleteRequest::callback_type  onFinish) {
+Controller::stopReplicaDelete (const std::string                &workerName,
+                               const std::string                &targetRequestId,
+                               StopDeleteRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaDelete  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StopDeleteRequest> (
+    return ControllerImpl::requestManagementOperation<StopDeleteRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -548,14 +548,14 @@ MasterServer::stopReplicaDelete (const std::string                &workerName,
 }
 
 StopFindRequest::pointer
-MasterServer::stopReplicaFind (const std::string              &workerName,
-                               const std::string              &targetRequestId,
-                               StopFindRequest::callback_type  onFinish) {
+Controller::stopReplicaFind (const std::string              &workerName,
+                             const std::string              &targetRequestId,
+                             StopFindRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaFind  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StopFindRequest> (
+    return ControllerImpl::requestManagementOperation<StopFindRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -563,14 +563,14 @@ MasterServer::stopReplicaFind (const std::string              &workerName,
 }
 
 StopFindAllRequest::pointer
-MasterServer::stopReplicaFindAll (const std::string                 &workerName,
-                                  const std::string                 &targetRequestId,
-                                  StopFindAllRequest::callback_type  onFinish) {
+Controller::stopReplicaFindAll (const std::string                 &workerName,
+                                const std::string                 &targetRequestId,
+                                StopFindAllRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaFindAll  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StopFindAllRequest> (
+    return ControllerImpl::requestManagementOperation<StopFindAllRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -578,14 +578,14 @@ MasterServer::stopReplicaFindAll (const std::string                 &workerName,
 }
 
 StatusReplicationRequest::pointer
-MasterServer::statusOfReplication (const std::string                       &workerName,
-                                   const std::string                       &targetRequestId,
-                                   StatusReplicationRequest::callback_type  onFinish) {
+Controller::statusOfReplication (const std::string                       &workerName,
+                                 const std::string                       &targetRequestId,
+                                 StatusReplicationRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfReplication  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StatusReplicationRequest> (
+    return ControllerImpl::requestManagementOperation<StatusReplicationRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -593,14 +593,14 @@ MasterServer::statusOfReplication (const std::string                       &work
 }
 
 StatusDeleteRequest::pointer
-MasterServer::statusOfDelete (const std::string                  &workerName,
-                              const std::string                  &targetRequestId,
-                              StatusDeleteRequest::callback_type  onFinish) {
+Controller::statusOfDelete (const std::string                  &workerName,
+                            const std::string                  &targetRequestId,
+                            StatusDeleteRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfDelete  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StatusDeleteRequest> (
+    return ControllerImpl::requestManagementOperation<StatusDeleteRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -608,14 +608,14 @@ MasterServer::statusOfDelete (const std::string                  &workerName,
 }
 
 StatusFindRequest::pointer
-MasterServer::statusOfFind (const std::string                &workerName,
-                            const std::string                &targetRequestId,
-                            StatusFindRequest::callback_type  onFinish) {
+Controller::statusOfFind (const std::string                &workerName,
+                          const std::string                &targetRequestId,
+                          StatusFindRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfFind  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StatusFindRequest> (
+    return ControllerImpl::requestManagementOperation<StatusFindRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -623,14 +623,14 @@ MasterServer::statusOfFind (const std::string                &workerName,
 }
 
 StatusFindAllRequest::pointer
-MasterServer::statusOfFindAll (const std::string                   &workerName,
-                               const std::string                   &targetRequestId,
-                               StatusFindAllRequest::callback_type  onFinish) {
+Controller::statusOfFindAll (const std::string                   &workerName,
+                             const std::string                   &targetRequestId,
+                             StatusFindAllRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfFindAll  targetRequestId = " << targetRequestId);
 
-    return MasterServerImpl::requestManagementOperation<StatusFindAllRequest> (
+    return ControllerImpl::requestManagementOperation<StatusFindAllRequest> (
         shared_from_this(),
         workerName,
         targetRequestId,
@@ -638,39 +638,39 @@ MasterServer::statusOfFindAll (const std::string                   &workerName,
 }
 
 ServiceSuspendRequest::pointer
-MasterServer::suspendWorkerService (const std::string                    &workerName,
-                                    ServiceSuspendRequest::callback_type  onFinish) {
+Controller::suspendWorkerService (const std::string                    &workerName,
+                                  ServiceSuspendRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "suspendWorkerService  workerName: " << workerName);
 
-    return MasterServerImpl::serviceManagementOperation<ServiceSuspendRequest> (
+    return ControllerImpl::serviceManagementOperation<ServiceSuspendRequest> (
         shared_from_this(),
         workerName,
         onFinish);
 }
 
 ServiceResumeRequest::pointer
-MasterServer::resumeWorkerService (const std::string                   &workerName,
-                                   ServiceResumeRequest::callback_type  onFinish) {
+Controller::resumeWorkerService (const std::string                   &workerName,
+                                 ServiceResumeRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "resumeWorkerService  workerName: " << workerName);
 
-    return MasterServerImpl::serviceManagementOperation<ServiceResumeRequest> (
+    return ControllerImpl::serviceManagementOperation<ServiceResumeRequest> (
         shared_from_this(),
         workerName,
         onFinish);
 }
 
 ServiceStatusRequest::pointer
-MasterServer::statusOfWorkerService (const std::string                   &workerName,
-                                     ServiceStatusRequest::callback_type  onFinish) {
+Controller::statusOfWorkerService (const std::string                   &workerName,
+                                   ServiceStatusRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfWorkerService  workerName: " << workerName);
 
-    return MasterServerImpl::serviceManagementOperation<ServiceStatusRequest> (
+    return ControllerImpl::serviceManagementOperation<ServiceStatusRequest> (
         shared_from_this(),
         workerName,
         onFinish);
@@ -678,196 +678,196 @@ MasterServer::statusOfWorkerService (const std::string                   &worker
 }
 
 std::vector<ReplicationRequest::pointer>
-MasterServer::activeReplicationRequests () {
+Controller::activeReplicationRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<ReplicationRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<ReplicationRequest>(shared_from_this());
 }
 
 std::vector<DeleteRequest::pointer>
-MasterServer::activeDeleteRequests () {
+Controller::activeDeleteRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<DeleteRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<DeleteRequest>(shared_from_this());
 }
 std::vector<FindRequest::pointer>
-MasterServer::activeFindRequests () {
+Controller::activeFindRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<FindRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<FindRequest>(shared_from_this());
 }
 
 std::vector<FindAllRequest::pointer>
-MasterServer::activeFindAllRequests () {
+Controller::activeFindAllRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<FindAllRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<FindAllRequest>(shared_from_this());
 }
 
 std::vector<StopReplicationRequest::pointer>
-MasterServer::activeStopReplicationRequests () {
+Controller::activeStopReplicationRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StopReplicationRequest>(shared_from_this());       
+    return ControllerImpl::requestsByType<StopReplicationRequest>(shared_from_this());       
 }
 
 std::vector<StopDeleteRequest::pointer>
-MasterServer::activeStopDeleteRequests () {
+Controller::activeStopDeleteRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StopDeleteRequest>(shared_from_this());       
+    return ControllerImpl::requestsByType<StopDeleteRequest>(shared_from_this());       
 }
 
 std::vector<StopFindRequest::pointer>
-MasterServer::activeStopFindRequests () {
+Controller::activeStopFindRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StopFindRequest>(shared_from_this());       
+    return ControllerImpl::requestsByType<StopFindRequest>(shared_from_this());       
 }
 
 std::vector<StopFindAllRequest::pointer>
-MasterServer::activeStopFindAllRequests () {
+Controller::activeStopFindAllRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StopFindAllRequest>(shared_from_this());       
+    return ControllerImpl::requestsByType<StopFindAllRequest>(shared_from_this());       
 }
 
 std::vector<StatusReplicationRequest::pointer>
-MasterServer::activeStatusReplicationRequests () {
+Controller::activeStatusReplicationRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StatusReplicationRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<StatusReplicationRequest>(shared_from_this());
 }
 
 std::vector<StatusDeleteRequest::pointer>
-MasterServer::activeStatusDeleteRequests () {
+Controller::activeStatusDeleteRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StatusDeleteRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<StatusDeleteRequest>(shared_from_this());
 }
 
 std::vector<StatusFindRequest::pointer>
-MasterServer::activeStatusFindRequests () {
+Controller::activeStatusFindRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StatusFindRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<StatusFindRequest>(shared_from_this());
 }
 
 std::vector<StatusFindAllRequest::pointer>
-MasterServer::activeStatusFindAllRequests () {
+Controller::activeStatusFindAllRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<StatusFindAllRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<StatusFindAllRequest>(shared_from_this());
 }
 
 std::vector<ServiceSuspendRequest::pointer>
-MasterServer::activeServiceSuspendRequests () {
+Controller::activeServiceSuspendRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<ServiceSuspendRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<ServiceSuspendRequest>(shared_from_this());
 }
 
 
 std::vector<ServiceResumeRequest::pointer>
-MasterServer::activeServiceResumeRequests () {
+Controller::activeServiceResumeRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<ServiceResumeRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<ServiceResumeRequest>(shared_from_this());
 }
 
 
 std::vector<ServiceStatusRequest::pointer>
-MasterServer::activeServiceStatusRequests () {
+Controller::activeServiceStatusRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::requestsByType<ServiceStatusRequest>(shared_from_this());
+    return ControllerImpl::requestsByType<ServiceStatusRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveRequests () {
+Controller::numActiveRequests () {
     LOCK_GUARD;
     return _registry.size();
 }
 
 
 size_t
-MasterServer::numActiveReplicationRequests () {
+Controller::numActiveReplicationRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<ReplicationRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<ReplicationRequest>(shared_from_this());
 }
 
 
 size_t
-MasterServer::numActiveDeleteRequests () {
+Controller::numActiveDeleteRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<DeleteRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<DeleteRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveFindRequests () {
+Controller::numActiveFindRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<FindRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<FindRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveFindAllRequests () {
+Controller::numActiveFindAllRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<FindAllRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<FindAllRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStopReplicationRequests () {
+Controller::numActiveStopReplicationRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StopReplicationRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StopReplicationRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStopDeleteRequests () {
+Controller::numActiveStopDeleteRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StopDeleteRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StopDeleteRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStopFindRequests () {
+Controller::numActiveStopFindRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StopFindRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StopFindRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStopFindAllRequests () {
+Controller::numActiveStopFindAllRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StopFindAllRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StopFindAllRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStatusReplicationRequests () {
+Controller::numActiveStatusReplicationRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StatusReplicationRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StatusReplicationRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStatusDeleteRequests () {
+Controller::numActiveStatusDeleteRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StatusDeleteRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StatusDeleteRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStatusFindRequests () {
+Controller::numActiveStatusFindRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StatusFindRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StatusFindRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveStatusFindAllRequests () {
+Controller::numActiveStatusFindAllRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<StatusFindAllRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<StatusFindAllRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveServiceSuspendRequests () {
+Controller::numActiveServiceSuspendRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<ServiceSuspendRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<ServiceSuspendRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveServiceResumeRequests () {
+Controller::numActiveServiceResumeRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<ServiceResumeRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<ServiceResumeRequest>(shared_from_this());
 }
 
 size_t
-MasterServer::numActiveServiceStatusRequests () {
+Controller::numActiveServiceStatusRequests () {
     LOCK_GUARD;
-    return MasterServerImpl::numRequestsByType<ServiceStatusRequest>(shared_from_this());
+    return ControllerImpl::numRequestsByType<ServiceStatusRequest>(shared_from_this());
 }
 
 void
-MasterServer::finish (const std::string &id) {
+Controller::finish (const std::string &id) {
 
     // IMPORTANT:
     //
@@ -876,9 +876,9 @@ MasterServer::finish (const std::string &id) {
     //
     //   - it will avoid a possibility of deadlocking in case if
     //     the callback function to be notified will be doing
-    //     any API calls of the server.
+    //     any API calls of the controller.
     //
-    //   - it will reduce the server API dead-time due to a prolonged
+    //   - it will reduce the controller API dead-time due to a prolonged
     //     execution time of of the callback function.
 
     RequestWrapper::pointer request;
@@ -891,7 +891,7 @@ MasterServer::finish (const std::string &id) {
 }
 
 void
-MasterServer::assertIsRunning () const {
+Controller::assertIsRunning () const {
     if (!isRunning())
         throw std::runtime_error("the replication service is not running");
 }

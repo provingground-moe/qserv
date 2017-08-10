@@ -111,7 +111,7 @@ Request::Request (ServiceProvider         &serviceProvider,
         _socket   (io_service),
         _timer    (io_service),
 
-        _requestExpirationIvalSec (serviceProvider.config().masterRequestTimeoutSec()),
+        _requestExpirationIvalSec (serviceProvider.config().controllerRequestTimeoutSec()),
         _requestExpirationTimer   (io_service)
 {}
 
