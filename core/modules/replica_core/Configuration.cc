@@ -62,17 +62,17 @@ namespace qserv {
 namespace replica_core {
 
 Configuration::Configuration (const std::string &configFile)
-    :   _configFile                (configFile),
-        _workers                   {},
-        _requestBufferSizeBytes    (1024),
-        _defaultRetryTimeoutSec    (2),
-        _masterHttpPort            (80),
-        _masterHttpThreads         (1),
-        _masterRequestTimeoutSec   (0),
-        _workerSvcPort             (50000),
-        _workerXrootdPort          (1094),
-        _workerNumConnectionsLimit (16),
-        _workerNumProcessingThreads(1) {
+    :   _configFile                 (configFile),
+        _workers                    {},
+        _requestBufferSizeBytes     (1024),
+        _defaultRetryTimeoutSec     (2),
+        _controllerHttpPort         (80),
+        _controllerHttpThreads      (1),
+        _controllerRequestTimeoutSec(0),
+        _workerSvcPort              (50000),
+        _workerXrootdPort           (1094),
+        _workerNumConnectionsLimit  (16),
+        _workerNumProcessingThreads (1) {
 
     loadConfiguration();
 }
@@ -94,9 +94,9 @@ Configuration::loadConfiguration () {
     ::parseKeyVal(configStore, "common.request_buf_size_bytes",     _requestBufferSizeBytes);
     ::parseKeyVal(configStore, "common.request_retry_interval_sec", _defaultRetryTimeoutSec);
 
-    ::parseKeyVal(configStore, "master.http_server_port",           _masterHttpPort);
-    ::parseKeyVal(configStore, "master.http_server_threads",        _masterHttpThreads);
-    ::parseKeyVal(configStore, "master.request_timeout_sec",        _masterRequestTimeoutSec);
+    ::parseKeyVal(configStore, "controller.http_server_port",       _controllerHttpPort);
+    ::parseKeyVal(configStore, "controller.http_server_threads",    _controllerHttpThreads);
+    ::parseKeyVal(configStore, "controller.request_timeout_sec",    _controllerRequestTimeoutSec);
 
     ::parseKeyVal(configStore, "worker.svc_port",                   _workerSvcPort);
     ::parseKeyVal(configStore, "worker.xrootd_port",                _workerXrootdPort);

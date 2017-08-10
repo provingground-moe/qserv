@@ -20,12 +20,12 @@
  * the GNU General Public License along with this program.  If not,
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
-#ifndef LSST_QSERV_REPLICA_CORE_MASTERSERVER_H
-#define LSST_QSERV_REPLICA_CORE_MASTERSERVER_H
+#ifndef LSST_QSERV_REPLICA_CORE_CONTROLLER_H
+#define LSST_QSERV_REPLICA_CORE_CONTROLLER_H
 
-/// MasterServer.h declares:
+/// Controller.h declares:
 ///
-/// class MasterServer
+/// class Controller
 /// (see individual class documentation for more information)
 
 // System headers
@@ -53,12 +53,12 @@ namespace replica_core {
 
 // Forward declarations
 
-class MasterServerImpl;
+class ControllerImpl;
 class ServiceProvider;
 class RequestWrapper;
 
 /**
-  * Class MasterServer is used for pushing replication (etc.) requests
+  * Class Controller is used for pushing replication (etc.) requests
   * to the worker replication services. Only one instance of this class is
   * allowed per a thread.
   *
@@ -68,17 +68,17 @@ class RequestWrapper;
   *   std::runtime_error. The current implementation of the server
   *   doesn't support (yet?) amn operation queuing mechanism.
   */
-class MasterServer
-    :   public std::enable_shared_from_this<MasterServer>  {
+class Controller
+    :   public std::enable_shared_from_this<Controller>  {
 
 public:
 
     /// Friend class behind this implementation must have access to
     /// the private methods
-    friend class MasterServerImpl;
+    friend class ControllerImpl;
 
     /// The pointer type for instances of the class
-    typedef std::shared_ptr<MasterServer> pointer;
+    typedef std::shared_ptr<Controller> pointer;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -91,12 +91,12 @@ public:
 
     // Default construction and copy semantics are proxibited
 
-    MasterServer () = delete;
-    MasterServer (MasterServer const&) = delete;
-    MasterServer & operator= (MasterServer const&) = delete;
+    Controller () = delete;
+    Controller (Controller const&) = delete;
+    Controller & operator= (Controller const&) = delete;
  
     /// Destructor
-    virtual ~MasterServer ();
+    virtual ~Controller ();
 
     /// Return the Service Provider used by the server
     ServiceProvider& serviceProvider () { return _serviceProvider; }
@@ -386,7 +386,7 @@ private:
      *
      * @param serviceProvider - for configuration, other services
      */
-    explicit MasterServer (ServiceProvider &serviceProvider);
+    explicit Controller (ServiceProvider &serviceProvider);
 
     /**
      * Finalize the completion of the request. This method will notify
@@ -424,4 +424,4 @@ private:
 
 }}} // namespace lsst::qserv::replica_core
 
-#endif // LSST_QSERV_REPLICA_CORE_MASTERSERVER_H
+#endif // LSST_QSERV_REPLICA_CORE_CONTROLLER_H
