@@ -44,8 +44,8 @@
 
 // This macro to appear witin each block which requires thread safety
 
-#define THREAD_SAFE_BLOCK \
-std::lock_guard<std::mutex> lock(_mtx);
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
 
 namespace {
 
@@ -100,321 +100,299 @@ WorkerProcessor::~WorkerProcessor () {
 void
 WorkerProcessor::run () {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "run");
 
-    THREAD_SAFE_BLOCK {
+    if (_state == STATE_IS_STOPPED) {
 
-        if (_state == STATE_IS_STOPPED) {
-
-            const size_t numThreads = _serviceProvider.config().workerNumProcessingThreads();
-            if (!numThreads) throw std::out_of_range("the number of procesisng threads can't be 0");
-        
-            // Create threads if needed
-        
-            if (_threads.empty()) {
-                for (size_t i=0; i < numThreads; ++i) {
-                    _threads.push_back(WorkerProcessorThread::create(*this));
-                }
+        const size_t numThreads = _serviceProvider.config().workerNumProcessingThreads();
+        if (!numThreads) throw std::out_of_range("the number of procesisng threads can't be 0");
+    
+        // Create threads if needed
+    
+        if (_threads.empty()) {
+            for (size_t i=0; i < numThreads; ++i) {
+                _threads.push_back(WorkerProcessorThread::create(*this));
             }
-        
-            // Tell each thread to run
-        
-            for (auto &t: _threads) {
-                t->run();
-            }
-            _state = STATE_IS_RUNNING;
         }
+    
+        // Tell each thread to run
+    
+        for (auto &t: _threads) {
+            t->run();
+        }
+        _state = STATE_IS_RUNNING;
     }
 }
 
 void
 WorkerProcessor::stop () {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "stop");
-    
-    THREAD_SAFE_BLOCK {
 
-        if (_state == STATE_IS_RUNNING) {
-            
-            // Tell each thread to stop.
+    if (_state == STATE_IS_RUNNING) {
         
-            for (auto &t: _threads) {
-                t->stop();
-            }
-            
-            // Begin transitioning to the final state via this intermediate one.
-            // The transition will finish asynchronious when all threads will report
-            // desired changes in their states.
-
-            _state = STATE_IS_STOPPING;
+        // Tell each thread to stop.
+    
+        for (auto &t: _threads) {
+            t->stop();
         }
+        
+        // Begin transitioning to the final state via this intermediate one.
+        // The transition will finish asynchronious when all threads will report
+        // desired changes in their states.
+
+        _state = STATE_IS_STOPPING;
     }
 }
 
 void
 WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate &request,
                                         proto::ReplicationResponseReplicate      &response) {
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForReplication"
         << "  id: "     << request.id()
         << "  db: "     << request.database()
         << "  chunk: "  << request.chunk()
-        << "  worker: " << request.worker());
+        << "  worker: " << request.worker());    
 
-    THREAD_SAFE_BLOCK {
+    // TODO: run the sanity check to ensure no such request is found in any
+    //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+
+    WorkerRequest::pointer workerRequest =
+        _requestFactory.createReplicationRequest (
+            request.id(),
+            request.priority(),
+            request.database(),
+            request.chunk(),
+            request.worker());
+
+    _newRequests.push(workerRequest);
     
-
-        // TODO: run the sanity check to ensure no such request is found in any
-        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
-
-        WorkerRequest::pointer workerRequest =
-            _requestFactory.createReplicationRequest (
-                request.id(),
-                request.priority(),
-                request.database(),
-                request.chunk(),
-                request.worker());
-
-        _newRequests.push(workerRequest);
-        
-        response.set_status (proto::ReplicationStatus::QUEUED);
-    }
+    response.set_status (proto::ReplicationStatus::QUEUED);
 }
 
 void
 WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &request,
                                      proto::ReplicationResponseDelete      &response) {
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForDeletion"
         << "  id: "    << request.id()
         << "  db: "    << request.database()
         << "  chunk: " << request.chunk());
-
-    THREAD_SAFE_BLOCK {
     
-        // TODO: run the sanity check to ensure no such request is found in any
-        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+    // TODO: run the sanity check to ensure no such request is found in any
+    //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-        WorkerRequest::pointer workerRequest =
-            _requestFactory.createDeleteRequest (
-                request.id(),
-                request.priority(),
-                request.database(),
-                request.chunk());
+    WorkerRequest::pointer workerRequest =
+        _requestFactory.createDeleteRequest (
+            request.id(),
+            request.priority(),
+            request.database(),
+            request.chunk());
 
-        _newRequests.push(workerRequest);
- 
-        response.set_status (proto::ReplicationStatus::QUEUED);
-    }
+    _newRequests.push(workerRequest);
+
+    response.set_status (proto::ReplicationStatus::QUEUED);
 }
 
 void
 WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
                                  proto::ReplicationResponseFind      &response) {
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFind"
         << "  id: "    << request.id()
         << "  db: "    << request.database()
         << "  chunk: " << request.chunk());
 
-    THREAD_SAFE_BLOCK {
+    // TODO: run the sanity check to ensure no such request is found in any
+    //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-        // TODO: run the sanity check to ensure no such request is found in any
-        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+    WorkerRequest::pointer workerRequest =
+        _requestFactory.createFindRequest (
+            request.id(),
+            request.priority(),
+            request.database(),
+            request.chunk());
 
-        WorkerRequest::pointer workerRequest =
-            _requestFactory.createFindRequest (
-                request.id(),
-                request.priority(),
-                request.database(),
-                request.chunk());
+    _newRequests.push(workerRequest);
 
-        _newRequests.push(workerRequest);
- 
-        response.set_status (proto::ReplicationStatus::QUEUED);
-    }
+    response.set_status (proto::ReplicationStatus::QUEUED);
 }
 
 
 void
 WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &request,
                                     proto::ReplicationResponseFindAll      &response) {
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFindAll"
         << "  id: " << request.id()
         << "  db: " << request.database());
 
-    THREAD_SAFE_BLOCK {
+    // TODO: run the sanity check to ensure no such request is found in any
+    //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-        // TODO: run the sanity check to ensure no such request is found in any
-        //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+    WorkerRequest::pointer workerRequest =
+        _requestFactory.createFindAllRequest (
+            request.id(),
+            request.priority(),
+            request.database());
 
-        WorkerRequest::pointer workerRequest =
-            _requestFactory.createFindAllRequest (
-                request.id(),
-                request.priority(),
-                request.database());
+    _newRequests.push(workerRequest);
 
-        _newRequests.push(workerRequest);
-
-        response.set_status (proto::ReplicationStatus::QUEUED);
-    }
+    response.set_status (proto::ReplicationStatus::QUEUED);
 }
 
 
 WorkerRequest::pointer
 WorkerProcessor::dequeueOrCancelImpl (const std::string &id) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "dequeueOrCancelImpl"
-        << "  id: " << id);
+    LOCK_GUARD;
 
-    THREAD_SAFE_BLOCK {
+    LOGS(_log, LOG_LVL_DEBUG, context() << "dequeueOrCancelImpl" << "  id: " << id);
      
-         // Still waiting in the queue?
- 
-        for (auto ptr : _newRequests) {
-            if (ptr->id() == id) {
-                
-                // Cancel it and move it into the final queue in case if a client
-                // won't be able to receive the desired status of the request due to
-                // a protocol failure, etc.
+    // Still waiting in the queue?
 
-                ptr->cancel();
+    for (auto ptr : _newRequests)
+        if (ptr->id() == id) {
+           
+            // Cancel it and move it into the final queue in case if a client
+            // won't be able to receive the desired status of the request due to
+            // a protocol failure, etc.
 
-                switch (ptr->status()) {
+            ptr->cancel();
 
-                    case WorkerRequest::STATUS_CANCELLED:
+            switch (ptr->status()) {
 
-                        _newRequests.remove(id);
-                        _finishedRequests.push_back(ptr);
+                case WorkerRequest::STATUS_CANCELLED:
 
-                        return ptr;
+                    _newRequests.remove(id);
+                    _finishedRequests.push_back(ptr);
 
-                    default:
-                        throw std::logic_error (
-                            "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
-                            " at WorkerProcessor::dequeueOrCancelImpl among new requests");
-                }
-            }
-        }
- 
-        // Is it already being processed?
+                    return ptr;
 
-        for (auto ptr : _inProgressRequests) {
-            if (ptr->id() == id) {
-
-                // Tell the request to begin the cancelling protocol. The protocol
-                // will take care of moving the request into the final queue when
-                // the cancellation will finish.
-                //
-                // At the ment time we just notify the client about the cancelattion status
-                // of the request and let it come back later to check the updated status.
-
-                ptr->cancel();
-
-                switch (ptr->status()) {
-
-                    case WorkerRequest::STATUS_IS_CANCELLING:
-                        return ptr;
-
-                    default:
-                        throw std::logic_error (
-                            "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
-                            " at WorkerProcessor::dequeueOrCancelImpl among in-progress requests");
-                }
+                default:
+                    throw std::logic_error (
+                        "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
+                        " at WorkerProcessor::dequeueOrCancelImpl among new requests");
             }
         }
 
-        // Has it finished?
+    // Is it already being processed?
 
-        for (auto ptr : _finishedRequests) {
-            if (ptr->id() == id) {
+    for (auto ptr : _inProgressRequests)
+        if (ptr->id() == id) {
 
-                // There is nothing else we can do here other than just
-                // reporting the completion status of the request. It's up to a client
-                // to figure out what to do about this situation.
+            // Tell the request to begin the cancelling protocol. The protocol
+            // will take care of moving the request into the final queue when
+            // the cancellation will finish.
+            //
+            // At the ment time we just notify the client about the cancelattion status
+            // of the request and let it come back later to check the updated status.
 
-                switch (ptr->status()) {
+            ptr->cancel();
 
-                    case WorkerRequest::STATUS_CANCELLED:
-                    case WorkerRequest::STATUS_SUCCEEDED:
-                    case WorkerRequest::STATUS_FAILED:
-                        return ptr;
+            switch (ptr->status()) {
 
-                    default:
-                        throw std::logic_error (
-                            "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
-                            " at WorkerProcessor::dequeueOrCancelImpl.");
-                }
+                case WorkerRequest::STATUS_IS_CANCELLING:
+                    return ptr;
+
+                default:
+                    throw std::logic_error (
+                        "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
+                        " at WorkerProcessor::dequeueOrCancelImpl among in-progress requests");
             }
         }
 
-        // Sorry, no such request found!
+    // Has it finished?
 
-        return WorkerRequest::pointer();
-    }
+    for (auto ptr : _finishedRequests)
+        if (ptr->id() == id) {
+
+            // There is nothing else we can do here other than just
+            // reporting the completion status of the request. It's up to a client
+            // to figure out what to do about this situation.
+
+            switch (ptr->status()) {
+
+                case WorkerRequest::STATUS_CANCELLED:
+                case WorkerRequest::STATUS_SUCCEEDED:
+                case WorkerRequest::STATUS_FAILED:
+                    return ptr;
+
+                default:
+                    throw std::logic_error (
+                        "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
+                        " at WorkerProcessor::dequeueOrCancelImpl.");
+            }
+        }
+
+    // Sorry, no such request found!
+
+    return WorkerRequest::pointer();
 }
 
 WorkerRequest::pointer
 WorkerProcessor::checkStatusImpl (const std::string &id) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "checkStatusImpl"
-        << "  id: " << id);
+    LOCK_GUARD;
 
-    THREAD_SAFE_BLOCK {
+    LOGS(_log, LOG_LVL_DEBUG, context() << "checkStatusImpl" << "  id: " << id);
 
-        // Still waiting in the queue?
- 
-        for (auto ptr : _newRequests) {
-            if (ptr->id() == id) {
-                switch (ptr->status()) {
-                    case WorkerRequest::STATUS_NONE:
-                        return ptr;
-                    default:
-                        throw std::logic_error (
-                            "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
-                            " at WorkerProcessor::checkStatusImpl among new requests");
-                }
+    // Still waiting in the queue?
+
+    for (auto ptr : _newRequests)
+        if (ptr->id() == id)
+            switch (ptr->status()) {
+                case WorkerRequest::STATUS_NONE:
+                    return ptr;
+                default:
+                    throw std::logic_error (
+                        "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
+                        " at WorkerProcessor::checkStatusImpl among new requests");
             }
-        }
 
-        // Is it already being processed?
 
-        for (auto ptr : _inProgressRequests) {
-            if (ptr->id() == id) {
-                switch (ptr->status()) {
-                    case WorkerRequest::STATUS_IS_CANCELLING:
-                    case WorkerRequest::STATUS_IN_PROGRESS:
-                        return ptr;
-                    default:
-                        throw std::logic_error (
-                            "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
-                            " at WorkerProcessor::checkStatusImpl among in-progress requests");
-                }
+    // Is it already being processed?
+
+    for (auto ptr : _inProgressRequests)
+        if (ptr->id() == id)
+            switch (ptr->status()) {
+                case WorkerRequest::STATUS_IS_CANCELLING:
+                case WorkerRequest::STATUS_IN_PROGRESS:
+                    return ptr;
+                default:
+                    throw std::logic_error (
+                        "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
+                        " at WorkerProcessor::checkStatusImpl among in-progress requests");
             }
-        }
 
-        // Has it finished?
 
-        for (auto ptr : _finishedRequests) {
-            if (ptr->id() == id) {
-                switch (ptr->status()) {
-                    case WorkerRequest::STATUS_CANCELLED:
-                    case WorkerRequest::STATUS_SUCCEEDED:
-                    case WorkerRequest::STATUS_FAILED:
-                        return ptr;
-                    default:
-                        throw std::logic_error (
-                            "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
-                            " at WorkerProcessor::checkStatusImpl among finished requests");
-                }
+    // Has it finished?
+
+    for (auto ptr : _finishedRequests)
+        if (ptr->id() == id)
+            switch (ptr->status()) {
+                case WorkerRequest::STATUS_CANCELLED:
+                case WorkerRequest::STATUS_SUCCEEDED:
+                case WorkerRequest::STATUS_FAILED:
+                    return ptr;
+                default:
+                    throw std::logic_error (
+                        "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
+                        " at WorkerProcessor::checkStatusImpl among finished requests");
             }
-        }
 
-        // Sorry, no such request found!
+    // Sorry, no such request found!
 
-        return WorkerRequest::pointer();
-    }
+    return WorkerRequest::pointer();
 }
 
 
@@ -440,18 +418,17 @@ WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &p
         // the wait.
 
         {
-            THREAD_SAFE_BLOCK {
+            LOCK_GUARD;
 
-                if (!_newRequests.empty()) {
+            if (!_newRequests.empty()) {
 
-                    WorkerRequest::pointer request = _newRequests.top();
-                    _newRequests.pop();
+                WorkerRequest::pointer request = _newRequests.top();
+                _newRequests.pop();
 
-                    request->setStatus(WorkerRequest::STATUS_IN_PROGRESS);
-                    _inProgressRequests.push_back(request);
+                request->setStatus(WorkerRequest::STATUS_IN_PROGRESS);
+                _inProgressRequests.push_back(request);
 
-                    return request;
-                }
+                return request;
             }
         }
         totalElapsedTime += blockPost.wait();
@@ -466,61 +443,56 @@ WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &p
 void
 WorkerProcessor::processingRefused (const WorkerRequest::pointer &request) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "processingRefused"
-        << "  id: " << request->id());
-    
-    THREAD_SAFE_BLOCK {
+    LOCK_GUARD;
 
-        // Update request's state before moving it back into
-        // the input queue.
+    LOGS(_log, LOG_LVL_DEBUG, context() << "processingRefused" << "  id: " << request->id());
 
-        request->setStatus(WorkerRequest::STATUS_NONE);
-        _inProgressRequests.remove_if (
-            [&request] (const WorkerRequest::pointer &ptr) {
-                return ptr->id() == request->id();
-            }
-        );
-        _newRequests.push(request);
-    }
+    // Update request's state before moving it back into
+    // the input queue.
+
+    request->setStatus(WorkerRequest::STATUS_NONE);
+    _inProgressRequests.remove_if (
+        [&request] (const WorkerRequest::pointer &ptr) {
+            return ptr->id() == request->id();
+        }
+    );
+    _newRequests.push(request);
 }
 
 void
 WorkerProcessor::processingFinished (const WorkerRequest::pointer &request) {
-    
+
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "processingFinished"
         << "  id: " << request->id()
         << "  status: " << WorkerRequest::status2string(request->status()));
 
-    THREAD_SAFE_BLOCK {
+    // Then move it forward into the finished queue.
 
-        // Then move it forward into the finished queue.
-
-        _inProgressRequests.remove_if (
-            [&request] (const WorkerRequest::pointer &ptr) {
-                return ptr->id() == request->id();
-            }
-        );
-        _finishedRequests.push_back(request);
-    }
+    _inProgressRequests.remove_if (
+        [&request] (const WorkerRequest::pointer &ptr) {
+            return ptr->id() == request->id();
+        }
+    );
+    _finishedRequests.push_back(request);
 }
 
 void
 WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &processorThread) {
-    
-    LOGS(_log, LOG_LVL_DEBUG, context() << "processorThreadStopped"
-        << "  thread: " << processorThread->id());
 
-    THREAD_SAFE_BLOCK {
+    LOCK_GUARD;
 
-        if (_state == STATE_IS_STOPPING) {
+    LOGS(_log, LOG_LVL_DEBUG, context() << "processorThreadStopped" << "  thread: " << processorThread->id());
 
-            // Complete state transition if all threds are stopped
+    if (_state == STATE_IS_STOPPING) {
 
-            for (auto &t: _threads) {
-                if (t->isRunning()) return;
-            }
-            _state = STATE_IS_STOPPED;
+        // Complete state transition if all threds are stopped
+
+        for (auto &t: _threads) {
+            if (t->isRunning()) return;
         }
+        _state = STATE_IS_STOPPED;
     }
 }
 
