@@ -34,6 +34,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/ProtocolBuffer.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/ServiceProvider.h"
 
 namespace proto = lsst::qserv::proto;
@@ -81,14 +82,22 @@ FindRequest::FindRequest (ServiceProvider         &serviceProvider,
                 io_service,
                 priority),
  
-        _database (database),
-        _chunk    (chunk),
-        _onFinish (onFinish) {
+        _database    (database),
+        _chunk       (chunk),
+        _onFinish    (onFinish),
+        _replicaInfo () {
 }
 
 FindRequest::~FindRequest () {
 }
+const ReplicaInfo&
+FindRequest::replicaInfo () const {
+    if ((state() == FINISHED) && (extendedState() == SUCCESS)) return _replicaInfo;
+    throw std::logic_error("operation is only allowed in state " + state2string(FINISHED, SUCCESS)  +
+                           " in FindRequest::replicaInfo()");
+}
 
+    
 void
 FindRequest::beginProtocol () {
 
@@ -211,10 +220,10 @@ FindRequest::responseReceived (const boost::system::error_code &ec,
     
         // Parse the response to see what should be done next.
     
-        proto::ReplicationResponseDelete message;
+        proto::ReplicationResponseFind message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
@@ -371,18 +380,22 @@ FindRequest::statusReceived (const boost::system::error_code &ec,
         proto::ReplicationResponseFind message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
 void
-FindRequest::analyze (proto::ReplicationStatus status) {
+FindRequest::analyze (const proto::ReplicationResponseFind &message) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(message.status()));
 
-    switch (status) {
+    switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
+            
+            // Transfer result before finishing the operation
+            _replicaInfo = ReplicaInfo(&(message.replica_info()));
+    
             finish (SUCCESS);
             break;
 
@@ -408,7 +421,7 @@ FindRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("FindRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+            throw std::logic_error("FindRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(message.status()) +
                                    "' received from server");
 
     }

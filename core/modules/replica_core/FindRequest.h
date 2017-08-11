@@ -36,6 +36,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/Request.h"
 
 // This header declarations
@@ -72,6 +73,14 @@ public:
  
     const std::string& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
+
+    /**
+     * Return a refernce to a result obtained from a remote service.
+     *
+     * Note that this operation is only allowed when the request completed
+     * with status SUCCESS. Otherwise the std::logic_error exception will be thrown.
+     */
+    const ReplicaInfo& replicaInfo () const;
 
     /**
      * Create a new request with specified parameters.
@@ -154,7 +163,7 @@ private:
                          size_t                           bytes_transferred);
 
     /// Process the completion of the requested operation
-    void analyze (lsst::qserv::proto::ReplicationStatus status);
+    void analyze (const proto::ReplicationResponseFind &message);
 
     /**
      * Notifying a party which initiated the request.
@@ -171,9 +180,11 @@ private:
     std::string  _database;
     unsigned int _chunk;
     
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+    
+    /// The results reported by a worker service
+    ReplicaInfo _replicaInfo;
 };
 
 }}} // namespace lsst::qserv::replica_core
