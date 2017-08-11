@@ -29,6 +29,8 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Configuration.h"
+#include "replica_core/ServiceProvider.h"
 
 namespace {
 
@@ -67,10 +69,42 @@ WorkerFindAllRequest::WorkerFindAllRequest (ServiceProvider   &serviceProvider,
                        id,
                        priority),
 
-        _database (database) {
+        _database              (database),
+        _replicaInfoCollection () {
 }
 
+
 WorkerFindAllRequest::~WorkerFindAllRequest () {
+}
+
+
+const ReplicaInfoCollection&
+WorkerFindAllRequest::replicaInfoCollection () const {
+    if (status() == STATUS_SUCCEEDED) return _replicaInfoCollection;
+    throw std::logic_error("operation is only allowed in state " + status2string(STATUS_SUCCEEDED)  +
+                           " in WorkerFindAllRequest::replicaInfoCollection()");
+}
+
+
+bool
+WorkerFindAllRequest::execute (bool incremental) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+         << "  worker: "   << serviceProvider().config().workerName()
+         << "  database: " << database());
+
+    // Set up the result if the operation is over
+
+    bool completed = WorkerRequest::execute(incremental);
+    if (completed)
+        for (unsigned int chunk=0; chunk<8; ++chunk)
+            _replicaInfoCollection.emplace_back (
+                ReplicaInfo::COMPLETE,
+                serviceProvider().config().workerName(),
+                database(),
+                chunk);
+
+    return completed;
 }
 
 
@@ -108,7 +142,8 @@ bool
 WorkerFindAllRequestX::execute (bool incremental) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  db: " << database());
+         << "  worker: "   << serviceProvider().config().workerName()
+         << "  database: " << database());
 
     // TODO: provide the actual implementation instead of the dummy one.
 

@@ -61,8 +61,11 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-Configuration::Configuration (const std::string &configFile)
-    :   _configFile                 (configFile),
+Configuration::Configuration (const std::string &configFile,
+                              const std::string &workerName)
+    :   _configFile (configFile),
+        _workerName (workerName),
+
         _workers                    {},
         _requestBufferSizeBytes     (1024),
         _defaultRetryTimeoutSec     (2),

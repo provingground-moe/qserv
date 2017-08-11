@@ -496,5 +496,59 @@ WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &p
     }
 }
 
+
+void
+WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer        &request,
+                                 proto::ReplicationResponseReplicate &response) {
+    throw std::logic_error("calling a dummy method WorkerProcessor::setReplicaInfo(WorkerReplicationRequest)");
+}
+
+
+void
+WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer     &request,
+                                 proto::ReplicationResponseDelete &response) {
+    throw std::logic_error("calling a dummy method WorkerProcessor::setReplicaInfo(WorkerDeleteRequest)");
+}
+
+
+void
+WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer   &request,
+                                 proto::ReplicationResponseFind &response){
+
+    WorkerFindRequest::pointer findRequest =
+        std::dynamic_pointer_cast<WorkerFindRequest>(request);
+
+    if (!findRequest)
+        throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
+                               " in WorkerProcessor::setReplicaInfo(WorkerFindRequest)");
+
+    // Note the ownership transfer of an intermediate protobuf object obtained
+    // from ReplicaInfo object in the call below. The protobuf runtime will take
+    // care of deleting the intermediate object.
+
+    response.set_allocated_replica_info(findRequest->replicaInfo().info());
+}
+
+void
+WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer      &request,
+                                 proto::ReplicationResponseFindAll &response) {
+
+    WorkerFindAllRequest::pointer findRequest =
+        std::dynamic_pointer_cast<WorkerFindAllRequest>(request);
+
+    if (!findRequest)
+        throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
+                               " in WorkerProcessor::setReplicaInfo(WorkerFindAllRequest)");
+
+    // Note that a new Info object is allocated and appended to
+    // the 'replica_info_many' series at each step of the iteration below.
+    // The protobuf runtime will take care of deleting those objects.
+
+    for (const auto &replicaInfo : findRequest->replicaInfoCollection()) {
+        proto::ReplicationReplicaInfo *info = response.add_replica_info_many();
+        replicaInfo.setInfo(info);
+    }
+}
+                     
     
 }}} // namespace lsst::qserv::replica_core

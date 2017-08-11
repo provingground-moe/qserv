@@ -29,6 +29,8 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Configuration.h"
+#include "replica_core/ServiceProvider.h"
 
 namespace {
 
@@ -69,12 +71,40 @@ WorkerFindRequest::WorkerFindRequest (ServiceProvider   &serviceProvider,
                        id,
                        priority),
 
-        _database (database),
-        _chunk    (chunk) {
+        _database    (database),
+        _chunk       (chunk),
+        _replicaInfo () {
 }
 
 WorkerFindRequest::~WorkerFindRequest () {
 }
+
+const ReplicaInfo&
+WorkerFindRequest::replicaInfo () const {
+    if (status() == STATUS_SUCCEEDED) return _replicaInfo;
+    throw std::logic_error("operation is only allowed in state " + status2string(STATUS_SUCCEEDED)  +
+                           " in WorkerFindRequest::replicaInfo()");
+}
+
+bool
+WorkerFindRequest::execute (bool incremental) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+         << "  worker: "   << serviceProvider().config().workerName()
+         << "  database: " << database()
+         << "  chunk: "    << chunk());
+
+    // Set up the result if the operation is over
+
+    bool completed = WorkerRequest::execute(incremental);
+    if (completed) _replicaInfo =
+        ReplicaInfo (ReplicaInfo::COMPLETE,
+                     serviceProvider().config().workerName(),
+                     database(),
+                     chunk());
+    return completed;
+}
+
 
 /////////////////////////////////////////////////////////////
 ///////////////////// WorkerFindRequestX ////////////////////
@@ -115,12 +145,13 @@ bool
 WorkerFindRequestX::execute (bool incremental) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  db: "    << database()
-         << "  chunk: " << chunk());
+         << "  worker: "   << serviceProvider().config().workerName()
+         << "  database: " << database()
+         << "  chunk: "    << chunk());
 
     // TODO: provide the actual implementation instead of the dummy one.
 
-    return WorkerRequest::execute(incremental);
+    return WorkerFindRequest::execute(incremental);
 }
 
 

@@ -79,10 +79,19 @@ FindAllRequest::FindAllRequest (ServiceProvider         &serviceProvider,
                 priority),
  
         _database (database),
-        _onFinish (onFinish) {
+        _onFinish (onFinish),
+
+        _replicaInfoCollection () {
 }
 
 FindAllRequest::~FindAllRequest () {
+}
+
+const ReplicaInfoCollection&
+FindAllRequest::replicaInfoCollection () const {
+    if ((state() == FINISHED) && (extendedState() == SUCCESS)) return _replicaInfoCollection;
+    throw std::logic_error("operation is only allowed in state " + state2string(FINISHED, SUCCESS)  +
+                           " in FindAllRequest::replicaInfoCollection()");
 }
 
 void
@@ -206,10 +215,10 @@ FindAllRequest::responseReceived (const boost::system::error_code &ec,
     
         // Parse the response to see what should be done next.
     
-        proto::ReplicationResponseDelete message;
+        proto::ReplicationResponseFindAll message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
@@ -366,18 +375,24 @@ FindAllRequest::statusReceived (const boost::system::error_code &ec,
         proto::ReplicationResponseFindAll message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
 void
-FindAllRequest::analyze (proto::ReplicationStatus status) {
+FindAllRequest::analyze (const proto::ReplicationResponseFindAll &message) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: "
+         << proto::ReplicationStatus_Name(message.status()));
 
-    switch (status) {
+    switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
+
+            // Transfer result before finishing the operation
+            for (int num = message.replica_info_many_size(), idx = 0; idx < num; ++idx)
+                _replicaInfoCollection.emplace_back(&(message.replica_info_many(idx)));
+
             finish (SUCCESS);
             break;
 
@@ -403,7 +418,7 @@ FindAllRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("FindAllRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+            throw std::logic_error("FindAllRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(message.status()) +
                                    "' received from server");
 
     }

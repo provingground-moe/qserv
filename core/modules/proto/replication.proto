@@ -188,14 +188,15 @@ message ReplicationResponseDelete {
 
 message ReplicationReplicaInfo {
     enum ReplicaStatus {
-        REPLICA_NOT_FOUND  = 0;
-        REPLICA_CORRUPT    = 1;
-        REPLICA_INCOMPLETE = 2;
-        REPLICA_COMPLETE   = 3;
+        NOT_FOUND  = 0;
+        CORRUPT    = 1;
+        INCOMPLETE = 2;
+        COMPLETE   = 3;
     }
     required ReplicaStatus status   = 1;
-    required string        database = 2;
-    required int32         chunk    = 3;
+    required string        worker   = 2;
+    required string        database = 3;
+    required int32         chunk    = 4;
 }
 
 message ReplicationResponseFind {

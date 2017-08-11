@@ -219,9 +219,11 @@ public:
                 break;
 
             case proto::ReplicationReplicaRequestType::REPLICA_FIND: {
+                setReplicaInfo(ptr, response);
                 break;
             }
             case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL : {
+                setReplicaInfo(ptr, response);
                 break;
             }
         }
@@ -256,9 +258,11 @@ public:
                 break;
 
             case proto::ReplicationReplicaRequestType::REPLICA_FIND: {
+                setReplicaInfo(ptr, response);
                 break;
             }
             case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL : {
+                setReplicaInfo(ptr, response);
                 break;
             }
         }
@@ -324,6 +328,34 @@ private:
      *           or a reference to nullptr otherwise. 
      */
     WorkerRequest::pointer checkStatusImpl (const std::string &id);
+
+    /// Dummy method meant to silence the compiler
+    void setReplicaInfo (const WorkerRequest::pointer        &request,
+                         proto::ReplicationResponseReplicate &response);
+
+    /// Dummy method meant to silence the compiler
+    void setReplicaInfo (const WorkerRequest::pointer     &request,
+                         proto::ReplicationResponseDelete &response);
+
+    /**
+     * Extract the replica info (for one chunk) from the request and put
+     * it into the response object.
+     *
+     * NOTE: This method expects a correct dynamic type of the request
+     *       object. Otherwise it will throw the std::logic_error exception.
+     */
+    void setReplicaInfo (const WorkerRequest::pointer   &request,
+                         proto::ReplicationResponseFind &response);
+ 
+    /**
+     * Extract the replica info (for multiple chunks) from the request and put
+     * it into the response object.
+     *
+     * NOTE: This method expects a correct dynamic type of the request
+     *       object. Otherwise it will throw the std::logic_error exception.
+     */
+    void setReplicaInfo (const WorkerRequest::pointer      &request,
+                         proto::ReplicationResponseFindAll &response);
 
     /**
      * Report a decision not to process a request

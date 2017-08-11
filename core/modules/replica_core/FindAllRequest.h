@@ -36,6 +36,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/Request.h"
 
 // This header declarations
@@ -71,6 +72,15 @@ public:
     // Trivial acccessors
  
     const std::string& database () const { return _database; }
+
+   /**
+     * Return a refernce to a result of the completed request.
+     *
+     * Note that this operation is only allowed when the request completed
+     * with status STATUS_SUCCEEDED. Otherwise the std::logic_error exception
+     * will be thrown.
+     */
+    const ReplicaInfoCollection& replicaInfoCollection () const;
 
     /**
      * Create a new request with specified parameters.
@@ -149,7 +159,7 @@ private:
                          size_t                           bytes_transferred);
 
     /// Process the completion of the requested operation
-    void analyze (lsst::qserv::proto::ReplicationStatus status);
+    void analyze (const lsst::qserv::proto::ReplicationResponseFindAll &message);
 
     /**
      * Notifying a party which initiated the request.
@@ -168,6 +178,9 @@ private:
     // Registered callback to be called when the operation finishes
 
     callback_type _onFinish;
+
+    /// Result of the operation
+    ReplicaInfoCollection _replicaInfoCollection;
 };
 
 }}} // namespace lsst::qserv::replica_core
