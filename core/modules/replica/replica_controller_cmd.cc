@@ -1,9 +1,13 @@
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <vector>
+#include <stdexcept>
 #include <string>
 
 #include "lsst/log/Log.h"
+#include "proto/replication.pb.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/DeleteRequest.h"
@@ -26,45 +30,57 @@ const char* usage =
     "  <config> <operation> [<parameters>]\n"
     "\n"
     "Supported operations:\n"
-    "  REPLICATE            <db> <chunk>\n"
-    "  REPLICATE_AND_CANCEL <db> <chunk>\n"
-    "  DELETE_REPLICA       <db> <chunk>\n"
-    "  FIND_REPLICA         <db> <chunk>\n"
-    "  FIND_ALL_REPLICAS    <db>\n"
-    "  REPLICATION_STATUS   <id>\n"
-    "  STOP_REPLICATION     <id>";
+    "  REPLICA_CREATE        <worker> <source_worker> <db> <chunk>\n"
+    "  REPLICA_CREATE,CANCEL <worker> <source_worker> <db> <chunk>\n"
+    "  REPLICA_DELETE        <worker> <db> <chunk>\n"
+    "  REPLICA_FIND          <worker> <db> <chunk>\n"
+    "  REPLICA_FIND_ALL      <worker> <db>\n"
+    "\n"
+    "  REQUEST_STATUS:REPLICA_CREATE   <worker> <id>\n"
+    "  REQUEST_STATUS:REPLICA_DELETE   <worker> <id>\n"
+    "  REQUEST_STATUS:REPLICA_FIND     <worker> <id>\n"
+    "  REQUEST_STATUS:REPLICA_FIND_ALL <worker> <id>\n"
+    "\n"
+    "  REQUEST_STOP:REPLICA_CREATE   <worker> <id>\n"
+    "  REQUEST_STOP:REPLICA_DELETE   <worker> <id>\n"
+    "  REQUEST_STOP:REPLICA_FIND     <worker> <id>\n"
+    "  REQUEST_STOP:REPLICA_FIND_ALL <worker> <id>";
 
-bool assertArguments (int argc, int minArgc) {
+
+/// (Run-time) assert for the minimum number of arguments
+void assertArguments (int argc, int minArgc) {
     if (argc < minArgc) {
         std::cerr << usage << std::endl;
         std::exit(1);
     }
-    return true;
 }
 
-/**
- * Return the name of any known worker from the controller configuration.
- * Throw std::runtime_error if no worker found.
- */
-std::string getAnyWorker (rc::ServiceProvider &provider) {
-    for (const std::string &workerName : provider.workers()) {
-        return workerName;
-    }
-    throw std::runtime_error ("getAnyWorker: no single worker found in the configuration");
+/// Return 'true' if the specified value is found in the collection
+bool found_in (const std::string &val,
+               const std::vector<std::string> &col) {
+    return col.end() != std::find(col.begin(), col.end(), val);
 }
 
+// Command line parameters
+
+std::string configFileName;
+std::string operation;
+std::string worker;
+std::string sourceWorker;
+std::string db;
+std::string id;
+uint32_t chunk;
+
+
+/// Report result of the operation
 template <class T>
 void printRequest (typename T::pointer &request) {
-    LOGS(_log, LOG_LVL_INFO, request->id() << "  DONE");
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  " << request->responseData());
 }
 
-/**
- * Run the test
- */
-bool test (const std::string &configFileName,
-           const std::string &operation,
-           const std::string &id_or_db,
-           uint32_t           chunk = 0) {
+
+/// Run the test
+bool test () {
 
     try {
 
@@ -73,26 +89,22 @@ bool test (const std::string &configFileName,
 
         rc::Controller::pointer controller = rc::Controller::create(provider);
 
-        // Configure the generator of requests 
-
-        const std::string worker = getAnyWorker(provider);
-
         // Start the controller in its own thread before injecting any requests
 
         controller->run();
 
         rc::Request::pointer request;
 
-        if ("REPLICATE" == operation) {
+        if ("REPLICA_CREATE" == operation) {
             request = controller->replicate (
-                id_or_db, chunk, worker, worker,
+                worker, sourceWorker, db, chunk,
                 [] (rc::ReplicationRequest::pointer request) {
                     printRequest<rc::ReplicationRequest>(request);
                 });
 
-        } else if ("REPLICATE_AND_CANCEL" == operation) {
+        } else if ("REPLICA_CREATE,CANCEL" == operation) {
             request = controller->replicate (
-                id_or_db, chunk, worker, worker,
+                worker, sourceWorker, db, chunk,
                 [] (rc::ReplicationRequest::pointer request) {
                     printRequest<rc::ReplicationRequest>(request);
                 });
@@ -102,45 +114,86 @@ bool test (const std::string &configFileName,
 
             request->cancel();
 
-        } else if ("DELETE_REPLICA" == operation) {
+        } else if ("REPLICA_DELETE" == operation) {
             request = controller->deleteReplica (
-                id_or_db, chunk, worker,
+                worker, db, chunk,
                 [] (rc::DeleteRequest::pointer request) {
                     printRequest<rc::DeleteRequest>(request);
                 });
 
-        } else if ("FIND_REPLICA" == operation) {
+        } else if ("REPLICA_FIND" == operation) {
             request = controller->findReplica (
-                id_or_db, chunk, worker,
+                worker, db, chunk,
                 [] (rc::FindRequest::pointer request) {
                     printRequest<rc::FindRequest>(request);
                 });
 
-        } else if ("FIND_ALL_REPLICAS" == operation) {
+        } else if ("REPLICA_FIND_ALL" == operation) {
             request = controller->findAllReplicas (
-                id_or_db, worker,
+                worker, db,
                 [] (rc::FindAllRequest::pointer request) {
                     printRequest<rc::FindAllRequest>(request);
                 });
 
-        } else if ("REPLICATION_STATUS"  == operation) {
+        } else if ("REQUEST_STATUS:REPLICA_CREATE"  == operation) {
             request = controller->statusOfReplication (
-                worker, id_or_db,
+                worker, id,
                 [] (rc::StatusReplicationRequest::pointer request) {
                     printRequest<rc::StatusReplicationRequest>(request);
                 });
 
-        } else if ("STOP_REPLICATION"  == operation) {
+        } else if ("REQUEST_STATUS:REPLICA_DELETE"  == operation) {
+            request = controller->statusOfDelete (
+                worker, id,
+                [] (rc::StatusDeleteRequest::pointer request) {
+                    printRequest<rc::StatusDeleteRequest>(request);
+                });
+
+        } else if ("REQUEST_STATUS:REPLICA_FIND"  == operation) {
+            request = controller->statusOfFind (
+                worker, id,
+                [] (rc::StatusFindRequest::pointer request) {
+                    printRequest<rc::StatusFindRequest>(request);
+                });
+
+        } else if ("REQUEST_STATUS:REPLICA_FIND_ALL"  == operation) {
+            request = controller->statusOfFindAll (
+                worker, id,
+                [] (rc::StatusFindAllRequest::pointer request) {
+                    printRequest<rc::StatusFindAllRequest>(request);
+                });
+
+        } else if ("REQUEST_STOP:REPLICA_CREATE"  == operation) {
             request = controller->stopReplication (
-                worker, id_or_db,
+                worker, id,
                 [] (rc::StopReplicationRequest::pointer request) {
                     printRequest<rc::StopReplicationRequest>(request);
+                });
+
+        } else if ("REQUEST_STOP:REPLICA_DELETE"  == operation) {
+            request = controller->stopReplicaDelete (
+                worker, id,
+                [] (rc::StopDeleteRequest::pointer request) {
+                    printRequest<rc::StopDeleteRequest>(request);
+                });
+
+        } else if ("REQUEST_STOP:REPLICA_FIND"  == operation) {
+            request = controller->stopReplicaFind (
+                worker, id,
+                [] (rc::StopFindRequest::pointer request) {
+                    printRequest<rc::StopFindRequest>(request);
+                });
+
+        } else if ("REQUEST_STOP:REPLICA_FIND_ALL"  == operation) {
+            request = controller->stopReplicaFindAll (
+                worker, id,
+                [] (rc::StopFindAllRequest::pointer request) {
+                    printRequest<rc::StopFindAllRequest>(request);
                 });
 
         } else {
             return false;
         }
-
 
         // Wait before the request is finished. Then stop the master controller
 
@@ -165,41 +218,51 @@ bool test (const std::string &configFileName,
 
 int main (int argc, const char* const argv[]) {
 
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
     ::assertArguments (argc, 4);
 
-    const std::string configFileName (argv[1]);
-    const std::string operation      (argv[2]);
-    const std::string id_or_db       (argv[3]);
+    configFileName = argv[1];
+    operation      = argv[2];
+    worker         = argv[3];
     
-    if      ("REPLICATE" == operation)
-        ::assertArguments (argc, 5) &&
-        ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
+    if (found_in(operation, {"REPLICA_CREATE",
+                             "REPLICA_CREATE,CANCEL"})) {
+        ::assertArguments (argc, 7);
+        sourceWorker =            argv[4];
+        db           =            argv[5];
+        chunk        = std::stoul(argv[6]);
 
-    else if ("REPLICATE_AND_CANCEL" == operation)
-        ::assertArguments (argc, 5) &&
-        ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
+    } else if (found_in(operation, {"REPLICA_DELETE",
+                                    "REPLICA_FIND"})) {
+        ::assertArguments (argc, 6);
+        db    =            argv[4];
+        chunk = std::stoul(argv[5]);
 
-    else if ("DELETE_REPLICA" == operation)
-        ::assertArguments (argc, 5) &&
-        ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
+    } else if (found_in(operation, {"REPLICA_FIND_ALL"})) {
 
-    else if ("FIND_REPLICA" == operation)
-        ::assertArguments (argc, 5) &&
-        ::test (configFileName, operation, id_or_db, std::stoul(argv[4]));
+        ::assertArguments (argc, 5);
+        db = argv[4];
 
-    else if ("FIND_ALL_REPLICAS" == operation)
-        ::assertArguments (argc, 4) &&
-        ::test (configFileName, operation, id_or_db);
+    } else if (found_in(operation, {"REPLICA_FIND_ALL",
+                                    "REQUEST_STATUS:REPLICA_CREATE",
+                                    "REQUEST_STATUS:REPLICA_DELETE",
+                                    "REQUEST_STATUS:REPLICA_FIND",
+                                    "REQUEST_STATUS:REPLICA_FIND_ALL",
+                                    "REQUEST_STOP:REPLICA_CREATE",
+                                    "REQUEST_STOP:REPLICA_DELETE",
+                                    "REQUEST_STOP:REPLICA_FIND",
+                                    "REQUEST_STOP:REPLICA_FIND_ALL"})) {
+        ::assertArguments (argc, 5);
+        id = argv[4];
 
-    else if ("REPLICATION_STATUS" == operation)
-        ::test (configFileName, operation, id_or_db);
-
-    else if ("STOP_REPLICATION" == operation)
-        ::test (configFileName, operation, id_or_db);
-
-    else {
+    } else {
         std::cerr << ::usage << std::endl;
         return 1;
     }
+    ::test();
     return 0;
 }

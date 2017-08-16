@@ -87,9 +87,9 @@ Request::generateId () {
 }
 
 Request::Request (ServiceProvider         &serviceProvider,
+                  boost::asio::io_service &io_service,
                   const std::string       &type,
                   const std::string       &worker,
-                  boost::asio::io_service &io_service,
                   int                      priority)
 
     :   _serviceProvider (serviceProvider),
@@ -112,8 +112,10 @@ Request::Request (ServiceProvider         &serviceProvider,
         _timer    (io_service),
 
         _requestExpirationIvalSec (serviceProvider.config().controllerRequestTimeoutSec()),
-        _requestExpirationTimer   (io_service)
-{}
+        _requestExpirationTimer   (io_service) {
+
+        _serviceProvider.assertWorkerIsValid(worker);
+}
 
 Request::~Request () { 
 }

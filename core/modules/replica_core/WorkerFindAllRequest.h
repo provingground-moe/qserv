@@ -87,9 +87,8 @@ public:
    /**
      * Return a refernce to a result of the completed request.
      *
-     * Note that this operation is only allowed when the request completed
-     * with status STATUS_SUCCEEDED. Otherwise the std::logic_error exception
-     * will be thrown.
+     * Note that this operation returns a meanigful result only when a request
+     * is completed with status STATUS_SUCCEEDED.
      */
     const ReplicaInfoCollection& replicaInfoCollection () const;
 

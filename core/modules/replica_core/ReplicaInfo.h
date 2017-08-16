@@ -68,7 +68,6 @@ public:
 
     /// Possible statuses of a replica
     enum Status {
-        NOT_INITIALIZED_DO_NOT_USE,
         NOT_FOUND,
         CORRUPT,
         INCOMPLETE,
@@ -77,32 +76,19 @@ public:
     
     /// Return the string representation of the status
     static std::string status2string (Status status);
- 
-     /**
-      * Default constructor
-      *
-      * The object will be constructed in a special state NOT_INITIALIZED_DO_NOT_USE. Any attempts
-      * to use the object in this state will result in throwing the std::logical_error
-      * exception.
-      */
-    ReplicaInfo ();
 
     /**
-     * Construct with the specified state
-     *
-     * DO NOT: use a special state NOT_INITIALIZED_DO_NOT_USE which is reserved for default
-     * construction only. Any attempt to do so will result in throwing
-     * exception std::invalid_argument
+     * Construct with the specified state. This is also the default constructor.
      *
      * @param status   - object status (see notes above)
      * @param worker   - the name of the worker wre the replica is located
      * @param database - the name of the database
      * @param chunk    - the chunk number
      */
-    ReplicaInfo (Status             status,
-                 const std::string &worker,
-                 const std::string &database,
-                 unsigned int       chunk);
+    explicit ReplicaInfo (Status             status   = NOT_FOUND,
+                          const std::string &worker   = "",
+                          const std::string &database = "",
+                          unsigned int       chunk    = 0);
 
     /// Construct from a protobuf object
     explicit ReplicaInfo (const lsst::qserv::proto::ReplicationReplicaInfo *info);

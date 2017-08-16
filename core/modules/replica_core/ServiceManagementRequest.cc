@@ -70,18 +70,15 @@ ServiceManagementRequestBase::getServiceState () const {
 
     
 ServiceManagementRequestBase::ServiceManagementRequestBase (
-
         ServiceProvider                      &serviceProvider,
+        boost::asio::io_service              &io_service,
         const char                           *requestTypeName,
         const std::string                    &worker,
-        boost::asio::io_service              &io_service,
         proto::ReplicationServiceRequestType  requestType)
-
     :   Request (serviceProvider,
+                 io_service,
                  requestTypeName,
-                 worker,
-                 io_service),
-
+                 worker),
         _requestType (requestType) {
 }
 

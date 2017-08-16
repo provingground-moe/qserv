@@ -63,10 +63,15 @@ class RequestWrapper;
   * allowed per a thread.
   *
   * NOTES:
+  *
   * - all methods launching, stopping or checking status of requests
   *   require that the server was runinng. Otherwise it will throw
   *   std::runtime_error. The current implementation of the server
   *   doesn't support (yet?) amn operation queuing mechanism.
+  *
+  * - methods which take worker names as parameters will throw exception
+  *   std::invalid_argument if the specified worker names were not found
+  *   in the configuration.
   */
 class Controller
     :   public std::enable_shared_from_this<Controller>  {
@@ -137,65 +142,68 @@ public:
     /**
      * Initiate a new replication request.
      *
+     * The method will throw exception std::invalid_argument if the worker
+     * names are equal.
+     *
+     * @param workerName            - the name of a worker node from which to copy the chunk
+     * @param sourceWorkerName      - the name of a worker node where the replica will be created
      * @param database              - database name
      * @param chunk                 - the chunk number
-     * @param sourceWorkerName      - the name of a worker node from which to copy the chunk
-     * @param destinationWorkerName - the name of a worker node where the replica will be created
      * @param onFinish              - an optional callback function to be called upon
      *                                the completion of the request
      *
      * @return a pointer to the replication request
      */
-    ReplicationRequest_pointer replicate (const std::string                &database,
-                                          unsigned int                      chunk,
+    ReplicationRequest_pointer replicate (const std::string                &workerName,
                                           const std::string                &sourceWorkerName,
-                                          const std::string                &destinationWorkerName,
+                                          const std::string                &database,
+                                          unsigned int                      chunk,
                                           ReplicationRequest_callback_type  onFinish=nullptr);
 
     /**
      * Initiate a new replica deletion request.
      *
+     * @param workerName - the name of a worker node where the replica will be deleted
      * @param database   - database name
      * @param chunk      - the chunk number
-     * @param workerName - the name of a worker node where the replica will be deleted
      * @param onFinish   - an optional callback function to be called upon
      *                     the completion of the request
      *
      * @return a pointer to the replication request
      */
-    DeleteRequest_pointer deleteReplica (const std::string           &database,
+    DeleteRequest_pointer deleteReplica (const std::string           &workerName,
+                                         const std::string           &database,
                                          unsigned int                 chunk,
-                                         const std::string           &workerName,
                                          DeleteRequest_callback_type  onFinish=nullptr);
 
     /**
      * Initiate a new replica lookup request.
      *
+     * @param workerName - the name of a worker node where the replica is located
      * @param database   - database name
      * @param chunk      - the chunk number
-     * @param workerName - the name of a worker node where the replica is located
      * @param onFinish   - an optional callback function to be called upon
      *                     the completion of the request
      *
      * @return a pointer to the replication request
      */
-    FindRequest_pointer findReplica (const std::string         &database,
+    FindRequest_pointer findReplica (const std::string         &workerName,
+                                     const std::string         &database,
                                      unsigned int               chunk,
-                                     const std::string         &workerName,
                                      FindRequest_callback_type  onFinish=nullptr);
 
     /**
      * Initiate a new replicas lookup request.
      *
-     * @param database   - database name
      * @param workerName - the name of a worker node where the replicas are located
+     * @param database   - database name
      * @param onFinish   - an optional callback function to be called upon
      *                     the completion of the request
      *
      * @return a pointer to the replication request
      */
-    FindAllRequest_pointer findAllReplicas (const std::string            &database,
-                                            const std::string            &workerName,
+    FindAllRequest_pointer findAllReplicas (const std::string            &workerName,
+                                            const std::string            &database,
                                             FindAllRequest_callback_type  onFinish=nullptr);
 
     /**

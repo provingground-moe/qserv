@@ -70,13 +70,29 @@ WorkerDeleteRequest::WorkerDeleteRequest (ServiceProvider   &serviceProvider,
                        id,
                        priority),
 
-        _database (database),
-        _chunk    (chunk) {
+        _database   (database),
+        _chunk      (chunk),
+        _deleteInfo () {
 }
 
 WorkerDeleteRequest::~WorkerDeleteRequest () {
 }
 
+bool
+WorkerDeleteRequest::execute (bool incremental) {
+
+   LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+         << "  db: "     << database()
+         << "  chunk: "  << chunk());
+
+    // TODO: provide the actual implementation instead of the dummy one.
+
+    const bool complete = WorkerRequest::execute(incremental);
+    if (complete) {
+        _deleteInfo = ReplicaDeleteInfo(100.0);     // simulate 100% completed
+    }
+    return complete;
+}
 
 ///////////////////////////////////////////////////////////////
 ///////////////////// WorkerDeleteRequestX ////////////////////
@@ -115,13 +131,9 @@ WorkerDeleteRequestX::~WorkerDeleteRequestX () {
 bool
 WorkerDeleteRequestX::execute (bool incremental) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  db: "    << database()
-         << "  chunk: " << chunk());
-
     // TODO: provide the actual implementation instead of the dummy one.
 
-    return WorkerRequest::execute(incremental);
+    return WorkerDeleteRequest::execute(incremental);
 }
 
 

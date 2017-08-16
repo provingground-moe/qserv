@@ -50,16 +50,15 @@ namespace replica_core {
 
 
 StatusRequestBase::StatusRequestBase (ServiceProvider                                   &serviceProvider,
+                                      boost::asio::io_service                           &io_service,
                                       const char                                        *requestTypeName,
                                       const std::string                                 &worker,
-                                      boost::asio::io_service                           &io_service,
                                       const std::string                                 &targetRequestId,
                                       lsst::qserv::proto::ReplicationReplicaRequestType  requestType)
     :   Request(serviceProvider,
+                io_service,
                 requestTypeName,
-                worker,
-                io_service),
-
+                worker),
         _targetRequestId (targetRequestId),
         _requestType     (requestType) {
 }

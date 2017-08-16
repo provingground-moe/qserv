@@ -80,7 +80,7 @@ public:
      * Note that this operation is only allowed when the request completed
      * with status SUCCESS. Otherwise the std::logic_error exception will be thrown.
      */
-    const ReplicaInfo& replicaInfo () const;
+    const ReplicaInfo& responseData () const;
 
     /**
      * Create a new request with specified parameters.
@@ -90,20 +90,19 @@ public:
      * low-level pointers).
      *
      * @param serviceProvider  - a host of services for various communications
+     * @param worker           - the identifier of a worker node (the one where the chunk is
+     *                           expected to be located) at a destination of the chunk
      * @param database         - the name of a database
      * @param chunk            - the number of a chunk to find (implies all relevant tables)
-     * @param worker           - the identifier of a worker node (the one where the chunk is
-     *                           expected to be located)
-     *                           at a destination of the chunk
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      * @param priority         - a priority level of the request
      */
     static pointer create (ServiceProvider         &serviceProvider,
+                           boost::asio::io_service &io_service,
+                           const std::string       &worker,
                            const std::string       &database,
                            unsigned int             chunk,
-                           const std::string       &worker,
-                           boost::asio::io_service &io_service,
                            callback_type            onFinish,
                            int                      priority=0);
 
@@ -113,10 +112,10 @@ private:
      * Construct the request with the pointer to the services provider.
      */
     FindRequest (ServiceProvider         &serviceProvider,
+                 boost::asio::io_service &io_service,
+                 const std::string       &worker,
                  const std::string       &database,
                  unsigned int             chunk,
-                 const std::string       &worker,
-                 boost::asio::io_service &io_service,
                  callback_type            onFinish,
                  int                      priority=0);
 

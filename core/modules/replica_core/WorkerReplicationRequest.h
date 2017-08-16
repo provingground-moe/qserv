@@ -35,6 +35,7 @@
 
 // Qserv headers
 
+#include "replica_core/ReplicaCreateInfo.h"
 #include "replica_core/WorkerRequest.h"
 
 // Forward declarations
@@ -88,6 +89,16 @@ public:
     unsigned int       chunk    () const { return _chunk; }
     const std::string& worker   () const { return _worker; }
 
+    /// Return extended status of the request
+    const ReplicaCreateInfo& replicationInfo () const { return _replicationInfo; }
+
+    /**
+     * This method implements the virtual method of the base class
+     *
+     * @see WorkerRequest::execute
+     */
+    bool execute (bool incremental=true) override;
+
 protected:
 
     /**
@@ -99,11 +110,16 @@ protected:
                               const std::string &database,
                               unsigned int       chunk,
                               const std::string &worker);
-private:
+protected:
+
+    // Parameters of the object
 
     std::string  _database;
     unsigned int _chunk;
     std::string  _worker;
+
+    /// Extended status of the replication request
+    ReplicaCreateInfo _replicationInfo;
 };
 
 
@@ -143,7 +159,7 @@ public:
     /**
      * This method implements the virtual method of the base class
      *
-     * @see WorkerRequest::execute
+     * @see WorkerReplicationRequest::execute
      */
     bool execute (bool incremental=true) override;
 

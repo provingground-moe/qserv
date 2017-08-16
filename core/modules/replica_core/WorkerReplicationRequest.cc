@@ -73,15 +73,35 @@ WorkerReplicationRequest::WorkerReplicationRequest (ServiceProvider   &servicePr
                        id,
                        priority),
 
-        _database (database),
-        _chunk    (chunk),
-        _worker   (worker) {
+        _database        (database),
+        _chunk           (chunk),
+        _worker          (worker),
+        _replicationInfo () {
+
+    _serviceProvider.assertWorkerIsValid       (worker);
+    _serviceProvider.assertWorkersAreDifferent (_serviceProvider.config().workerName(), worker);
 }
 
 
 WorkerReplicationRequest::~WorkerReplicationRequest () {
 }
 
+bool
+WorkerReplicationRequest::execute (bool incremental) {
+
+   LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+         << "  db: "     << database()
+         << "  chunk: "  << chunk()
+         << "  worker: " << worker());
+
+    // TODO: provide the actual implementation instead of the dummy one.
+
+    const bool complete = WorkerRequest::execute(incremental);
+    if (complete) {
+        _replicationInfo = ReplicaCreateInfo(100.);     // simulate 100% completed
+    }
+    return complete;
+}
 
 ////////////////////////////////////////////////////////////////////
 ///////////////////// WorkerReplicationRequestX ////////////////////
@@ -124,14 +144,9 @@ WorkerReplicationRequestX::~WorkerReplicationRequestX () {
 bool
 WorkerReplicationRequestX::execute (bool incremental) {
 
-   LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  db: "     << database()
-         << "  chunk: "  << chunk()
-         << "  worker: " << worker());
-
     // TODO: provide the actual implementation instead of the dummy one.
 
-    return WorkerRequest::execute(incremental);
+    return WorkerReplicationRequest::execute(incremental);
 }
 
 }}} // namespace lsst::qserv::replica_core

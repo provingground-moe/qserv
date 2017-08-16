@@ -50,37 +50,35 @@ namespace replica_core {
 
 FindAllRequest::pointer
 FindAllRequest::create (ServiceProvider         &serviceProvider,
-                        const std::string       &database,
-                        const std::string       &worker,
                         boost::asio::io_service &io_service,
+                        const std::string       &worker,
+                        const std::string       &database,
                         callback_type            onFinish,
                         int                      priority) {
 
     return FindAllRequest::pointer (
         new FindAllRequest (
             serviceProvider,
-            database,
-            worker,
             io_service,
+            worker,
+            database,
             onFinish,
             priority));
 }
 
 FindAllRequest::FindAllRequest (ServiceProvider         &serviceProvider,
-                                const std::string       &database,
-                                const std::string       &worker,
                                 boost::asio::io_service &io_service,
+                                const std::string       &worker,
+                                const std::string       &database,
                                 callback_type            onFinish,
                                 int                      priority)
     :   Request(serviceProvider,
+                io_service,
                 "REPLICA_FIND_ALL",
                 worker,
-                io_service,
                 priority),
- 
         _database (database),
         _onFinish (onFinish),
-
         _replicaInfoCollection () {
 }
 
@@ -88,7 +86,7 @@ FindAllRequest::~FindAllRequest () {
 }
 
 const ReplicaInfoCollection&
-FindAllRequest::replicaInfoCollection () const {
+FindAllRequest::responseData () const {
     if ((state() == FINISHED) && (extendedState() == SUCCESS)) return _replicaInfoCollection;
     throw std::logic_error("operation is only allowed in state " + state2string(FINISHED, SUCCESS)  +
                            " in FindAllRequest::replicaInfoCollection()");
@@ -385,14 +383,15 @@ FindAllRequest::analyze (const proto::ReplicationResponseFindAll &message) {
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: "
          << proto::ReplicationStatus_Name(message.status()));
 
+    // Always extract extended data regardless of the completion status
+    // reported by the worker service.
+
+    for (int num = message.replica_info_many_size(), idx = 0; idx < num; ++idx)
+        _replicaInfoCollection.emplace_back(&(message.replica_info_many(idx)));
+
     switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
-
-            // Transfer result before finishing the operation
-            for (int num = message.replica_info_many_size(), idx = 0; idx < num; ++idx)
-                _replicaInfoCollection.emplace_back(&(message.replica_info_many(idx)));
-
             finish (SUCCESS);
             break;
 

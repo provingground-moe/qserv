@@ -163,17 +163,24 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
     // TODO: run the sanity check to ensure no such request is found in any
     //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-    WorkerRequest::pointer workerRequest =
-        _requestFactory.createReplicationRequest (
+    WorkerRequest::pointer ptr;
+    try {
+        ptr = _requestFactory.createReplicationRequest (
             request.id(),
             request.priority(),
             request.database(),
             request.chunk(),
             request.worker());
-
-    _newRequests.push(workerRequest);
     
-    response.set_status (proto::ReplicationStatus::QUEUED);
+        _newRequests.push(ptr);
+        
+        response.set_status (proto::ReplicationStatus::QUEUED);
+
+    } catch (const std::invalid_argument &ec) {
+        LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForReplication  " << ec.what());
+        response.set_status (proto::ReplicationStatus::BAD);
+    }
+    setInfo(ptr, response);
 }
 
 void
@@ -189,16 +196,17 @@ WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &requ
     // TODO: run the sanity check to ensure no such request is found in any
     //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-    WorkerRequest::pointer workerRequest =
+    WorkerRequest::pointer ptr =
         _requestFactory.createDeleteRequest (
             request.id(),
             request.priority(),
             request.database(),
             request.chunk());
 
-    _newRequests.push(workerRequest);
+    _newRequests.push(ptr);
 
     response.set_status (proto::ReplicationStatus::QUEUED);
+    setInfo(ptr, response);
 }
 
 void
@@ -214,16 +222,17 @@ WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
     // TODO: run the sanity check to ensure no such request is found in any
     //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-    WorkerRequest::pointer workerRequest =
+    WorkerFindRequest::pointer ptr =
         _requestFactory.createFindRequest (
             request.id(),
             request.priority(),
             request.database(),
             request.chunk());
 
-    _newRequests.push(workerRequest);
+    _newRequests.push(ptr);
 
     response.set_status (proto::ReplicationStatus::QUEUED);
+    setInfo(ptr, response);
 }
 
 
@@ -239,15 +248,16 @@ WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &requ
     // TODO: run the sanity check to ensure no such request is found in any
     //       of the queue. Return 'DUPLICATE' error status if teh one is found.
 
-    WorkerRequest::pointer workerRequest =
+    WorkerFindAllRequest::pointer ptr =
         _requestFactory.createFindAllRequest (
             request.id(),
             request.priority(),
             request.database());
 
-    _newRequests.push(workerRequest);
+    _newRequests.push(ptr);
 
     response.set_status (proto::ReplicationStatus::QUEUED);
+    setInfo(ptr, response);
 }
 
 
@@ -498,53 +508,87 @@ WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &p
 
 
 void
-WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer        &request,
-                                 proto::ReplicationResponseReplicate &response) {
-    throw std::logic_error("calling a dummy method WorkerProcessor::setReplicaInfo(WorkerReplicationRequest)");
+WorkerProcessor::setInfo (const WorkerRequest::pointer        &request,
+                          proto::ReplicationResponseReplicate &response) {
+
+    if (request) {
+
+        WorkerReplicationRequest::pointer ptr =
+            std::dynamic_pointer_cast<WorkerReplicationRequest>(request);
+    
+        if (!ptr)
+            throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
+                                   " in WorkerProcessor::setInfo(WorkerReplicationRequest)");
+    
+        // Note the ownership transfer of an intermediate protobuf object obtained
+        // from ReplicaCreateInfo object in the call below. The protobuf runtime will take
+        // care of deleting the intermediate object.
+    
+        response.set_allocated_replication_info(ptr->replicationInfo().info());
+        
+    } else {
+
+        // Set the dummy info iv no pointer is passed into the method
+        
+        ReplicaCreateInfo dummyInfo;
+        response.set_allocated_replication_info(dummyInfo.info());
+    }
 }
 
 
 void
-WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer     &request,
-                                 proto::ReplicationResponseDelete &response) {
-    throw std::logic_error("calling a dummy method WorkerProcessor::setReplicaInfo(WorkerDeleteRequest)");
+WorkerProcessor::setInfo (const WorkerRequest::pointer     &request,
+                          proto::ReplicationResponseDelete &response) {
+
+    WorkerDeleteRequest::pointer ptr =
+        std::dynamic_pointer_cast<WorkerDeleteRequest>(request);
+
+    if (!ptr)
+        throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
+                               " in WorkerProcessor::setInfo(WorkerDeleteRequest)");
+
+    // Note the ownership transfer of an intermediate protobuf object obtained
+    // from ReplicaDeleteInfo object in the call below. The protobuf runtime will take
+    // care of deleting the intermediate object.
+
+    response.set_allocated_delete_info(ptr->deleteInfo().info());
 }
 
 
 void
-WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer   &request,
-                                 proto::ReplicationResponseFind &response){
+WorkerProcessor::setInfo (const WorkerRequest::pointer   &request,
+                          proto::ReplicationResponseFind &response){
 
-    WorkerFindRequest::pointer findRequest =
+    WorkerFindRequest::pointer ptr =
         std::dynamic_pointer_cast<WorkerFindRequest>(request);
 
-    if (!findRequest)
+    if (!ptr)
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
-                               " in WorkerProcessor::setReplicaInfo(WorkerFindRequest)");
+                               " in WorkerProcessor::setInfo(WorkerFindRequest)");
 
     // Note the ownership transfer of an intermediate protobuf object obtained
     // from ReplicaInfo object in the call below. The protobuf runtime will take
     // care of deleting the intermediate object.
 
-    response.set_allocated_replica_info(findRequest->replicaInfo().info());
+    response.set_allocated_replica_info(ptr->replicaInfo().info());
 }
 
 void
-WorkerProcessor::setReplicaInfo (const WorkerRequest::pointer      &request,
-                                 proto::ReplicationResponseFindAll &response) {
+WorkerProcessor::setInfo (const WorkerRequest::pointer      &request,
+                          proto::ReplicationResponseFindAll &response) {
 
-    WorkerFindAllRequest::pointer findRequest =
+    WorkerFindAllRequest::pointer ptr =
         std::dynamic_pointer_cast<WorkerFindAllRequest>(request);
 
-    if (!findRequest)
+    if (!ptr)
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
-                               " in WorkerProcessor::setReplicaInfo(WorkerFindAllRequest)");
+                               " in WorkerProcessor::setInfo(WorkerFindAllRequest)");
 
     // Note that a new Info object is allocated and appended to
     // the 'replica_info_many' series at each step of the iteration below.
     // The protobuf runtime will take care of deleting those objects.
 
-    for (const auto &replicaInfo : findRequest->replicaInfoCollection()) {
+    for (const auto &replicaInfo : ptr->replicaInfoCollection()) {
         proto::ReplicationReplicaInfo *info = response.add_replica_info_many();
         replicaInfo.setInfo(info);
     }

@@ -80,7 +80,7 @@ public:
      * with status STATUS_SUCCEEDED. Otherwise the std::logic_error exception
      * will be thrown.
      */
-    const ReplicaInfoCollection& replicaInfoCollection () const;
+    const ReplicaInfoCollection& responseData () const;
 
     /**
      * Create a new request with specified parameters.
@@ -90,17 +90,17 @@ public:
      * low-level pointers).
      *
      * @param serviceProvider  - a host of services for various communications
-     * @param database         - the name of a database
      * @param worker           - the identifier of a worker node (the one where the chunks
      *                           expected to be located)
+     * @param database         - the name of a database
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      * @param priority         - a priority level of the request
      */
     static pointer create (ServiceProvider         &serviceProvider,
-                           const std::string       &database,
-                           const std::string       &worker,
                            boost::asio::io_service &io_service,
+                           const std::string       &worker,
+                           const std::string       &database,
                            callback_type            onFinish,
                            int                      priority=0);
 
@@ -110,9 +110,9 @@ private:
      * Construct the request with the pointer to the services provider.
      */
     FindAllRequest (ServiceProvider         &serviceProvider,
-                    const std::string       &database,
-                    const std::string       &worker,
                     boost::asio::io_service &io_service,
+                    const std::string       &worker,
+                    const std::string       &database,
                     callback_type            onFinish,
                     int                      priority=0);
 

@@ -65,7 +65,6 @@ namespace replica_core {
 std::string
 ReplicaInfo::status2string (Status status) {
     switch (status) {
-        case NOT_INITIALIZED_DO_NOT_USE: return "NOT_INITIALIZED_DO_NOT_USE";
         case NOT_FOUND:                  return "NOT_FOUND";
         case CORRUPT:                    return "CORRUPT";
         case INCOMPLETE:                 return "INCOMPLETE";
@@ -75,12 +74,6 @@ ReplicaInfo::status2string (Status status) {
                            " in ReplicaInfo::status2string()");
 }
 
-
-ReplicaInfo::ReplicaInfo ()
-    :   _status(NOT_INITIALIZED_DO_NOT_USE) {
-}
-
-
 ReplicaInfo::ReplicaInfo (Status             status,
                           const std::string &worker,
                           const std::string &database,
@@ -89,10 +82,6 @@ ReplicaInfo::ReplicaInfo (Status             status,
         _worker   (worker),
         _database (database),
         _chunk    (chunk) {
-
-    if (status == NOT_INITIALIZED_DO_NOT_USE)
-        throw std::invalid_argument("status " + std::to_string(status) +
-                                    " is not allowed in ReplicaInfo::ReplicaInfo()");
 }
 
 ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {

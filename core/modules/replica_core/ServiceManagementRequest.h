@@ -118,9 +118,9 @@ protected:
      * Construct the request with the pointer to the services provider.
      */
     ServiceManagementRequestBase (ServiceProvider                                   &serviceProvider,
+                                  boost::asio::io_service                           &io_service,
                                   const char                                        *requestTypeName,
                                   const std::string                                 &worker,
-                                  boost::asio::io_service                           &io_service,
                                   lsst::qserv::proto::ReplicationServiceRequestType  requestType);
 private:
 
@@ -198,16 +198,16 @@ public:
      *                           the request.
      */
     static pointer create (ServiceProvider                 &serviceProvider,
-                           const std::string               &worker,
                            boost::asio::io_service         &io_service,
+                           const std::string               &worker,
                            callback_type                    onFinish) {
 
         return ServiceManagementRequest<POLICY>::pointer (
             new ServiceManagementRequest<POLICY> (
                 serviceProvider,
+                io_service,
                 POLICY::requestTypeName(),
                 worker,
-                io_service,
                 POLICY::requestType(),
                 onFinish));
     }
@@ -218,16 +218,16 @@ private:
      * Construct the request
      */
     ServiceManagementRequest (ServiceProvider                                   &serviceProvider,
+                              boost::asio::io_service                           &io_service,
                               const char                                        *requestTypeName,
                               const std::string                                 &worker,
-                              boost::asio::io_service                           &io_service,
                               lsst::qserv::proto::ReplicationServiceRequestType  requestType,
                               callback_type                                      onFinish)
 
         :   ServiceManagementRequestBase (serviceProvider,
+                                          io_service,
                                           requestTypeName,
                                           worker,
-                                          io_service,
                                           requestType),
             _onFinish (onFinish)
     {}

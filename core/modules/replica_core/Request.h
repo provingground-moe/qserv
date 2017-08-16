@@ -209,9 +209,9 @@ protected:
      *                          priority.
      */
     Request (ServiceProvider         &serviceProvider,
+             boost::asio::io_service &io_service,
              const std::string       &type,
              const std::string       &worker,
-             boost::asio::io_service &io_service,
              int                      priority=0);
 
     /**
