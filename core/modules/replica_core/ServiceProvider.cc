@@ -26,10 +26,13 @@
 
 // System headers
 
-#include "replica_core/Configuration.h"
-#include "replica_core/WorkerInfo.h"
+#include <algorithm>
+#include <stdexcept>
 
 // Qserv headers
+
+#include "replica_core/Configuration.h"
+#include "replica_core/WorkerInfo.h"
 
 namespace lsst {
 namespace qserv {
@@ -50,14 +53,33 @@ ServiceProvider::workerInfo (const std::string& workerName) const {
 
     const std::string &workerHost = workerName;
 
-    std::shared_ptr<WorkerInfo> info(new WorkerInfo (
-        workerName,
-        workerHost,
-        std::to_string(_configuration.workerSvcPort()),
-        workerHost,
-        std::to_string(_configuration.workerSvcPort()))
-    );
-    return info;
+    auto workers = _configuration.workers();
+    return workers.end() == std::find(workers.begin(), workers.end(), workerName) ?
+        std::make_shared<WorkerInfo> (
+            workerName,
+            workerHost,
+            std::to_string(_configuration.workerSvcPort()),
+            workerHost,
+            std::to_string(_configuration.workerSvcPort())) :
+        nullptr;
 }
 
+void
+ServiceProvider::assertWorkerIsValid (const std::string &name) {
+    std::shared_ptr<WorkerInfo> ptr = workerInfo(name);
+    if (!ptr)
+        throw std::invalid_argument (
+            "Request::assertWorkerIsValid: worker name is not valid: " + name);
+}
+
+void
+ServiceProvider::assertWorkersAreDifferent (const std::string &firstName,
+                                            const std::string &secondName) {
+    assertWorkerIsValid(firstName);
+    assertWorkerIsValid(secondName);
+
+    if (firstName == secondName)
+        throw std::invalid_argument (
+            "Request::assertWorkersAreDifferent: worker names are the same: " + firstName);
+}
 }}} // namespace lsst::qserv::replica_core

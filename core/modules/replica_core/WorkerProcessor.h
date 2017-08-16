@@ -210,22 +210,13 @@ public:
         // Set the status field which is present in all response types
         response.set_status(translateReplicationStatus(ptr->status()));
 
-        // Set request-specific fields (if any)
-        
-        switch (request.type()) {
+        // Set request-specific fields. Note exception handling for scenarios
+        // when request identifiers won't match actual types of requests
 
-            case proto::ReplicationReplicaRequestType::REPLICA_CREATE:
-            case proto::ReplicationReplicaRequestType::REPLICA_DELETE:
-                break;
-
-            case proto::ReplicationReplicaRequestType::REPLICA_FIND: {
-                setReplicaInfo(ptr, response);
-                break;
-            }
-            case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL : {
-                setReplicaInfo(ptr, response);
-                break;
-            }
+        try {
+            setInfo(ptr, response);
+        } catch (const std::logic_error &ex) {
+            response.set_status(proto::ReplicationStatus::BAD);
         }
     }
 
@@ -249,25 +240,15 @@ public:
         // Set the status field which is present in all response types
         response.set_status(translateReplicationStatus(ptr->status()));
 
-        // Set request-specific fields (if any)
-        
-        switch (request.type()) {
+       // Set request-specific fields. Note exception handling for scenarios
+        // when request identifiers won't match actual types of requests
 
-            case proto::ReplicationReplicaRequestType::REPLICA_CREATE:
-            case proto::ReplicationReplicaRequestType::REPLICA_DELETE:
-                break;
-
-            case proto::ReplicationReplicaRequestType::REPLICA_FIND: {
-                setReplicaInfo(ptr, response);
-                break;
-            }
-            case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL : {
-                setReplicaInfo(ptr, response);
-                break;
-            }
+        try {
+            setInfo(ptr, response);
+        } catch (const std::logic_error &ex) {
+            response.set_status(proto::ReplicationStatus::BAD);
         }
     }
-
 
     /// Number of new unprocessed requests
     size_t numNewRequests () const { return _newRequests.size(); }
@@ -329,13 +310,25 @@ private:
      */
     WorkerRequest::pointer checkStatusImpl (const std::string &id);
 
-    /// Dummy method meant to silence the compiler
-    void setReplicaInfo (const WorkerRequest::pointer        &request,
-                         proto::ReplicationResponseReplicate &response);
+    /**
+     * Extract the extra data from the request and put
+     * it into the response object.
+     *
+     * NOTE: This method expects a correct dynamic type of the request
+     *       object. Otherwise it will throw the std::logic_error exception.
+     */
+    void setInfo (const WorkerRequest::pointer        &request,
+                  proto::ReplicationResponseReplicate &response);
 
-    /// Dummy method meant to silence the compiler
-    void setReplicaInfo (const WorkerRequest::pointer     &request,
-                         proto::ReplicationResponseDelete &response);
+    /**
+     * Extract the extra data from the request and put
+     * it into the response object.
+     *
+     * NOTE: This method expects a correct dynamic type of the request
+     *       object. Otherwise it will throw the std::logic_error exception.
+     */
+    void setInfo (const WorkerRequest::pointer     &request,
+                  proto::ReplicationResponseDelete &response);
 
     /**
      * Extract the replica info (for one chunk) from the request and put
@@ -344,8 +337,8 @@ private:
      * NOTE: This method expects a correct dynamic type of the request
      *       object. Otherwise it will throw the std::logic_error exception.
      */
-    void setReplicaInfo (const WorkerRequest::pointer   &request,
-                         proto::ReplicationResponseFind &response);
+    void setInfo (const WorkerRequest::pointer   &request,
+                  proto::ReplicationResponseFind &response);
  
     /**
      * Extract the replica info (for multiple chunks) from the request and put
@@ -354,8 +347,8 @@ private:
      * NOTE: This method expects a correct dynamic type of the request
      *       object. Otherwise it will throw the std::logic_error exception.
      */
-    void setReplicaInfo (const WorkerRequest::pointer      &request,
-                         proto::ReplicationResponseFindAll &response);
+    void setInfo (const WorkerRequest::pointer      &request,
+                  proto::ReplicationResponseFindAll &response);
 
     /**
      * Report a decision not to process a request

@@ -81,9 +81,7 @@ WorkerFindRequest::~WorkerFindRequest () {
 
 const ReplicaInfo&
 WorkerFindRequest::replicaInfo () const {
-    if (status() == STATUS_SUCCEEDED) return _replicaInfo;
-    throw std::logic_error("operation is only allowed in state " + status2string(STATUS_SUCCEEDED)  +
-                           " in WorkerFindRequest::replicaInfo()");
+    return _replicaInfo;
 }
 
 bool

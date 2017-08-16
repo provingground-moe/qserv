@@ -48,8 +48,8 @@ enum ReplicationReplicaRequestType {
 //
 enum ReplicationManagementRequestType {
 
-    REQUEST_STOP     = 0;    // stop a previously requested request
-    REQUEST_STATUS   = 1;    // check a status of a request
+    REQUEST_STATUS   = 0;    // check a status of a request
+    REQUEST_STOP     = 1;    // stop a previously requested request
 }
 
 // Request types affecting the overall state of the worker replication service
@@ -178,12 +178,20 @@ enum ReplicationStatus {
     CANCELLED     = 6;
 }
 
+message ReplicationReplicaCreateInfo {
+    required float progress = 1;
+}
 message ReplicationResponseReplicate {
     required ReplicationStatus status = 1;
+    optional ReplicationReplicaCreateInfo replication_info = 2;
 }
 
+message ReplicationReplicaDeleteInfo {
+    required float progress = 1;
+}
 message ReplicationResponseDelete {
     required ReplicationStatus status = 1;
+    optional ReplicationReplicaDeleteInfo delete_info = 2;
 }
 
 message ReplicationReplicaInfo {
@@ -201,7 +209,7 @@ message ReplicationReplicaInfo {
 
 message ReplicationResponseFind {
     required ReplicationStatus      status = 1;
-    required ReplicationReplicaInfo replica_info = 2;
+    optional ReplicationReplicaInfo replica_info = 2;
 }
 
 message ReplicationResponseFindAll {

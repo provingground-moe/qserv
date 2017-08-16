@@ -85,7 +85,7 @@ public:
     // ------------------------------------------------------------------------
 
     /// The names of known workers.
-    std::vector<std::string> workers () const { return _workers; }
+    const std::vector<std::string>& workers () const { return _workers; }
 
     /// The maximum size of the request buffers in bytes.
     size_t requestBufferSizeBytes () const { return _requestBufferSizeBytes; }

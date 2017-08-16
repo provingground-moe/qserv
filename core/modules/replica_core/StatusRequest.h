@@ -42,8 +42,11 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
-#include "replica_core/ProtocolBuffer.h"
+#include "replica_core/ReplicaCreateInfo.h"
+#include "replica_core/ReplicaDeleteInfo.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/Request.h"
+#include "replica_core/ProtocolBuffer.h"
 
 // This header declarations
 
@@ -81,9 +84,9 @@ protected:
      * Construct the request with the pointer to the services provider.
      */
     StatusRequestBase (ServiceProvider                                   &serviceProvider,
+                       boost::asio::io_service                           &io_service,
                        const char                                        *requestTypeName,
                        const std::string                                 &worker,
-                       boost::asio::io_service                           &io_service,
                        const std::string                                 &targetRequestId,
                        lsst::qserv::proto::ReplicationReplicaRequestType  requestType);
 
@@ -174,17 +177,17 @@ public:
      *                           the request.
      */
     static pointer create (ServiceProvider         &serviceProvider,
-                           const std::string       &worker,
                            boost::asio::io_service &io_service,
+                           const std::string       &worker,
                            const std::string       &targetRequestId,
                            callback_type            onFinish) {
 
         return StatusRequest<POLICY>::pointer (
             new StatusRequest<POLICY> (
                 serviceProvider,
+                io_service,
                 POLICY::requestTypeName(),
                 worker,
-                io_service,
                 targetRequestId,
                 POLICY::requestType(),
                 onFinish));
@@ -196,17 +199,17 @@ private:
      * Construct the request
      */
     StatusRequest (ServiceProvider                                   &serviceProvider,
+                   boost::asio::io_service                           &io_service,
                    const char                                        *requestTypeName,
                    const std::string                                 &worker,
-                   boost::asio::io_service                           &io_service,
                    const std::string                                 &targetRequestId,
                    lsst::qserv::proto::ReplicationReplicaRequestType  requestType,
                    callback_type                                      onFinish)
 
         :   StatusRequestBase (serviceProvider,
+                               io_service,
                                requestTypeName,
                                worker,
-                               io_service,
                                targetRequestId,
                                requestType),
             _onFinish (onFinish)
@@ -236,17 +239,13 @@ private:
         typename POLICY::responseMessageType message;
         _bufferPtr->parse(message, _bufferPtr->size());
 
-        // Extract request-specific data from the response even if they mame no
-        // sense before returning from thsi method
-        //
-        // TODO: consider optimizing this method to do teh parsing only
-        //       if the status is 'SUCCESS".
+        // Extract request-specific data from the response regardless of
+        // the completion status of the request.
 
-        POLICY::parseResponseMessage(message, _responseData);
+        POLICY::extractResponseData(message, _responseData);
         
-        // NOTE: field 'message' of a type returned by the current method
-        //       must always be defined in all types of request-specific
-        //       responses.
+        // Field 'status' of a type returned by the current method always
+        // be defined in all types of request-specific responses.
 
         return message.status();
     }
@@ -271,10 +270,11 @@ struct StatusReplicationRequestPolicy {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_CREATE; }
 
     using responseMessageType = lsst::qserv::proto::ReplicationResponseReplicate;
+    using responseDataType    = ReplicaCreateInfo;
 
-    struct responseDataType {};
-
-    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+    static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
+        data = responseDataType(&(msg.replication_info()));
+    }
 };
 typedef StatusRequest<StatusReplicationRequestPolicy> StatusReplicationRequest;
 
@@ -287,10 +287,11 @@ struct StatusDeleteRequestPolicy {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }
 
     using responseMessageType = lsst::qserv::proto::ReplicationResponseDelete;
+    using responseDataType    = ReplicaDeleteInfo;
 
-    struct responseDataType {};
-
-    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+    static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
+        data = responseDataType(&(msg.delete_info()));
+    }
 };
 typedef StatusRequest<StatusDeleteRequestPolicy> StatusDeleteRequest;
 
@@ -302,10 +303,11 @@ struct StatusFindRequestPolicy {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND; }
 
     using responseMessageType = lsst::qserv::proto::ReplicationResponseFind;
+    using responseDataType    = ReplicaInfo;
 
-    struct responseDataType {};
-
-    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+    static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
+        data = ReplicaInfo(&(msg.replica_info()));
+    }
 };
 typedef StatusRequest<StatusFindRequestPolicy> StatusFindRequest;
 
@@ -317,10 +319,12 @@ struct StatusFindAllRequestPolicy {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL; }
 
     using responseMessageType = lsst::qserv::proto::ReplicationResponseFindAll;
+    using responseDataType    = ReplicaInfoCollection;
 
-    struct responseDataType {};
-
-    static void parseResponseMessage (const responseMessageType& msg, responseDataType& data) {}
+    static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
+        for (int num = msg.replica_info_many_size(), idx = 0; idx < num; ++idx)
+            data.emplace_back(&(msg.replica_info_many(idx)));
+    }
 };
 typedef StatusRequest<StatusFindAllRequestPolicy> StatusFindAllRequest;
 

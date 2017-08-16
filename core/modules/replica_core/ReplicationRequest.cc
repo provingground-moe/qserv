@@ -50,44 +50,48 @@ namespace replica_core {
 
 ReplicationRequest::pointer
 ReplicationRequest::create (ServiceProvider         &serviceProvider,
+                            boost::asio::io_service &io_service,
+                            const std::string       &worker,
+                            const std::string       &sourceWorker,
                             const std::string       &database,
                             unsigned int             chunk,
-                            const std::string       &sourceWorker,
-                            const std::string       &destinationWorker,
-                            boost::asio::io_service &io_service,
                             callback_type            onFinish,
                             int                      priority) {
 
     return ReplicationRequest::pointer (
         new ReplicationRequest (
             serviceProvider,
+            io_service,
+            worker,
+            sourceWorker,
             database,
             chunk,
-            sourceWorker,
-            destinationWorker,
-            io_service,
             onFinish,
             priority));
 }
 
 ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider,
+                                        boost::asio::io_service &io_service,
+                                        const std::string       &worker,
+                                        const std::string       &sourceWorker,
                                         const std::string       &database,
                                         unsigned int             chunk,
-                                        const std::string       &sourceWorker,
-                                        const std::string       &destinationWorker,
-                                        boost::asio::io_service &io_service,
                                         callback_type            onFinish,
                                         int                      priority)
     :   Request(serviceProvider,
-                "REPLICA_CREATE",
-                destinationWorker,
                 io_service,
+                "REPLICA_CREATE",
+                worker,
                 priority),
  
         _database     (database),
         _chunk        (chunk),
         _sourceWorker (sourceWorker),
-        _onFinish     (onFinish) {
+        _onFinish     (onFinish),
+        _responseData () {
+
+    _serviceProvider.assertWorkerIsValid       (sourceWorker);
+    _serviceProvider.assertWorkersAreDifferent (sourceWorker, worker);
 }
 
 ReplicationRequest::~ReplicationRequest () {
@@ -219,7 +223,7 @@ ReplicationRequest::responseReceived (const boost::system::error_code &ec,
         proto::ReplicationResponseReplicate message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
@@ -376,16 +380,21 @@ ReplicationRequest::statusReceived (const boost::system::error_code &ec,
         proto::ReplicationResponseReplicate message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
 void
-ReplicationRequest::analyze (proto::ReplicationStatus status) {
+ReplicationRequest::analyze (const proto::ReplicationResponseReplicate &message) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(message.status()));
 
-    switch (status) {
+    // Always extract extended data regardless of the completion status
+    // reported by the worker service.
+
+    _responseData = ReplicaCreateInfo(&(message.replication_info()));
+
+    switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
             finish (SUCCESS);
@@ -413,7 +422,7 @@ ReplicationRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("ReplicationRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+            throw std::logic_error("ReplicationRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(message.status()) +
                                    "' received from server");
 
     }

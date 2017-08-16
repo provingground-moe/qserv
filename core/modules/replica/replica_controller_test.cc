@@ -1,11 +1,11 @@
-#include <stdexcept>
-
 #include <iostream>
 #include <list>
+#include <stdexcept>
 #include <string>
 #include <thread>
 
 #include "lsst/log/Log.h"
+#include "proto/replication.pb.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
@@ -51,19 +51,19 @@ public:
      * The normal constructor.
      *
      * @param controller        - the controller API for initiating requests
-     * @param database          - the database which is a subject of teh replication
+     * @param worker            - the name of a worker node for new replicas
      * @param sourceWorker      - the name of a worker node for chunks to be replicated
-     * @param destinationWorker - the name of a worker node for new replicas
+     * @param database          - the database which is a subject of the replication
      */
-    RequestGenerator (rc::Controller::pointer    controller,
-                      const std::string         &database,
-                      const std::string         &sourceWorker,
-                      const std::string         &destinationWorker) noexcept
-        :   _controller        (controller),
-            _database          (database),
-            _sourceWorker      (sourceWorker),
-            _destinationWorker (destinationWorker)
-    {}
+    RequestGenerator (rc::Controller::pointer  controller,
+                      const std::string       &worker,
+                      const std::string       &sourceWorker,
+                      const std::string       &database)
+        :   _controller   (controller),
+            _worker       (worker),
+            _sourceWorker (sourceWorker),
+            _database     (database) {
+    }
 
     /**
      * Initiate the specified numder of replication requests
@@ -95,10 +95,10 @@ public:
 
             rc::ReplicationRequest::pointer request =
                 _controller->replicate (
+                    _worker,
+                    _sourceWorker,
                     _database,
                     chunk++,
-                    _sourceWorker,
-                    _destinationWorker,
                     [] (rc::ReplicationRequest::pointer request) {
                         LOGS(_log, LOG_LVL_INFO, request->context() << "** DONE **"
                             << "  chunk: " << request->chunk());
@@ -167,21 +167,10 @@ private:
 
     rc::Controller::pointer _controller;
 
-    std::string _database;        
+    std::string _worker;
     std::string _sourceWorker;
-    std::string _destinationWorker;
+    std::string _database;        
 };
-
-/**
- * Return the name of any known worker from the controller configuration.
- * Throw std::runtime_error if no worker found.
- */
-std::string getAnyWorker (rc::ServiceProvider &provider) {
-    for (const std::string &workerName : provider.workers()) {
-        return workerName;
-    }
-    throw std::runtime_error ("getAnyWorker: no single worker found in the configuration");
-}
 
 /**
  * Print a status of the controller
@@ -193,9 +182,10 @@ void reportControllerStatus (rc::Controller::pointer controller) {
 /**
  * Run the test
  */
-void test (const std::string &configFileName) {
-
-    const std::string database = "wise_00";
+void test (const std::string &configFileName,
+           const std::string &workerName,
+           const std::string &sourceWorkerName,
+           const std::string &database) {
 
     try {
 
@@ -210,9 +200,9 @@ void test (const std::string &configFileName) {
 
         RequestGenerator requestGenerator (
             controller,
-            "wise_00",
-            getAnyWorker(provider),
-            getAnyWorker(provider));
+            workerName,
+            sourceWorkerName,
+            database);
         
         // Start the controller in its own thread before injecting any requests
 
@@ -304,13 +294,21 @@ void test (const std::string &configFileName) {
 
 int main (int argc, const char* const argv[]) {
 
-    if (argc != 2) {
-        std::cerr << "Usage: <config>" << std::endl;
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    if (argc != 5) {
+        std::cerr << "Usage: <config> <worker> <source_worker> <database>" << std::endl;
         return 1;
     }
-    const std::string configFileName(argv[1]);
+    const std::string configFileName       = argv[1];
+    const std::string     workerName       = argv[2];
+    const std::string     sourceWorkerName = argv[3];
+    const std::string     database         = argv[4];
     
-    ::test (configFileName);
+    ::test (configFileName, workerName, sourceWorkerName, database);
 
     return 0;
 }

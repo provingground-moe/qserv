@@ -81,6 +81,19 @@ public:
      */
     std::shared_ptr<WorkerInfo> workerInfo (const std::string& workerName) const;
 
+    /**
+     * Make sure this worker is known in the configuration. Throws exception
+     * std::invalid_argument otherwise.
+     */
+    void assertWorkerIsValid (const std::string &workerName);
+
+    /**
+     * Make sure workers are now known in the configuration and they're different.
+     * Throws exception std::invalid_argument otherwise.
+     */
+    void assertWorkersAreDifferent (const std::string &workerOneName,
+                                    const std::string &workerTwoName);
+
 private:
 
     Configuration& _configuration;

@@ -80,9 +80,7 @@ WorkerFindAllRequest::~WorkerFindAllRequest () {
 
 const ReplicaInfoCollection&
 WorkerFindAllRequest::replicaInfoCollection () const {
-    if (status() == STATUS_SUCCEEDED) return _replicaInfoCollection;
-    throw std::logic_error("operation is only allowed in state " + status2string(STATUS_SUCCEEDED)  +
-                           " in WorkerFindAllRequest::replicaInfoCollection()");
+    return _replicaInfoCollection;
 }
 
 

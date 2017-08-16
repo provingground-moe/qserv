@@ -34,6 +34,7 @@
 
 // Qserv headers
 
+#include "replica_core/ReplicaDeleteInfo.h"
 #include "replica_core/WorkerRequest.h"
 
 // Forward declarations
@@ -85,6 +86,16 @@ public:
     const std::string& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
 
+    /// Return extended status of the request
+    const ReplicaDeleteInfo& deleteInfo () const { return _deleteInfo; }
+
+    /**
+     * This method implements the virtual method of the base class
+     *
+     * @see WorkerRequest::execute
+     */
+    bool execute (bool incremental=true) override;
+
 protected:
 
     /**
@@ -95,10 +106,16 @@ protected:
                          int                priority,
                          const std::string &database,
                          unsigned int       chunk);
-private:
+protected:
+
+    // Parameters of the object
 
     std::string  _database;
     unsigned int _chunk;
+
+
+    /// Extended status of the replica deletion request
+    ReplicaDeleteInfo _deleteInfo;
 };
 
 /**
@@ -136,7 +153,7 @@ public:
     /**
      * This method implements the virtual method of the base class
      *
-     * @see WorkerRequest::execute
+     * @see WorkerDeleteRequest::execute
      */
     bool execute (bool incremental=true) override;
 

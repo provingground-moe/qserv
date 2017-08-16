@@ -50,40 +50,41 @@ namespace replica_core {
 
 DeleteRequest::pointer
 DeleteRequest::create (ServiceProvider         &serviceProvider,
+                       boost::asio::io_service &io_service,
+                       const std::string       &worker,
                        const std::string       &database,
                        unsigned int             chunk,
-                       const std::string       &worker,
-                       boost::asio::io_service &io_service,
                        callback_type            onFinish,
                        int                      priority) {
 
     return DeleteRequest::pointer (
         new DeleteRequest (
             serviceProvider,
+            io_service,
+            worker,
             database,
             chunk,
-            worker,
-            io_service,
             onFinish,
             priority));
 }
 
 DeleteRequest::DeleteRequest (ServiceProvider         &serviceProvider,
+                              boost::asio::io_service &io_service,
+                              const std::string       &worker,
                               const std::string       &database,
                               unsigned int             chunk,
-                              const std::string       &worker,
-                              boost::asio::io_service &io_service,
                               callback_type            onFinish,
                               int                      priority)
     :   Request(serviceProvider,
+                io_service,
                 "REPLICA_DELETE",
                 worker,
-                io_service,
                 priority),
  
-        _database (database),
-        _chunk    (chunk),
-        _onFinish (onFinish) {
+        _database     (database),
+        _chunk        (chunk),
+        _onFinish     (onFinish),
+        _responseData () {
 }
 
 DeleteRequest::~DeleteRequest () {
@@ -214,7 +215,7 @@ DeleteRequest::responseReceived (const boost::system::error_code &ec,
         proto::ReplicationResponseDelete message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
@@ -371,16 +372,21 @@ DeleteRequest::statusReceived (const boost::system::error_code &ec,
         proto::ReplicationResponseDelete message;
         _bufferPtr->parse(message, bytes);
     
-        analyze(message.status());
+        analyze(message);
     }
 }
 
 void
-DeleteRequest::analyze (proto::ReplicationStatus status) {
+DeleteRequest::analyze (const proto::ReplicationResponseDelete &message) {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(message.status()));
 
-    switch (status) {
+    // Always extract extended data regardless of the completion status
+    // reported by the worker service.
+
+    _responseData = ReplicaDeleteInfo(&(message.delete_info()));
+
+    switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
             finish (SUCCESS);
@@ -408,7 +414,7 @@ DeleteRequest::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("DeleteRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+            throw std::logic_error("DeleteRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(message.status()) +
                                    "' received from server");
 
     }

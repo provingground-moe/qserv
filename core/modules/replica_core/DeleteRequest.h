@@ -36,6 +36,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
+#include "replica_core/ReplicaDeleteInfo.h"
 #include "replica_core/Request.h"
 
 // This header declarations
@@ -73,6 +74,11 @@ public:
     const std::string& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
 
+    /// Return request-specific extended data reported upon completion of the request
+    const ReplicaDeleteInfo& responseData () const {
+        return _responseData;
+    }
+
     /**
      * Create a new request with specified parameters.
      * 
@@ -81,20 +87,19 @@ public:
      * low-level pointers).
      *
      * @param serviceProvider  - a host of services for various communications
+     * @param worker           - the identifier of a worker node (the one where the chunk is supposed
+     *                           to be located) at a destination of the chunk
      * @param database         - the name of a database
      * @param chunk            - the number of a chunk to replicate (implies all relevant tables)
-     * @param worker           - the identifier of a worker node (the one where the chunk is supposed
-     *                           to be located)
-     *                           at a destination of the chunk
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      * @param priority         - a priority level of the request
      */
     static pointer create (ServiceProvider         &serviceProvider,
+                           boost::asio::io_service &io_service,
+                           const std::string       &worker,
                            const std::string       &database,
                            unsigned int             chunk,
-                           const std::string       &worker,
-                           boost::asio::io_service &io_service,
                            callback_type            onFinish,
                            int                      priority=0);
 
@@ -104,10 +109,10 @@ private:
      * Construct the request with the pointer to the services provider.
      */
     DeleteRequest (ServiceProvider         &serviceProvider,
+                   boost::asio::io_service &io_service,
+                   const std::string       &worker,
                    const std::string       &database,
                    unsigned int             chunk,
-                   const std::string       &worker,
-                   boost::asio::io_service &io_service,
                    callback_type            onFinish,
                    int                      priority=0);
 
@@ -154,7 +159,7 @@ private:
                          size_t                           bytes_transferred);
 
     /// Process the completion of the requested operation
-    void analyze (lsst::qserv::proto::ReplicationStatus status);
+    void analyze (const proto::ReplicationResponseDelete &message);
 
     /**
      * Notifying a party which initiated the request.
@@ -174,6 +179,9 @@ private:
     // Registered callback to be called when the operation finishes
 
     callback_type _onFinish;
+
+    /// Extended informationon on a status of the operation
+    ReplicaDeleteInfo _responseData;
 };
 
 }}} // namespace lsst::qserv::replica_core

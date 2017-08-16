@@ -1,6 +1,5 @@
-#include <stdexcept>
-
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
 #include "lsst/log/Log.h"
@@ -17,18 +16,7 @@ namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_admin");
 
-const char* usage = "Usage: <config> {SUSPEND | RESUME | STATUS}";
-
-/**
- * Return the name of any known worker from the controller configuration.
- * Throw std::runtime_error if no worker found.
- */
-std::string getAnyWorker (rc::ServiceProvider &provider) {
-    for (const std::string &workerName : provider.workers()) {
-        return workerName;
-    }
-    throw std::runtime_error ("getAnyWorker: no single worker found in the configuration");
-}
+const char* usage = "Usage: <config> {SUSPEND | RESUME | STATUS} <worker>";
 
 /**
  * Print a status of the service
@@ -50,7 +38,8 @@ void printRequest (const rc::ServiceManagementRequestBase::pointer &request) {
  * Run the test
  */
 void test (const std::string &configFileName,
-           const std::string &operation) {
+           const std::string &operation,
+           const std::string &worker) {
 
     try {
 
@@ -58,10 +47,6 @@ void test (const std::string &configFileName,
         rc::ServiceProvider provider{config};
 
         rc::Controller::pointer controller = rc::Controller::create(provider);
-
-        // Configure the generator of requests 
-
-        const std::string worker = getAnyWorker(provider);
 
         // Start the controller in its own thread before injecting any requests
 
@@ -118,14 +103,15 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    if (argc != 3) {
+    if (argc != 4) {
         std::cerr << ::usage << std::endl;
         return 1;
     }
-    const std::string configFileName (argv[1]),
-                      operation      (argv[2]);
+    const std::string configFileName = argv[1];
+    const std::string operation      = argv[2];
+    const std::string workerName     = argv[3];
     
-    ::test (configFileName, operation);
+    ::test (configFileName, operation, workerName);
 
     return 0;
 }

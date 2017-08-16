@@ -3,7 +3,7 @@
 #include <string>
 
 #include "lsst/log/Log.h"
-
+#include "proto/replication.pb.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
@@ -55,6 +55,11 @@ void service (const std::string &configFileName,
 
 int main (int argc, const char* const argv[]) {
 
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
+ 
     if (argc != 3) {
         std::cerr << "usage: <config> <worker>" << std::endl;
         return 1;

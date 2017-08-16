@@ -167,8 +167,8 @@ public:
         typename REQUEST_TYPE::pointer request =
             REQUEST_TYPE::create (
                 controller->_serviceProvider,
-                workerName,
                 controller->_io_service,
+                workerName,
                 targetRequestId,
                 [controller] (typename REQUEST_TYPE::pointer request) {
                     controller->finish(request->id());
@@ -208,8 +208,8 @@ public:
         typename REQUEST_TYPE::pointer request =
             REQUEST_TYPE::create (
                 controller->_serviceProvider,
-                workerName,
                 controller->_io_service,
+                workerName,
                 [controller] (typename REQUEST_TYPE::pointer request) {
                     controller->finish(request->id());
                 }
@@ -282,11 +282,10 @@ Controller::create (ServiceProvider &serviceProvider) {
 
 Controller::Controller (ServiceProvider &serviceProvider)
     :   _serviceProvider (serviceProvider),
-
-        _io_service (),
-        _work       (nullptr),
-        _thread     (nullptr),
-        _registry   () {
+        _io_service      (),
+        _work     (nullptr),
+        _thread   (nullptr),
+        _registry () {
 }
 
 Controller::~Controller () {
@@ -370,10 +369,10 @@ Controller::join () {
 }
 
 ReplicationRequest::pointer
-Controller::replicate (const std::string                 &database,
-                       unsigned int                      chunk,
+Controller::replicate (const std::string                 &workerName,
                        const std::string                 &sourceWorkerName,
-                       const std::string                 &destinationWorkerName,
+                       const std::string                 &database,
+                       unsigned int                      chunk,
                        ReplicationRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
@@ -384,11 +383,11 @@ Controller::replicate (const std::string                 &database,
     ReplicationRequest::pointer request =
         ReplicationRequest::create (
             _serviceProvider,
+            _io_service,
+            workerName,
+            sourceWorkerName,
             database,
             chunk,
-            sourceWorkerName,
-            destinationWorkerName,
-            _io_service,
             [controller] (ReplicationRequest::pointer request) {
                 controller->finish(request->id());
             }
@@ -409,9 +408,9 @@ Controller::replicate (const std::string                 &database,
 }
 
 DeleteRequest::pointer
-Controller::deleteReplica (const std::string            &database,
+Controller::deleteReplica (const std::string            &workerName,
+                           const std::string            &database,
                            unsigned int                  chunk,
-                           const std::string            &workerName,
                            DeleteRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
@@ -422,10 +421,10 @@ Controller::deleteReplica (const std::string            &database,
     DeleteRequest::pointer request =
         DeleteRequest::create (
             _serviceProvider,
+            _io_service,
+            workerName,
             database,
             chunk,
-            workerName,
-            _io_service,
             [controller] (DeleteRequest::pointer request) {
                 controller->finish(request->id());
             }
@@ -446,9 +445,9 @@ Controller::deleteReplica (const std::string            &database,
 }
 
 FindRequest::pointer
-Controller::findReplica (const std::string          &database,
+Controller::findReplica (const std::string          &workerName,
+                         const std::string          &database,
                          unsigned int                chunk,
-                         const std::string          &workerName,
                          FindRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
@@ -459,10 +458,10 @@ Controller::findReplica (const std::string          &database,
     FindRequest::pointer request =
         FindRequest::create (
             _serviceProvider,
+            _io_service,
+            workerName,
             database,
             chunk,
-            workerName,
-            _io_service,
             [controller] (FindRequest::pointer request) {
                 controller->finish(request->id());
             }
@@ -483,8 +482,8 @@ Controller::findReplica (const std::string          &database,
 }
 
 FindAllRequest::pointer
-Controller::findAllReplicas (const std::string             &database,
-                             const std::string             &workerName,
+Controller::findAllReplicas (const std::string             &workerName,
+                             const std::string             &database,
                              FindAllRequest::callback_type  onFinish) {
     LOCK_GUARD;
 
@@ -495,9 +494,9 @@ Controller::findAllReplicas (const std::string             &database,
     FindAllRequest::pointer request =
         FindAllRequest::create (
             _serviceProvider,
-            database,
-            workerName,
             _io_service,
+            workerName,
+            database,
             [controller] (FindAllRequest::pointer request) {
                 controller->finish(request->id());
             }

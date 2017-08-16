@@ -178,7 +178,7 @@ protected:
                    const std::string &id,
                    int                priority);
 
-private:
+protected:
 
     ServiceProvider  &_serviceProvider;
 
