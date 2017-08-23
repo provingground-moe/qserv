@@ -48,30 +48,35 @@ namespace replica_core {
 ///////////////////////////////////////////////////////////////
 
 WorkerFindAllRequest::pointer
-WorkerFindAllRequest::create (ServiceProvider   &serviceProvider,
-                              const std::string &worker,
-                              const std::string &id,
-                              int                priority,
-                              const std::string &database) {
+WorkerFindAllRequest::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database) {
 
     return WorkerFindAllRequest::pointer (
-        new WorkerFindAllRequest (serviceProvider,
-                                  worker,
-                                  id,
-                                  priority,
-                                  database));
+        new WorkerFindAllRequest (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database));
 }
 
-WorkerFindAllRequest::WorkerFindAllRequest (ServiceProvider   &serviceProvider,
-                                            const std::string &worker,
-                                            const std::string &id,
-                                            int                priority,
-                                            const std::string &database)
-    :   WorkerRequest (serviceProvider,
-                       worker,
-                       "FIND-ALL",
-                       id,
-                       priority),
+WorkerFindAllRequest::WorkerFindAllRequest (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database)
+
+    :   WorkerRequest (
+            serviceProvider,
+            worker,
+            "FIND-ALL",
+            id,
+            priority),
 
         _database              (database),
         _replicaInfoCollection () {
@@ -110,35 +115,88 @@ WorkerFindAllRequest::execute (bool incremental) {
 }
 
 
+////////////////////////////////////////////////////////////////////
+///////////////////// WorkerFindAllRequestPOSIX ////////////////////
+////////////////////////////////////////////////////////////////////
+
+WorkerFindAllRequestPOSIX::pointer
+WorkerFindAllRequestPOSIX::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database) {
+
+    return WorkerFindAllRequestPOSIX::pointer (
+        new WorkerFindAllRequestPOSIX (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database));
+}
+
+WorkerFindAllRequestPOSIX::WorkerFindAllRequestPOSIX (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database)
+
+    :   WorkerFindAllRequest (
+            serviceProvider,
+            worker,
+            id,
+            priority,
+            database) {
+}
+
+WorkerFindAllRequestPOSIX::~WorkerFindAllRequestPOSIX () {
+}
+
+bool
+WorkerFindAllRequestPOSIX::execute (bool incremental) {
+
+    // TODO: provide the actual implementation instead of the dummy one.
+
+    return WorkerRequest::execute(incremental);
+}
+
+
 ////////////////////////////////////////////////////////////////
 ///////////////////// WorkerFindAllRequestX ////////////////////
 ////////////////////////////////////////////////////////////////
 
 WorkerFindAllRequestX::pointer
-WorkerFindAllRequestX::create (ServiceProvider   &serviceProvider,
-                               const std::string &worker,
-                               const std::string &id,
-                               int                priority,
-                               const std::string &database) {
+WorkerFindAllRequestX::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database) {
 
     return WorkerFindAllRequestX::pointer (
-        new WorkerFindAllRequestX (serviceProvider,
-                                   worker,
-                                   id,
-                                   priority,
-                                   database));
+        new WorkerFindAllRequestX (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database));
 }
 
-WorkerFindAllRequestX::WorkerFindAllRequestX (ServiceProvider   &serviceProvider,
-                                              const std::string &worker,
-                                              const std::string &id,
-                                              int                priority,
-                                              const std::string &database)
-    :   WorkerFindAllRequest (serviceProvider,
-                              worker,
-                              id,
-                              priority,
-                              database) {
+WorkerFindAllRequestX::WorkerFindAllRequestX (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database)
+
+    :   WorkerFindAllRequest (
+            serviceProvider,
+            worker,
+            id,
+            priority,
+            database) {
 }
 
 WorkerFindAllRequestX::~WorkerFindAllRequestX () {
@@ -146,10 +204,6 @@ WorkerFindAllRequestX::~WorkerFindAllRequestX () {
 
 bool
 WorkerFindAllRequestX::execute (bool incremental) {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  worker: " << _worker
-         << "  database: " << database());
 
     // TODO: provide the actual implementation instead of the dummy one.
 

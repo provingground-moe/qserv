@@ -26,6 +26,8 @@
 /// WorkerFindRequest.h declares:
 ///
 /// class WorkerFindRequest
+/// class WorkerFindRequestPOSIX
+/// class WorkerFindRequestX
 /// (see individual class documentation for more information)
 
 // System headers
@@ -124,8 +126,64 @@ private:
     ReplicaInfo _replicaInfo;
 };
 
+
 /**
-  * Class WorkerReplicationRequestX provides an actual implementation for
+  * Class WorkerFindRequestPOSIX provides an actual implementation for
+  * the replica lookup requests based on the direct manipulation of files on
+  * a POSIX file system.
+  */
+class WorkerFindRequestPOSIX
+    :   public WorkerFindRequest {
+
+public:
+
+    /// Pointer to self
+    typedef std::shared_ptr<WorkerFindRequestPOSIX> pointer;
+
+    /**
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     */
+    static pointer create (ServiceProvider   &serviceProvider,
+                           const std::string &worker,
+                           const std::string &id,
+                           int                priority,
+                           const std::string &database,
+                           unsigned int       chunk);
+
+    // Default construction and copy semantics are proxibited
+
+    WorkerFindRequestPOSIX () = delete;
+    WorkerFindRequestPOSIX (WorkerFindRequestPOSIX const&) = delete;
+    WorkerFindRequestPOSIX & operator= (WorkerFindRequestPOSIX const&) = delete;
+
+    /// Destructor
+    ~WorkerFindRequestPOSIX () override;
+
+    /**
+     * This method implements the virtual method of the base class
+     *
+     * @see WorkerFindRequest::execute
+     */
+    bool execute (bool incremental=true) override;
+
+private:
+
+    /**
+     * The normal constructor of the class.
+     */
+    WorkerFindRequestPOSIX (ServiceProvider   &serviceProvider,
+                            const std::string &worker,
+                            const std::string &id,
+                            int                priority,
+                            const std::string &database,
+                            unsigned int       chunk);
+};
+
+
+/**
+  * Class WorkerFindRequestX provides an actual implementation for
   * the replica lookup requests using XRootD.
   */
 class WorkerFindRequestX
@@ -176,6 +234,7 @@ private:
                         const std::string &database,
                         unsigned int       chunk);
 };
+
 
 }}} // namespace lsst::qserv::replica_core
 

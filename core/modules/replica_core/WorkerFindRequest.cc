@@ -47,33 +47,38 @@ namespace replica_core {
 ////////////////////////////////////////////////////////////
 
 WorkerFindRequest::pointer
-WorkerFindRequest::create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
-                           int                priority,
-                           const std::string &database,
-                           unsigned int       chunk) {
+WorkerFindRequest::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk) {
 
     return WorkerFindRequest::pointer (
-        new WorkerFindRequest (serviceProvider,
-                               worker,
-                               id,
-                               priority,
-                               database,
-                               chunk));
+        new WorkerFindRequest (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk));
 }
 
-WorkerFindRequest::WorkerFindRequest (ServiceProvider   &serviceProvider,
-                                      const std::string &worker,
-                                      const std::string &id,
-                                      int                priority,
-                                      const std::string &database,
-                                      unsigned int       chunk)
-    :   WorkerRequest (serviceProvider,
-                       worker,
-                       "FIND",
-                       id,
-                       priority),
+WorkerFindRequest::WorkerFindRequest (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk)
+
+    :   WorkerRequest (
+            serviceProvider,
+            worker,
+            "FIND",
+            id,
+            priority),
 
         _database    (database),
         _chunk       (chunk),
@@ -108,39 +113,97 @@ WorkerFindRequest::execute (bool incremental) {
 }
 
 
+/////////////////////////////////////////////////////////////////
+///////////////////// WorkerFindRequestPOSIX ////////////////////
+/////////////////////////////////////////////////////////////////
+
+WorkerFindRequestPOSIX::pointer
+WorkerFindRequestPOSIX::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk) {
+
+    return WorkerFindRequestPOSIX::pointer (
+        new WorkerFindRequestPOSIX (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk));
+}
+
+WorkerFindRequestPOSIX::WorkerFindRequestPOSIX (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk)
+
+    :   WorkerFindRequest (
+            serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk) {
+}
+
+WorkerFindRequestPOSIX::~WorkerFindRequestPOSIX () {
+}
+
+
+bool
+WorkerFindRequestPOSIX::execute (bool incremental) {
+
+    // TODO: provide the actual implementation instead of the dummy one.
+
+    return WorkerFindRequest::execute(incremental);
+}
+
+
 /////////////////////////////////////////////////////////////
 ///////////////////// WorkerFindRequestX ////////////////////
 /////////////////////////////////////////////////////////////
 
 WorkerFindRequestX::pointer
-WorkerFindRequestX::create (ServiceProvider   &serviceProvider,
-                            const std::string &worker,
-                            const std::string &id,
-                            int                priority,
-                            const std::string &database,
-                            unsigned int       chunk) {
+WorkerFindRequestX::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk) {
 
     return WorkerFindRequestX::pointer (
-        new WorkerFindRequestX (serviceProvider,
-                                worker,
-                                id,
-                                priority,
-                                database,
-                                chunk));
+        new WorkerFindRequestX (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk));
 }
 
-WorkerFindRequestX::WorkerFindRequestX (ServiceProvider   &serviceProvider,
-                                        const std::string &worker,
-                                        const std::string &id,
-                                        int                priority,
-                                        const std::string &database,
-                                        unsigned int       chunk)
-    :   WorkerFindRequest (serviceProvider,
-                           worker,
-                           id,
-                           priority,
-                           database,
-                           chunk) {
+WorkerFindRequestX::WorkerFindRequestX (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk)
+
+    :   WorkerFindRequest (
+            serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk) {
 }
 
 WorkerFindRequestX::~WorkerFindRequestX () {
@@ -149,11 +212,6 @@ WorkerFindRequestX::~WorkerFindRequestX () {
 
 bool
 WorkerFindRequestX::execute (bool incremental) {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  worker: " << _worker
-         << "  database: " << database()
-         << "  chunk: " << chunk());
 
     // TODO: provide the actual implementation instead of the dummy one.
 

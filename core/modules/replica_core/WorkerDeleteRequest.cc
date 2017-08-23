@@ -98,6 +98,59 @@ WorkerDeleteRequest::execute (bool incremental) {
     return complete;
 }
 
+
+///////////////////////////////////////////////////////////////////
+///////////////////// WorkerDeleteRequestPOSIX ////////////////////
+///////////////////////////////////////////////////////////////////
+
+WorkerDeleteRequestPOSIX::pointer
+WorkerDeleteRequestPOSIX::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk) {
+
+    return WorkerDeleteRequestPOSIX::pointer (
+        new WorkerDeleteRequestPOSIX (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk));
+}
+
+WorkerDeleteRequestPOSIX::WorkerDeleteRequestPOSIX (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk)
+
+    :   WorkerDeleteRequest (
+            serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk) {
+}
+
+WorkerDeleteRequestPOSIX::~WorkerDeleteRequestPOSIX () {
+}
+
+bool
+WorkerDeleteRequestPOSIX::execute (bool incremental) {
+
+    // TODO: provide the actual implementation instead of the dummy one.
+
+    return WorkerDeleteRequest::execute(incremental);
+}
+
+
 ///////////////////////////////////////////////////////////////
 ///////////////////// WorkerDeleteRequestX ////////////////////
 ///////////////////////////////////////////////////////////////

@@ -50,6 +50,14 @@ struct WorkerInfo {
     uint16_t    svcPort;
     std::string xrootdHost;
     uint16_t    xrootdPort;
+    std::string dataDir;
+};
+
+/// The descriptor of a database
+struct DatabaseInfo {
+    std::string name;
+    std::vector<std::string> partitionedTables;
+    std::vector<std::string> regularTables;
 };
 
 /**
@@ -80,7 +88,7 @@ public:
      * The configuration can be used by controller or worker services.
      *
      * @param configFile - the name of a configuraiton file
-\     */
+     */
     explicit Configuration (const std::string &configFile);
 
     /// Destructor
@@ -92,6 +100,9 @@ public:
 
     /// The names of known workers
     const std::vector<std::string>& workers () const { return _workers; }
+
+    /// The names of known databases
+    const std::vector<std::string>& databases () const { return _databases; }
 
     /// The maximum size of the request buffers in bytes
     size_t requestBufferSizeBytes () const { return _requestBufferSizeBytes; }
@@ -111,12 +122,34 @@ public:
 
     unsigned int controllerRequestTimeoutSec () const { return _controllerRequestTimeoutSec; }
 
+    
+    // ---------------------------------------------------
+    // -- Configuration parameters related to databases --
+    // ---------------------------------------------------
+
+    /**
+     * Return 'true' if the specified database is known to the configuraion
+     *
+     * @param name - the name of a database
+     */
+    bool isKnownDatabase (const std::string &name) const;
+
+    /**
+     * Return parameters of the specified database
+     *
+     * The method will throw std::out_of_range if the specified database was not
+     * found in the configuration.
+     *
+     * @param name - the name of a database
+     */
+    const DatabaseInfo& databaseInfo (const std::string &name) const;
+
     // -----------------------------------------------------
     // -- Configuration parameters of the worker services --
     // -----------------------------------------------------
 
     /**
-     * Return 'true' if the specified work is known to the configuraion
+     * Return 'true' if the specified worker is known to the configuraion
      *
      * @param name - the name of a worker
      */
@@ -159,6 +192,7 @@ private:
     // Cached values of the parameters
 
     std::vector<std::string> _workers;
+    std::vector<std::string> _databases;
 
     size_t       _requestBufferSizeBytes;
     unsigned int _retryTimeoutSec;
@@ -170,7 +204,8 @@ private:
     size_t       _workerNumConnectionsLimit;
     size_t       _workerNumProcessingThreads;
     
-    std::map<std::string, WorkerInfo> _workerInfo;
+    std::map<std::string, DatabaseInfo> _databaseInfo;
+    std::map<std::string, WorkerInfo>   _workerInfo;
 };
 
 }}} // namespace lsst::qserv::replica_core
