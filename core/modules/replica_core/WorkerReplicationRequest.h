@@ -26,6 +26,7 @@
 /// WorkerReplicationRequest.h declares:
 ///
 /// class WorkerReplicationRequest
+/// class WorkerReplicationRequestPOSIX
 /// class WorkerReplicationRequestX
 /// (see individual class documentation for more information)
 
@@ -122,6 +123,63 @@ protected:
 
     /// Extended status of the replication request
     ReplicaCreateInfo _replicationInfo;
+};
+
+
+/**
+  * Class WorkerReplicationRequestPOSIX provides an actual implementation for
+  * the replication requests based on the direct manipulation of files on
+  * a POSIX file system.
+  */
+class WorkerReplicationRequestPOSIX
+    :   public WorkerReplicationRequest {
+
+public:
+
+    /// Pointer to self
+    typedef std::shared_ptr<WorkerReplicationRequestPOSIX> pointer;
+
+    /**
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     */
+    static pointer create (ServiceProvider   &serviceProvider,
+                           const std::string &worker,
+                           const std::string &id,
+                           int                priority,
+                           const std::string &database,
+                           unsigned int       chunk,
+                           const std::string &sourceWorker);
+
+    // Default construction and copy semantics are proxibited
+
+    WorkerReplicationRequestPOSIX () = delete;
+    WorkerReplicationRequestPOSIX (WorkerReplicationRequestPOSIX const&) = delete;
+    WorkerReplicationRequestPOSIX & operator= (WorkerReplicationRequestPOSIX const&) = delete;
+
+    /// Destructor
+    ~WorkerReplicationRequestPOSIX () override;
+
+    /**
+     * This method implements the virtual method of the base class
+     *
+     * @see WorkerReplicationRequest::execute
+     */
+    bool execute (bool incremental=true) override;
+
+private:
+
+    /**
+     * The normal constructor of the class.
+     */
+    WorkerReplicationRequestPOSIX (ServiceProvider   &serviceProvider,
+                                   const std::string &worker,
+                                   const std::string &id,
+                                   int                priority,
+                                   const std::string &database,
+                                   unsigned int       chunk,
+                                   const std::string &sourceWorker);
 };
 
 

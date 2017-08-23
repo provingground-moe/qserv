@@ -48,36 +48,41 @@ namespace replica_core {
 ///////////////////////////////////////////////////////////////////
 
 WorkerReplicationRequest::pointer
-WorkerReplicationRequest::create (ServiceProvider   &serviceProvider,
-                                  const std::string &worker,
-                                  const std::string &id,
-                                  int                priority,
-                                  const std::string &database,
-                                  unsigned int       chunk,
-                                  const std::string &sourceWorker) {
+WorkerReplicationRequest::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker) {
 
     return WorkerReplicationRequest::pointer (
-        new WorkerReplicationRequest (serviceProvider,
-                                      worker,
-                                      id,
-                                      priority,
-                                      database,
-                                      chunk,
-                                      sourceWorker));
+        new WorkerReplicationRequest (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk,
+                sourceWorker));
 }
 
-WorkerReplicationRequest::WorkerReplicationRequest (ServiceProvider   &serviceProvider,
-                                                    const std::string &worker,
-                                                    const std::string &id,
-                                                    int                priority,
-                                                    const std::string &database,
-                                                    unsigned int       chunk,
-                                                    const std::string &sourceWorker)
-    :   WorkerRequest (serviceProvider,
-                       worker,
-                       "REPLICATE",
-                       id,
-                       priority),
+WorkerReplicationRequest::WorkerReplicationRequest (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker)
+
+    :   WorkerRequest (
+            serviceProvider,
+            worker,
+            "REPLICATE",
+            id,
+            priority),
 
         _database        (database),
         _chunk           (chunk),
@@ -109,43 +114,105 @@ WorkerReplicationRequest::execute (bool incremental) {
     return complete;
 }
 
+
+////////////////////////////////////////////////////////////////////////
+///////////////////// WorkerReplicationRequestPOSIX ////////////////////
+////////////////////////////////////////////////////////////////////////
+
+WorkerReplicationRequestPOSIX::pointer
+WorkerReplicationRequestPOSIX::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker) {
+
+    return WorkerReplicationRequestPOSIX::pointer (
+        new WorkerReplicationRequestPOSIX (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk,
+                sourceWorker));
+}
+
+WorkerReplicationRequestPOSIX::WorkerReplicationRequestPOSIX (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker)
+
+    :   WorkerReplicationRequest (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk,
+                sourceWorker) {
+}
+
+WorkerReplicationRequestPOSIX::~WorkerReplicationRequestPOSIX () {
+}
+
+bool
+WorkerReplicationRequestPOSIX::execute (bool incremental) {
+
+    // TODO: provide the actual implementation instead of the dummy one.
+
+    return WorkerReplicationRequest::execute(incremental);
+}
+
+
 ////////////////////////////////////////////////////////////////////
 ///////////////////// WorkerReplicationRequestX ////////////////////
 ////////////////////////////////////////////////////////////////////
 
 WorkerReplicationRequestX::pointer
-WorkerReplicationRequestX::create (ServiceProvider   &serviceProvider,
-                                   const std::string &worker,
-                                   const std::string &id,
-                                   int                priority,
-                                   const std::string &database,
-                                   unsigned int       chunk,
-                                   const std::string &sourceWorker) {
+WorkerReplicationRequestX::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker) {
 
     return WorkerReplicationRequestX::pointer (
-        new WorkerReplicationRequestX (serviceProvider,
-                                       worker,
-                                       id,
-                                       priority,
-                                       database,
-                                       chunk,
-                                       sourceWorker));
+        new WorkerReplicationRequestX (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk,
+                sourceWorker));
 }
 
-WorkerReplicationRequestX::WorkerReplicationRequestX (ServiceProvider   &serviceProvider,
-                                                      const std::string &worker,
-                                                      const std::string &id,
-                                                      int                priority,
-                                                      const std::string &database,
-                                                      unsigned int       chunk,
-                                                      const std::string &sourceWorker)
-    :   WorkerReplicationRequest (serviceProvider,
-                                  worker,
-                                  id,
-                                  priority,
-                                  database,
-                                  chunk,
-                                  sourceWorker) {
+WorkerReplicationRequestX::WorkerReplicationRequestX (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker)
+
+    :   WorkerReplicationRequest (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk,
+                sourceWorker) {
 }
 
 WorkerReplicationRequestX::~WorkerReplicationRequestX () {

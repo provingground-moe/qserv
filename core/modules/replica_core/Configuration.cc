@@ -49,7 +49,7 @@ const std::string  defaultWorkerSvcHost              {"localhost"};
 const uint16_t     defaultWorkerSvcPort              {50000};
 const std::string  defaultWorkerXrootdHost           {"localhost"};
 const uint16_t     defaultWorkerXrootdPort           {1094};
-
+const std::string  defaultDataDir                    {"{worker}"};
 
 /**
  * Fetch and parse a value of the specified key into. Return the specified
@@ -67,6 +67,26 @@ void parseKeyVal (lsst::qserv::util::ConfigStore &configStore,
 
     const std::string str = configStore.get(key);
     val = str.empty() ? defaultVal : boost::lexical_cast<T>(str);        
+}
+
+/**
+ * Inplace translation of the the data directory string by finding an optional
+ * placeholder '{worker}' and replacing it with the name of the specified worker.
+ *
+ * @param dataDir    - the string to be translated
+ * @param workerName - the actual name of a worker for replacing the placeholder
+ */
+void translateDataDir(std::string       &dataDir,
+                      const std::string &workerName) {
+
+    const std::string::size_type leftPos = dataDir.find('{');
+    if (leftPos == std::string::npos) return;
+
+    const std::string::size_type rightPos = dataDir.find('}');
+    if (rightPos == std::string::npos) return;
+
+    if (dataDir.substr (leftPos, rightPos - leftPos + 1) == "{worker}")
+        dataDir.replace(leftPos, rightPos - leftPos + 1, workerName);
 }
 
 }  // namespace
@@ -104,6 +124,19 @@ Configuration::workerInfo (const std::string &name) const {
     return _workerInfo.at(name);
 }
 
+bool
+Configuration::isKnownDatabase (const std::string &name) const {
+    return _databaseInfo.count(name) > 0;
+}
+
+const DatabaseInfo&
+Configuration::databaseInfo (const std::string &name) const {
+    if (!isKnownDatabase(name)) 
+        throw std::out_of_range("Configuration::databaseInfo() uknown database name '"+name+"'");
+    return _databaseInfo.at(name);
+}
+
+
 void
 Configuration::loadConfiguration () {
 
@@ -111,9 +144,16 @@ Configuration::loadConfiguration () {
 
     // Parse the list of worker names
 
-    std::istringstream ss(configStore.getRequired("common.workers"));
-    std::istream_iterator<std::string> begin(ss), end;
-    _workers = std::vector<std::string>(begin, end);
+    {
+        std::istringstream ss(configStore.getRequired("common.workers"));
+        std::istream_iterator<std::string> begin(ss), end;
+        _workers = std::vector<std::string>(begin, end);
+    }
+    {
+        std::istringstream ss(configStore.getRequired("common.databases"));
+        std::istream_iterator<std::string> begin(ss), end;
+        _databases = std::vector<std::string>(begin, end);
+    }
 
     ::parseKeyVal(configStore, "common.request_buf_size_bytes",     _requestBufferSizeBytes,      defaultRequestBufferSizeBytes);
     ::parseKeyVal(configStore, "common.request_retry_interval_sec", _retryTimeoutSec,             defaultRetryTimeoutSec);
@@ -133,6 +173,10 @@ Configuration::loadConfiguration () {
     ::parseKeyVal(configStore, "worker.svc_port",    commonWorkerSvcPort,    defaultWorkerSvcPort);
     ::parseKeyVal(configStore, "worker.xrootd_port", commonWorkerXrootdPort, defaultWorkerXrootdPort);
 
+    std::string commonDataDir;
+    
+    ::parseKeyVal(configStore, "worker.data_dir",    commonDataDir,    defaultDataDir);
+
     // Parse optional worker-specific configuraton sections. Assume default
     // or (previously parsed) common values if a whole secton or individual
     // parameters are missing.
@@ -150,6 +194,31 @@ Configuration::loadConfiguration () {
         ::parseKeyVal(configStore, section+".svc_port",    _workerInfo[name].svcPort,    commonWorkerSvcPort);
         ::parseKeyVal(configStore, section+".xrootd_host", _workerInfo[name].xrootdHost, defaultWorkerXrootdHost);
         ::parseKeyVal(configStore, section+".xrootd_port", _workerInfo[name].xrootdPort, commonWorkerXrootdPort);
+
+        ::parseKeyVal(configStore, section+".data_dir",    _workerInfo[name].dataDir,    commonDataDir);
+        ::translateDataDir(_workerInfo[name].dataDir, name);
+    }
+    
+    // Parse mandatory database-specific configuraton sections
+
+    for (const std::string &name : _databases) {
+
+        const std::string section = "database:"+name;
+        if (_databaseInfo.count(name))
+            throw std::range_error("Configuration::loadConfiguration() duplicate database entry: '" +
+                                   name + "' in: [common] or ["+section+"], configuration file: " + _configFile);
+
+        _databaseInfo[name].name = name;
+        {
+            std::istringstream ss(configStore.getRequired(section+".partitioned_tables"));
+            std::istream_iterator<std::string> begin(ss), end;
+            _databaseInfo[name].partitionedTables = std::vector<std::string>(begin, end);
+        }
+        {
+            std::istringstream ss(configStore.getRequired(section+".regular_tables"));
+            std::istream_iterator<std::string> begin(ss), end;
+            _databaseInfo[name].regularTables = std::vector<std::string>(begin, end);
+        }
     }
 }
     

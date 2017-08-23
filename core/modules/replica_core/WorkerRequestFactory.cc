@@ -102,6 +102,59 @@ WorkerRequestFactory::createFindAllRequest (const std::string &worker,
 }
 
 
+
+////////////////////////////////////////////////////////////////////
+///////////////////// WorkerRequestFactoryPOSIX ////////////////////
+////////////////////////////////////////////////////////////////////
+
+WorkerRequestFactoryPOSIX::WorkerRequestFactoryPOSIX (ServiceProvider &serviceProvider)
+    :   WorkerRequestFactory (serviceProvider) {
+}
+
+WorkerRequestFactoryPOSIX::~WorkerRequestFactoryPOSIX () {
+}
+
+WorkerRequestFactory::WorkerReplicationRequest_pointer
+WorkerRequestFactoryPOSIX::createReplicationRequest (const std::string &worker,
+                                                     const std::string &id,
+                                                     int                priority,
+                                                     const std::string &database,
+                                                     unsigned int       chunk,
+                                                     const std::string &sourceWorker) {
+    return WorkerReplicationRequestPOSIX::create (
+        _serviceProvider, worker, id, priority, database, chunk, sourceWorker);
+}
+
+WorkerRequestFactory::WorkerDeleteRequest_pointer
+WorkerRequestFactoryPOSIX::createDeleteRequest (const std::string &worker,
+                                                const std::string &id,
+                                                int                priority,
+                                                const std::string &database,
+                                                unsigned int       chunk) {
+    return WorkerDeleteRequestPOSIX::create (
+        _serviceProvider, worker, id, priority, database, chunk);
+}
+
+WorkerRequestFactory::WorkerFindRequest_pointer
+WorkerRequestFactoryPOSIX::createFindRequest (const std::string &worker,
+                                              const std::string &id,
+                                              int                priority,
+                                              const std::string &database,
+                                              unsigned int       chunk) {
+    return WorkerFindRequestPOSIX::create (
+        _serviceProvider, worker, id, priority, database, chunk);
+}
+
+WorkerRequestFactory::WorkerFindAllRequest_pointer
+WorkerRequestFactoryPOSIX::createFindAllRequest (const std::string &worker,
+                                                 const std::string &id,
+                                                 int                priority,
+                                                 const std::string &database) {
+    return WorkerFindAllRequestPOSIX::create (
+        _serviceProvider, worker, id, priority, database);
+}
+
+
 ////////////////////////////////////////////////////////////////
 ///////////////////// WorkerRequestFactoryX ////////////////////
 ////////////////////////////////////////////////////////////////

@@ -26,6 +26,8 @@
 /// WorkerDeleteRequest.h declares:
 ///
 /// class WorkerDeleteRequest
+/// class WorkerDeleteRequestPOSIX
+/// class WorkerDeleteRequestX
 /// (see individual class documentation for more information)
 
 // System headers
@@ -118,6 +120,62 @@ protected:
     /// Extended status of the replica deletion request
     ReplicaDeleteInfo _deleteInfo;
 };
+
+
+/**
+  * Class WorkerDeleteRequestPOSIX provides an actual implementation for
+  * the replica deletion based on the direct manipulation of files on
+  * a POSIX file system.
+  */
+class WorkerDeleteRequestPOSIX
+    :   public WorkerDeleteRequest {
+
+public:
+
+    /// Pointer to self
+    typedef std::shared_ptr<WorkerDeleteRequestPOSIX> pointer;
+
+    /**
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     */
+    static pointer create (ServiceProvider   &serviceProvider,
+                           const std::string &worker,
+                           const std::string &id,
+                           int                priority,
+                           const std::string &database,
+                           unsigned int       chunk);
+
+    // Default construction and copy semantics are proxibited
+
+    WorkerDeleteRequestPOSIX () = delete;
+    WorkerDeleteRequestPOSIX (WorkerDeleteRequestPOSIX const&) = delete;
+    WorkerDeleteRequestPOSIX & operator= (WorkerDeleteRequestPOSIX const&) = delete;
+
+    /// Destructor
+    ~WorkerDeleteRequestPOSIX () override;
+
+    /**
+     * This method implements the virtual method of the base class
+     *
+     * @see WorkerDeleteRequest::execute
+     */
+    bool execute (bool incremental=true) override;
+
+private:
+
+    /**
+     * The normal constructor of the class.
+     */
+    WorkerDeleteRequestPOSIX (ServiceProvider   &serviceProvider,
+                              const std::string &worker,
+                              const std::string &id,
+                              int                priority,
+                              const std::string &database,
+                              unsigned int       chunk);
+};
+
 
 /**
   * Class WorkerDeleteRequestX provides an actual implementation for

@@ -26,6 +26,7 @@
 /// WorkerRequestFactory.h declares:
 ///
 /// class WorkerRequestFactory
+/// class WorkerRequestFactoryPOSIX
 /// class WorkerRequestFactoryX
 /// (see individual class documentation for more information)
 
@@ -144,6 +145,86 @@ protected:
     // Parameters of the object
 
     ServiceProvider &_serviceProvider;
+};
+
+/**
+  * Class WorkerRequestFactoryPOSIX creates request objects based on the direct
+  * manipulation of files on a POSIX file system.
+  */
+class WorkerRequestFactoryPOSIX
+    :   WorkerRequestFactory {
+
+public:
+
+    // Default construction and copy semantics are proxibited
+
+    WorkerRequestFactoryPOSIX () = delete;
+    WorkerRequestFactoryPOSIX (WorkerRequestFactoryPOSIX const&) = delete;
+    WorkerRequestFactoryPOSIX & operator= (WorkerRequestFactoryPOSIX const&) = delete;
+
+    /**
+     * The constructor of the class.
+     */
+    explicit WorkerRequestFactoryPOSIX (ServiceProvider &serviceProvider);
+
+    /// Destructor
+    ~WorkerRequestFactoryPOSIX () override;
+
+    /**
+     * Create an instance of the replication request
+     *
+     * @see class WorkerReplicationRequest
+     *
+     * @return a pointer to the newely created object
+     */
+    WorkerReplicationRequest_pointer createReplicationRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk,
+            const std::string &sourceWorker) override;
+
+   /**
+     * Create an instance of the replica deletion request
+     *
+     * @see class WorkerDeleteRequest
+     *
+     * @return a pointer to the newely created object
+     */
+    WorkerDeleteRequest_pointer createDeleteRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk) override;
+
+   /**
+     * Create an instance of the replica lookup request
+     *
+     * @see class WorkerFindRequest
+     *
+     * @return a pointer to the newely created object
+     */
+    WorkerFindRequest_pointer createFindRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk) override;
+
+   /**
+     * Create an instance of the replicas lookup request
+     *
+     * @see class WorkerFindAllRequest
+     *
+     * @return a pointer to the newely created object
+     */
+    WorkerFindAllRequest_pointer createFindAllRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database) override;
 };
 
 
