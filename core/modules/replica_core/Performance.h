@@ -54,14 +54,6 @@ namespace qserv {
 namespace replica_core {
 
 /**
- * Utilities shared by all classes in this scope
- *
-struct PerformanceUtils {
-    /// Return the current time in milliseconds since Epoch
-    static uint64_t now ();    
-};
-*/
-/**
  * Controller-side class with performance counters of a request.
  * 
  * The counters are meant for tracking requests progression over time.

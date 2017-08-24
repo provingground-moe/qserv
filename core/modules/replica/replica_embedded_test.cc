@@ -104,7 +104,7 @@ void launchRequests (rc::ServiceProvider     &serviceProvider,
                         << "  sourceWorker: " << request->sourceWorker()
                         << "  database: "     << request->database()
                         << "  chunk: "        << request->chunk()
-                        << "  "               << request->performance());
+                        << "  performance: "  << request->performance());
                 }
             );
             if (chunk >= maxChunk) break;

@@ -392,5 +392,4 @@ StatusRequestBase::analyze (proto::ReplicationStatus status) {
     }
 }
 
-
 }}} // namespace lsst::qserv::replica_core

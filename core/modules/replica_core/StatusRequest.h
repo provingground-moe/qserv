@@ -78,6 +78,9 @@ public:
     /// Return an identifier of the target request
     const std::string& targetRequestId () const { return _targetRequestId; }
 
+    /// Return the performance info of the target operation (if available)
+    const Performance& targetPerformance () const { return _targetPerformance; }
+
 protected:
 
     /**
@@ -153,6 +156,11 @@ private:
 
     /// Track mode
     bool _keepTracking;
+
+protected:
+
+    /// The performance of the target operation
+    Performance _targetPerformance;
 };
 
 
@@ -278,6 +286,10 @@ private:
         // Always update performance counters obtained from the worker service
 
         _performance.update(message.performance());
+
+        // Set the optional performance of the target operation
+        if (message.has_target_performance())
+            _targetPerformance.update(message.target_performance());
 
         // Field 'status' of a type returned by the current method always
         // be defined in all types of request-specific responses.
