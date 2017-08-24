@@ -80,6 +80,8 @@ FindAllRequest::FindAllRequest (ServiceProvider         &serviceProvider,
         _database (database),
         _onFinish (onFinish),
         _replicaInfoCollection () {
+
+    _serviceProvider.assertDatabaseIsValid (database);
 }
 
 FindAllRequest::~FindAllRequest () {

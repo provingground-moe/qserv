@@ -73,8 +73,10 @@ public:
     /**
      * Make sure this worker is known in the configuration. Throws exception
      * std::invalid_argument otherwise.
+     * 
+     * @param name - the name of a worker
      */
-    void assertWorkerIsValid (const std::string &workerName);
+    void assertWorkerIsValid (const std::string &name);
 
     /**
      * Make sure workers are now known in the configuration and they're different.
@@ -82,6 +84,14 @@ public:
      */
     void assertWorkersAreDifferent (const std::string &workerOneName,
                                     const std::string &workerTwoName);
+
+    /**
+     * Make sure this database is known in the configuration. Throws exception
+     * std::invalid_argument otherwise.
+     *
+     * @param name - the name of a database
+     */
+    void assertDatabaseIsValid (const std::string &name);
 
 private:
 

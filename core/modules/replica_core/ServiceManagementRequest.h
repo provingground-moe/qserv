@@ -99,6 +99,9 @@ public:
             return "";
         }
 
+        /// The backend technology
+        std::string technology;
+
         // Counters for requests known to the service since its last start
 
         uint32_t numNewRequests;

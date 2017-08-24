@@ -43,6 +43,7 @@ const unsigned int defaultRetryTimeoutSec            {1};
 const uint16_t     defaultControllerHttpPort         {80};
 const size_t       defaultControllerHttpThreads      {1};
 const unsigned int defaultControllerRequestTimeoutSec{3600};
+const std::string  defaultWorkerTechnology           {"TEST"};
 const size_t       defaultWorkerNumConnectionsLimit  {1};
 const size_t       defaultWorkerNumProcessingThreads {1};
 const std::string  defaultWorkerSvcHost              {"localhost"};
@@ -103,6 +104,7 @@ Configuration::Configuration (const std::string &configFile)
         _controllerHttpPort         (defaultControllerHttpPort),
         _controllerHttpThreads      (defaultControllerHttpThreads),
         _controllerRequestTimeoutSec(defaultControllerRequestTimeoutSec),
+        _workerTechnology           (defaultWorkerTechnology),
         _workerNumConnectionsLimit  (defaultWorkerNumConnectionsLimit),
         _workerNumProcessingThreads (defaultWorkerNumProcessingThreads) {
 
@@ -162,6 +164,7 @@ Configuration::loadConfiguration () {
     ::parseKeyVal(configStore, "controller.http_server_threads",    _controllerHttpThreads,       defaultControllerHttpThreads);
     ::parseKeyVal(configStore, "controller.request_timeout_sec",    _controllerRequestTimeoutSec, defaultControllerRequestTimeoutSec);
 
+    ::parseKeyVal(configStore, "worker.technology",                 _workerTechnology,            defaultWorkerTechnology);
     ::parseKeyVal(configStore, "worker.max_connections",            _workerNumConnectionsLimit,   defaultWorkerNumConnectionsLimit);
     ::parseKeyVal(configStore, "worker.num_processing_threads",     _workerNumProcessingThreads,  defaultWorkerNumProcessingThreads);
 

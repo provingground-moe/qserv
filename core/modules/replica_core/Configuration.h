@@ -45,18 +45,37 @@ namespace replica_core {
 
 /// The descriptor of a worker
 struct WorkerInfo {
+
+    /// The logical name of a worker
     std::string name;
+
+    /// The host name (or IP address) of the worker service
     std::string svcHost;
-    uint16_t    svcPort;
+
+    /// The port number of the worker service
+    uint16_t svcPort;
+
+    /// The host name (or IP address) of the XRootD service
     std::string xrootdHost;
-    uint16_t    xrootdPort;
+
+    /// The port number of the XRootD service
+    uint16_t xrootdPort;
+
+    /// An absolute path to the data directory under which the MySQL database
+    /// folders are residing.
     std::string dataDir;
 };
 
 /// The descriptor of a database
 struct DatabaseInfo {
+
+    /// The name of a database
     std::string name;
+
+    /// The names of the partitioned tables
     std::vector<std::string> partitionedTables;
+
+    /// The list of fully replicated tables
     std::vector<std::string> regularTables;
 };
 
@@ -92,7 +111,7 @@ public:
     explicit Configuration (const std::string &configFile);
 
     /// Destructor
-    ~Configuration();
+    virtual ~Configuration();
     
     // ------------------------------------------------------------------------
     // -- Common configuration parameters of both the controller and workers --
@@ -165,6 +184,9 @@ public:
      */
     const WorkerInfo& workerInfo (const std::string &name) const;
 
+    /// Return the name of the default technology for implementing requests
+    const std::string& workerTechnology () const { return _workerTechnology; }
+
     /// The maximum number of paralle network connections allowed by each worker
     size_t workerNumConnectionsLimit () const { return _workerNumConnectionsLimit; }
 
@@ -201,6 +223,7 @@ private:
     size_t       _controllerHttpThreads;
     unsigned int _controllerRequestTimeoutSec;
 
+    std::string  _workerTechnology;
     size_t       _workerNumConnectionsLimit;
     size_t       _workerNumProcessingThreads;
     

@@ -277,16 +277,17 @@ message ReplicationServiceResponse {
         RUNNING             = 2;
     }
     required ServiceState service_state = 3;
+    required string       technology    = 4;
 
     // Counters for requests known to the service since its last start
 
-    required uint32 num_new_requests         = 4;
-    required uint32 num_in_progress_requests = 5;
-    required uint32 num_finished_requests    = 6;
+    required uint32 num_new_requests         = 5;
+    required uint32 num_in_progress_requests = 6;
+    required uint32 num_finished_requests    = 7;
 
     // Optional (depending on a request) collections of requests in each queue
     
-    repeated ReplicationServiceRequestInfo new_requests         = 7;
-    repeated ReplicationServiceRequestInfo in_progress_requests = 8;
-    repeated ReplicationServiceRequestInfo finished_requests    = 9;
+    repeated ReplicationServiceRequestInfo new_requests         = 8;
+    repeated ReplicationServiceRequestInfo in_progress_requests = 9;
+    repeated ReplicationServiceRequestInfo finished_requests    = 10;
 }

@@ -86,6 +86,8 @@ FindRequest::FindRequest (ServiceProvider         &serviceProvider,
         _chunk       (chunk),
         _onFinish    (onFinish),
         _replicaInfo () {
+
+    _serviceProvider.assertDatabaseIsValid (database);
 }
 
 FindRequest::~FindRequest () {

@@ -431,7 +431,8 @@ WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "setServiceResponse");
 
-    response.set_status(status);
+    response.set_status    (status);
+    response.set_technology(_requestFactory.technology());
 
     switch (state()) {
 

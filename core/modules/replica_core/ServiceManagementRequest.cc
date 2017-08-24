@@ -82,6 +82,7 @@ operator<< (std::ostream &os, const ServiceManagementRequestBase::ServiceState &
     os  << "ServiceManagementRequestBase::ServiceState:\n"
         << "  Summary:\n"
         << "    service state:              " << ss.state2string() << "\n"
+        << "    technology:                 " << ss.technology << "\n"
         << "    total new requests:         " << ss.numNewRequests << "\n"
         << "    total in-progress requests: " << ss.numInProgressRequests << "\n"
         << "    total finished requests:    " << ss.numFinishedRequests << "\n";
@@ -287,6 +288,7 @@ ServiceManagementRequestBase::analyze (const proto::ReplicationServiceResponse &
                 default:
                     throw std::runtime_error("service state found in protocol is unknown");
             }
+            _serviceState.technology            = message.technology              ();
             _serviceState.numNewRequests        = message.num_new_requests        ();
             _serviceState.numInProgressRequests = message.num_in_progress_requests();
             _serviceState.numFinishedRequests   = message.num_finished_requests   ();

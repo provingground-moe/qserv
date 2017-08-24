@@ -92,6 +92,7 @@ ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider
 
     _serviceProvider.assertWorkerIsValid       (sourceWorker);
     _serviceProvider.assertWorkersAreDifferent (sourceWorker, worker);
+    _serviceProvider.assertDatabaseIsValid     (database);
 }
 
 ReplicationRequest::~ReplicationRequest () {

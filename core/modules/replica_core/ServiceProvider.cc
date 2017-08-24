@@ -59,4 +59,13 @@ ServiceProvider::assertWorkersAreDifferent (const std::string &firstName,
         throw std::invalid_argument (
             "Request::assertWorkersAreDifferent: worker names are the same: " + firstName);
 }
+
+void
+ServiceProvider::assertDatabaseIsValid (const std::string &name) {
+    if (!_configuration.isKnownDatabase(name))
+        throw std::invalid_argument (
+            "Request::assertDatabaseIsValid: database name is not valid: " + name);
+}
+
+
 }}} // namespace lsst::qserv::replica_core
