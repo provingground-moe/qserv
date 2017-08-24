@@ -85,6 +85,8 @@ DeleteRequest::DeleteRequest (ServiceProvider         &serviceProvider,
         _chunk        (chunk),
         _onFinish     (onFinish),
         _responseData () {
+
+    _serviceProvider.assertDatabaseIsValid (database);
 }
 
 DeleteRequest::~DeleteRequest () {

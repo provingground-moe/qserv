@@ -26,13 +26,12 @@
 
 // System headers
 
-#include <algorithm>
-#include <iterator>
 #include <stdexcept>
 
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerDeleteRequest.h"
 #include "replica_core/WorkerFindAllRequest.h"
@@ -50,160 +49,391 @@ namespace qserv {
 namespace replica_core {
 
 
-///////////////////////////////////////////////////////////////
-///////////////////// WorkerRequestFactory ////////////////////
-///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+///////////////////// WorkerRequestFactoryBase ////////////////////
+///////////////////////////////////////////////////////////////////
 
-WorkerRequestFactory::WorkerRequestFactory (ServiceProvider &serviceProvider)
-    :   _serviceProvider (serviceProvider) {
-}
+WorkerRequestFactoryBase::WorkerRequestFactoryBase (ServiceProvider &serviceProvider)
+    :   _serviceProvider (serviceProvider) {}
 
-WorkerRequestFactory::~WorkerRequestFactory () {
-}
+WorkerRequestFactoryBase::~WorkerRequestFactoryBase () {}
 
-WorkerRequestFactory::WorkerReplicationRequest_pointer
-WorkerRequestFactory::createReplicationRequest (const std::string &worker,
-                                                const std::string &id,
-                                                int                priority,
-                                                const std::string &database,
-                                                unsigned int       chunk,
-                                                const std::string &sourceWorker) {
-    return WorkerReplicationRequest::create (
-        _serviceProvider, worker, id, priority, database, chunk, sourceWorker);
-}
 
-WorkerRequestFactory::WorkerDeleteRequest_pointer
-WorkerRequestFactory::createDeleteRequest (const std::string &worker,
-                                           const std::string &id,
-                                           int                priority,
-                                           const std::string &database,
-                                           unsigned int       chunk) {
-    return WorkerDeleteRequest::create (
-        _serviceProvider, worker, id, priority, database, chunk);
-}
+///////////////////////////////////////////////////////////////////
+///////////////////// WorkerRequestFactoryTest ////////////////////
+///////////////////////////////////////////////////////////////////
 
-WorkerRequestFactory::WorkerFindRequest_pointer
-WorkerRequestFactory::createFindRequest (const std::string &worker,
-                                         const std::string &id,
-                                         int                priority,
-                                         const std::string &database,
-                                         unsigned int       chunk) {
-    return WorkerFindRequest::create (
-        _serviceProvider, worker, id, priority, database, chunk);
-}
+/**
+  * Class WorkerRequestFactory is a factory class constructing the test versions
+  * of the request objects which make no persistent side effects.
+  */
+class WorkerRequestFactoryTest
+    :   public WorkerRequestFactoryBase {
 
-WorkerRequestFactory::WorkerFindAllRequest_pointer
-WorkerRequestFactory::createFindAllRequest (const std::string &worker,
-                                            const std::string &id,
-                                            int                priority,
-                                            const std::string &database) {
-    return WorkerFindAllRequest::create (
-        _serviceProvider, worker, id, priority, database);
-}
+public:
 
+    // Default construction and copy semantics are proxibited
+
+    WorkerRequestFactoryTest () = delete;
+    WorkerRequestFactoryTest (WorkerRequestFactoryTest const&) = delete;
+    WorkerRequestFactoryTest & operator= (WorkerRequestFactoryTest const&) = delete;
+
+    /// Normal constructor
+    WorkerRequestFactoryTest (ServiceProvider &serviceProvider)
+        :   WorkerRequestFactoryBase (serviceProvider) {}
+    
+    /// Destructor
+    ~WorkerRequestFactoryTest () override {}
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::technology
+     */
+    std::string technology () const { return "TEST"; }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createReplicationRequest
+     */
+    WorkerReplicationRequest_pointer createReplicationRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk,
+            const std::string &sourceWorker) override {
+
+        return WorkerReplicationRequest::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk,
+            sourceWorker);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createDeleteRequest
+     */
+    WorkerDeleteRequest_pointer createDeleteRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk) override {
+
+        return WorkerDeleteRequest::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindRequest
+     */
+    WorkerFindRequest_pointer createFindRequest (
+            const std::string &worker,
+             const std::string &id,
+             int                priority,
+             const std::string &database,
+             unsigned int       chunk) override {
+
+        return WorkerFindRequest::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindAllRequest
+     */
+    WorkerFindAllRequest_pointer createFindAllRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database) override {
+
+        return WorkerFindAllRequest::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database);
+    }
+};
 
 
 ////////////////////////////////////////////////////////////////////
 ///////////////////// WorkerRequestFactoryPOSIX ////////////////////
 ////////////////////////////////////////////////////////////////////
 
-WorkerRequestFactoryPOSIX::WorkerRequestFactoryPOSIX (ServiceProvider &serviceProvider)
-    :   WorkerRequestFactory (serviceProvider) {
-}
+/**
+  * Class WorkerRequestFactoryPOSIX creates request objects based on the direct
+  * manipulation of files on a POSIX file system.
+  */
+class WorkerRequestFactoryPOSIX
+    :   public WorkerRequestFactoryBase {
 
-WorkerRequestFactoryPOSIX::~WorkerRequestFactoryPOSIX () {
-}
+public:
 
-WorkerRequestFactory::WorkerReplicationRequest_pointer
-WorkerRequestFactoryPOSIX::createReplicationRequest (const std::string &worker,
-                                                     const std::string &id,
-                                                     int                priority,
-                                                     const std::string &database,
-                                                     unsigned int       chunk,
-                                                     const std::string &sourceWorker) {
-    return WorkerReplicationRequestPOSIX::create (
-        _serviceProvider, worker, id, priority, database, chunk, sourceWorker);
-}
+    // Default construction and copy semantics are proxibited
 
-WorkerRequestFactory::WorkerDeleteRequest_pointer
-WorkerRequestFactoryPOSIX::createDeleteRequest (const std::string &worker,
-                                                const std::string &id,
-                                                int                priority,
-                                                const std::string &database,
-                                                unsigned int       chunk) {
-    return WorkerDeleteRequestPOSIX::create (
-        _serviceProvider, worker, id, priority, database, chunk);
-}
+    WorkerRequestFactoryPOSIX () = delete;
+    WorkerRequestFactoryPOSIX (WorkerRequestFactoryPOSIX const&) = delete;
+    WorkerRequestFactoryPOSIX & operator= (WorkerRequestFactoryPOSIX const&) = delete;
 
-WorkerRequestFactory::WorkerFindRequest_pointer
-WorkerRequestFactoryPOSIX::createFindRequest (const std::string &worker,
-                                              const std::string &id,
-                                              int                priority,
-                                              const std::string &database,
-                                              unsigned int       chunk) {
-    return WorkerFindRequestPOSIX::create (
-        _serviceProvider, worker, id, priority, database, chunk);
-}
+    /// Normal constructor
+    WorkerRequestFactoryPOSIX (ServiceProvider &serviceProvider)
+        :   WorkerRequestFactoryBase (serviceProvider) {}
+    
+    /// Destructor
+    ~WorkerRequestFactoryPOSIX () override {}
 
-WorkerRequestFactory::WorkerFindAllRequest_pointer
-WorkerRequestFactoryPOSIX::createFindAllRequest (const std::string &worker,
-                                                 const std::string &id,
-                                                 int                priority,
-                                                 const std::string &database) {
-    return WorkerFindAllRequestPOSIX::create (
-        _serviceProvider, worker, id, priority, database);
-}
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::technology
+     */
+    std::string technology () const { return "POSIX"; }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createReplicationRequest
+     */
+    WorkerReplicationRequest_pointer createReplicationRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk,
+            const std::string &sourceWorker) override {
+
+        return WorkerReplicationRequestPOSIX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk,
+            sourceWorker);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createDeleteRequest
+     */
+    WorkerDeleteRequest_pointer createDeleteRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk) override {
+
+        return WorkerDeleteRequestPOSIX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindRequest
+     */
+    WorkerFindRequest_pointer createFindRequest (
+            const std::string &worker,
+             const std::string &id,
+             int                priority,
+             const std::string &database,
+             unsigned int       chunk) override {
+
+        return WorkerFindRequestPOSIX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindAllRequest
+     */
+    WorkerFindAllRequest_pointer createFindAllRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database) override {
+
+        return WorkerFindAllRequestPOSIX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database);
+    }
+};
 
 
 ////////////////////////////////////////////////////////////////
 ///////////////////// WorkerRequestFactoryX ////////////////////
 ////////////////////////////////////////////////////////////////
 
-WorkerRequestFactoryX::WorkerRequestFactoryX (ServiceProvider &serviceProvider)
-    :   WorkerRequestFactory (serviceProvider) {
-}
 
-WorkerRequestFactoryX::~WorkerRequestFactoryX () {
-}
+/**
+  * Class WorkerRequestFactoryX creates request objects based on the XRootD
+  * implementation of the file system operations.
+  */
+class WorkerRequestFactoryX
+    :   public WorkerRequestFactoryBase {
 
-WorkerRequestFactory::WorkerReplicationRequest_pointer
-WorkerRequestFactoryX::createReplicationRequest (const std::string &worker,
-                                                 const std::string &id,
-                                                 int                priority,
-                                                 const std::string &database,
-                                                 unsigned int       chunk,
-                                                 const std::string &sourceWorker) {
-    return WorkerReplicationRequestX::create (
-        _serviceProvider, worker, id, priority, database, chunk, sourceWorker);
-}
+public:
 
-WorkerRequestFactory::WorkerDeleteRequest_pointer
-WorkerRequestFactoryX::createDeleteRequest (const std::string &worker,
-                                            const std::string &id,
-                                            int                priority,
-                                            const std::string &database,
-                                            unsigned int       chunk) {
-    return WorkerDeleteRequestX::create (
-        _serviceProvider, worker, id, priority, database, chunk);
-}
+    // Default construction and copy semantics are proxibited
 
-WorkerRequestFactory::WorkerFindRequest_pointer
-WorkerRequestFactoryX::createFindRequest (const std::string &worker,
-                                          const std::string &id,
-                                          int                priority,
-                                          const std::string &database,
-                                          unsigned int       chunk) {
-    return WorkerFindRequestX::create (
-        _serviceProvider, worker, id, priority, database, chunk);
-}
+    WorkerRequestFactoryX () = delete;
+    WorkerRequestFactoryX (WorkerRequestFactoryX const&) = delete;
+    WorkerRequestFactoryX & operator= (WorkerRequestFactoryX const&) = delete;
 
-WorkerRequestFactory::WorkerFindAllRequest_pointer
-WorkerRequestFactoryX::createFindAllRequest (const std::string &worker,
-                                             const std::string &id,
-                                             int                priority,
-                                             const std::string &database) {
-    return WorkerFindAllRequestX::create (
-        _serviceProvider, worker, id, priority, database);
+    /// Normal constructor
+    WorkerRequestFactoryX (ServiceProvider &serviceProvider)
+        :   WorkerRequestFactoryBase (serviceProvider) {}
+    
+    /// Destructor
+    ~WorkerRequestFactoryX () override {}
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::technology
+     */
+    std::string technology () const { return "XROOTD"; }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createReplicationRequest
+     */
+    WorkerReplicationRequest_pointer createReplicationRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk,
+            const std::string &sourceWorker) override {
+
+        return WorkerReplicationRequestX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk,
+            sourceWorker);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createDeleteRequest
+     */
+    WorkerDeleteRequest_pointer createDeleteRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk) override {
+
+        return WorkerDeleteRequestX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindRequest
+     */
+    WorkerFindRequest_pointer createFindRequest (
+            const std::string &worker,
+             const std::string &id,
+             int                priority,
+             const std::string &database,
+             unsigned int       chunk) override {
+
+        return WorkerFindRequestX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindAllRequest
+     */
+    WorkerFindAllRequest_pointer createFindAllRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database) override {
+
+        return WorkerFindAllRequestX::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database);
+    }
+};
+
+
+///////////////////////////////////////////////////////////////
+///////////////////// WorkerRequestFactory ////////////////////
+///////////////////////////////////////////////////////////////
+
+WorkerRequestFactory::WorkerRequestFactory (ServiceProvider   &serviceProvider,
+                                            const std::string &technology)
+    :   WorkerRequestFactoryBase (serviceProvider) {
+        
+    const std::string finalTechnology =
+        technology.empty() ? serviceProvider.config().workerTechnology() : technology;
+
+    if      (finalTechnology == "TEST")   _ptr = new WorkerRequestFactoryTest  (serviceProvider);
+    else if (finalTechnology == "POSIX")  _ptr = new WorkerRequestFactoryPOSIX (serviceProvider);
+    else if (finalTechnology == "XROOTD") _ptr = new WorkerRequestFactoryX     (serviceProvider);
+    else
+        throw std::invalid_argument("WorkerRequestFactory::WorkerRequestFactory() unknown technology: '" +
+                                    finalTechnology);
 }
 
 }}} // namespace lsst::qserv::replica_core
