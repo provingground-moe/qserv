@@ -196,21 +196,47 @@ enum ReplicationStatus {
 }
 
 message ReplicationReplicaCreateInfo {
+
+    /// The progress of the operation (YET TO BE REFINED)
     required float progress = 1;
 }
 message ReplicationResponseReplicate {
+
+    /// The completion status of the operation
     required ReplicationStatus status = 1;
+
+    /// The performance of this operation
     required ReplicationPerformance performance = 2;
-    optional ReplicationReplicaCreateInfo replication_info = 3;
+
+    /// The performance of the target operation. This field represents
+    /// stats of the replica creation request obtained by the request
+    /// management operations
+    optional ReplicationPerformance target_performance = 3;
+
+    /// Extended information on the request
+    optional ReplicationReplicaCreateInfo replication_info = 4;
 }
 
 message ReplicationReplicaDeleteInfo {
+
+    /// The progress of the operation (YET TO BE REFINED)
     required float progress = 1;
 }
 message ReplicationResponseDelete {
+
+    /// The completion status of the operation
     required ReplicationStatus status = 1;
+
+    /// The performance of this operation
     required ReplicationPerformance performance = 2;
-    optional ReplicationReplicaDeleteInfo delete_info = 3;
+
+    /// The performance of the target operation. This field represents
+    /// stats of the replica deletion request obtained by the request
+    /// management operations
+    optional ReplicationPerformance target_performance = 3;
+    
+    /// Extended information on the request
+    optional ReplicationReplicaDeleteInfo delete_info = 4;
 }
 
 message ReplicationReplicaInfo {
@@ -227,15 +253,37 @@ message ReplicationReplicaInfo {
 }
 
 message ReplicationResponseFind {
+
+    /// The completion status of the operation
     required ReplicationStatus status = 1;
+
+    /// The performance of this operation
     required ReplicationPerformance performance = 2;
-    optional ReplicationReplicaInfo replica_info = 3;
+
+    /// The performance of the target operation. This field represents
+    /// stats of the replica deletion request obtained by the request
+    /// management operations
+    optional ReplicationPerformance target_performance = 3;
+
+    /// Extended information on the request
+    optional ReplicationReplicaInfo replica_info = 4;
 }
 
 message ReplicationResponseFindAll {
+
+    /// The completion status of the operation
     required ReplicationStatus status = 1;
+
+    /// The performance of this operation
     required ReplicationPerformance performance = 2;
-    repeated ReplicationReplicaInfo replica_info_many = 3;
+
+    /// The performance of the target operation. This field represents
+    /// stats of the replicas lookup request obtained by the request
+    /// management operations
+    optional ReplicationPerformance target_performance = 3;
+
+    /// Extended information on the request
+    repeated ReplicationReplicaInfo replica_info_many = 4;
 }
 
 /////////////////////////////////////////////////////////////////////////

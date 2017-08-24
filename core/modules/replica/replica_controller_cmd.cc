@@ -75,11 +75,14 @@ bool keepTracking = false;
 
 /// Report result of the operation
 template <class T>
-void printRequest (typename T::pointer &request) {
-    LOGS(_log, LOG_LVL_INFO, request->id() << "  " << request->responseData());
-    LOGS(_log, LOG_LVL_INFO, request->id() << "  " << request->performance());
+void printRequest (typename T::pointer request) {
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  responseData: " << request->responseData());
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  performance: " << request->performance());
 }
-
+template <class T>
+void printRequestExtra (typename T::pointer request) {
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  targetPerformance: " << request->targetPerformance());
+}
 
 /// Run the test
 bool test () {
@@ -141,7 +144,8 @@ bool test () {
             request = controller->statusOfReplication (
                 worker, id,
                 [] (rc::StatusReplicationRequest::pointer request) {
-                    printRequest<rc::StatusReplicationRequest>(request);
+                    printRequest     <rc::StatusReplicationRequest>(request);
+                    printRequestExtra<rc::StatusReplicationRequest>(request);
                 },
                 keepTracking);
 
@@ -149,7 +153,8 @@ bool test () {
             request = controller->statusOfDelete (
                 worker, id,
                 [] (rc::StatusDeleteRequest::pointer request) {
-                    printRequest<rc::StatusDeleteRequest>(request);
+                    printRequest     <rc::StatusDeleteRequest>(request);
+                    printRequestExtra<rc::StatusDeleteRequest>(request);
                 },
                 keepTracking);
 
@@ -157,7 +162,8 @@ bool test () {
             request = controller->statusOfFind (
                 worker, id,
                 [] (rc::StatusFindRequest::pointer request) {
-                    printRequest<rc::StatusFindRequest>(request);
+                    printRequest     <rc::StatusFindRequest>(request);
+                    printRequestExtra<rc::StatusFindRequest>(request);
                 },
                 keepTracking);
 
@@ -165,7 +171,8 @@ bool test () {
             request = controller->statusOfFindAll (
                 worker, id,
                 [] (rc::StatusFindAllRequest::pointer request) {
-                    printRequest<rc::StatusFindAllRequest>(request);
+                    printRequest     <rc::StatusFindAllRequest>(request);
+                    printRequestExtra<rc::StatusFindAllRequest>(request);
                 },
                 keepTracking);
 
@@ -173,7 +180,8 @@ bool test () {
             request = controller->stopReplication (
                 worker, id,
                 [] (rc::StopReplicationRequest::pointer request) {
-                    printRequest<rc::StopReplicationRequest>(request);
+                    printRequest     <rc::StopReplicationRequest>(request);
+                    printRequestExtra<rc::StopReplicationRequest>(request);
                 },
                 keepTracking);
 
@@ -181,7 +189,8 @@ bool test () {
             request = controller->stopReplicaDelete (
                 worker, id,
                 [] (rc::StopDeleteRequest::pointer request) {
-                    printRequest<rc::StopDeleteRequest>(request);
+                    printRequest     <rc::StopDeleteRequest>(request);
+                    printRequestExtra<rc::StopDeleteRequest>(request);
                 },
                 keepTracking);
 
@@ -189,7 +198,8 @@ bool test () {
             request = controller->stopReplicaFind (
                 worker, id,
                 [] (rc::StopFindRequest::pointer request) {
-                    printRequest<rc::StopFindRequest>(request);
+                    printRequest     <rc::StopFindRequest>(request);
+                    printRequestExtra<rc::StopFindRequest>(request);
                 },
                 keepTracking);
 
@@ -197,7 +207,8 @@ bool test () {
             request = controller->stopReplicaFindAll (
                 worker, id,
                 [] (rc::StopFindAllRequest::pointer request) {
-                    printRequest<rc::StopFindAllRequest>(request);
+                    printRequest     <rc::StopFindAllRequest>(request);
+                    printRequestExtra<rc::StopFindAllRequest>(request);
                 },
                 keepTracking);
 

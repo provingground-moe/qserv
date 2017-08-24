@@ -647,6 +647,10 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer        &request,
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
                                " in WorkerProcessor::setInfo(WorkerReplicationRequest)");
 
+    // Return the performance of the target request
+
+    response.set_allocated_target_performance(ptr->performance().info());
+
     // Note the ownership transfer of an intermediate protobuf object obtained
     // from ReplicaCreateInfo object in the call below. The protobuf runtime will take
     // care of deleting the intermediate object.
@@ -665,6 +669,10 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer     &request,
     if (!ptr)
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
                                " in WorkerProcessor::setInfo(WorkerDeleteRequest)");
+
+    // Return the performance of the target request
+
+    response.set_allocated_target_performance(ptr->performance().info());
 
     // Note the ownership transfer of an intermediate protobuf object obtained
     // from ReplicaDeleteInfo object in the call below. The protobuf runtime will take
@@ -685,6 +693,10 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer   &request,
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
                                " in WorkerProcessor::setInfo(WorkerFindRequest)");
 
+    // Return the performance of the target request
+
+    response.set_allocated_target_performance(ptr->performance().info());
+
     // Note the ownership transfer of an intermediate protobuf object obtained
     // from ReplicaInfo object in the call below. The protobuf runtime will take
     // care of deleting the intermediate object.
@@ -702,6 +714,10 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer      &request,
     if (!ptr)
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
                                " in WorkerProcessor::setInfo(WorkerFindAllRequest)");
+
+    // Return the performance of the target request
+
+    response.set_allocated_target_performance(ptr->performance().info());
 
     // Note that a new Info object is allocated and appended to
     // the 'replica_info_many' series at each step of the iteration below.
