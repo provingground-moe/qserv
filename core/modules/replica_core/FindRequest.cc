@@ -391,10 +391,19 @@ FindRequest::analyze (const proto::ReplicationResponseFind &message) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(message.status()));
 
+    // Performance counters are updated from either of two sources,
+    // depending on the availability of the 'target' performance counters
+    // filled in by the 'STATUS' queries. If the later is not available
+    // then fallback to the one of the current request.
+
+    if (message.has_target_performance())
+        _performance.update(message.target_performance());
+    else
+        _performance.update(message.performance());
+ 
     // Always extract extended data regardless of the completion status
     // reported by the worker service.
 
-    _performance.update(message.performance());
     _replicaInfo = ReplicaInfo(&(message.replica_info()));
 
     switch (message.status()) {
