@@ -97,7 +97,7 @@ WorkerRequest::setStatus (CompletionStatus status) {
             break;
 
         case STATUS_IN_PROGRESS:
-            _performance.start_time  = _performance.setUpdateStart();
+            _performance.setUpdateStart();
             _performance.finish_time = 0;
             break;
 

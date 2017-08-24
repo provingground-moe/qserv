@@ -202,6 +202,16 @@ public:
     void dequeueOrCancel (const proto::ReplicationRequestStop &request,
                           RESPONSE_MSG_TYPE                   &response) {
 
+        // The default status, unless finding the right request below
+
+        response.set_status(proto::ReplicationStatus::BAD);
+
+        // This type of requsts has 'instant' performance.
+
+        WorkerPerformance performance;
+        performance.setUpdateStart();
+        performance.setUpdateFinish();
+        response.set_allocated_performance(performance.info());
 
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
@@ -213,28 +223,13 @@ public:
                 // when request identifiers won't match actual types of requests
                 setInfo(ptr, response);
 
-                // The performance counters are filled from the above request only
-                // if this is the right kind of request.
-                response.set_allocated_performance(ptr->performance().info());
-
                 // The status field is present in all response types
                 response.set_status(translateReplicationStatus(ptr->status()));
-
-                return;
             
-            } catch (const std::logic_error &ex) { ; }
+            } catch (const std::logic_error &ex) {
+                return;
+            }
         }
-
-        // If the above stated conditions weren't met then assume a fallback
-        // scenario of a bad request. Note that we only need to set response
-        // fields which are strictly required by the protocol definition.
-
-        WorkerPerformance performance;
-        performance.setUpdateStart();
-        performance.setUpdateFinish();
-        response.set_allocated_performance(performance.info());
-
-        response.set_status(proto::ReplicationStatus::BAD);
     }
 
     /**
@@ -248,6 +243,17 @@ public:
     void checkStatus (const proto::ReplicationRequestStatus &request,
                       RESPONSE_MSG_TYPE                     &response) {
 
+        // The default status, unless finding the right request below
+
+        response.set_status(proto::ReplicationStatus::BAD);
+
+        // This type of requsts has 'instant' performance.
+
+        WorkerPerformance performance;
+        performance.setUpdateStart();
+        performance.setUpdateFinish();
+        response.set_allocated_performance(performance.info());
+
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
 
@@ -258,28 +264,13 @@ public:
                 // when request identifiers won't match actual types of requests
                 setInfo(ptr, response);
 
-                // The performance counters are filled from the above request only
-                // if this is the right kind of request.
-                response.set_allocated_performance(ptr->performance().info());
-
                 // The status field is present in all response types
                 response.set_status(translateReplicationStatus(ptr->status()));
 
+            } catch (const std::logic_error &ex) {
                 return;
-            
-            } catch (const std::logic_error &ex) { ; }
+            }
         }
-
-        // If the above stated conditions weren't met then assume a fallback
-        // scenario of a bad request. Note that we only need to set response
-        // fields which are strictly required by the protocol definition.
-
-        WorkerPerformance performance;
-        performance.setUpdateStart();
-        performance.setUpdateFinish();
-        response.set_allocated_performance(performance.info());
-
-        response.set_status(proto::ReplicationStatus::BAD);
     }
 
     /**
