@@ -32,6 +32,7 @@
 
 #include <exception>    // std::exception
 #include <memory>       // shared_ptr, enable_shared_from_this
+#include <mutex>
 #include <string>
 
 // Qserv headers
@@ -100,8 +101,9 @@ public:
 
     ServiceProvider& serviceProvider () { return _serviceProvider; }
 
-    const std::string& type () const { return _type; }
-    const std::string& id   () const { return _id; }
+    const std::string& worker () const { return _worker; }
+    const std::string& type   () const { return _type; }
+    const std::string& id     () const { return _id; }
 
     int priority () const { return _priority; }
 
@@ -203,6 +205,9 @@ protected:
     /// This members is used by the default implementation of method execute()
     /// to simulate request processing.
     unsigned int _durationMillisec;
+
+    /// Mutex guarding operations with the worker's data folder
+    static std::mutex _mtxDataFolderOperations;
 };
 
 

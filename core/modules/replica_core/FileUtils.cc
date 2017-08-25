@@ -48,11 +48,11 @@ FileUtils::partitionedFiles (const DatabaseInfo &databaseInfo,
 
     for (const auto &table: databaseInfo.partitionedTables) {
         
-        const std::string file = databaseInfo.name + "/" + table + chunkSuffix;
+        const std::string file = table + chunkSuffix;
         for (const auto &ext: ::extensions)
             result.push_back(file + ext);
 
-        const std::string fileOverlap = databaseInfo.name + "/" + table + "FullOverlap" + chunkSuffix;
+        const std::string fileOverlap = table + "FullOverlap" + chunkSuffix;
         for (const auto &ext: ::extensions)
             result.push_back(fileOverlap + ext);
     }
@@ -65,7 +65,7 @@ FileUtils::regularFiles (const DatabaseInfo &databaseInfo) {
     std::vector<std::string> result;
 
     for (const auto &table : databaseInfo.regularTables) {
-        const std::string filename = databaseInfo.name + "/" + table;
+        const std::string filename = table;
         for (const auto &ext : ::extensions)
             result.push_back(filename + ext);
     }

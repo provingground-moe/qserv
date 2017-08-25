@@ -77,7 +77,17 @@ bool keepTracking = false;
 template <class T>
 void printRequest (typename T::pointer request) {
     LOGS(_log, LOG_LVL_INFO, request->id() << "  responseData: " << request->responseData());
-    LOGS(_log, LOG_LVL_INFO, request->id() << "  performance: " << request->performance());
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  performance: "  << request->performance());
+}
+template <>
+void printRequest<rc::FindRequest> (rc::FindRequest::pointer request) {
+    if (request->state()         == rc::Request::State::FINISHED &&
+        request->extendedState() == rc::Request::ExtendedState::SUCCESS) {
+        LOGS(_log, LOG_LVL_INFO, request->id() << "  responseData: " << request->responseData());
+    } else {
+        LOGS(_log, LOG_LVL_INFO, request->id() << "  responseData: <NO DATA>");
+    }
+    LOGS(_log, LOG_LVL_INFO, request->id() << "  performance: "  << request->performance());
 }
 template <class T>
 void printRequestExtra (typename T::pointer request) {

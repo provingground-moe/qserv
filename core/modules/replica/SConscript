@@ -15,6 +15,7 @@ for f in env.Glob("*.cc"):
                 "qserv_common",
                 "util",
                 "protobuf",
+                "boost_filesystem",
                 "boost_system",
                 "log",
                 "log4cxx"])
