@@ -115,7 +115,7 @@ protected:
                        int                priority,
                        const std::string &database,
                        unsigned int       chunk);
-private:
+protected:
 
     // Parameters of the request
 

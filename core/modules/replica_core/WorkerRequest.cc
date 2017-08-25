@@ -32,6 +32,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
+#include "replica_core/ServiceProvider.h"
 #include "replica_core/SuccessRateGenerator.h"
 
 namespace {
@@ -53,6 +54,10 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+
+std::mutex
+WorkerRequest::_mtxDataFolderOperations;
+    
 std::string
 WorkerRequest::status2string (CompletionStatus status) {
     switch (status) {
@@ -79,6 +84,8 @@ WorkerRequest::WorkerRequest (ServiceProvider   &serviceProvider,
         _status           (STATUS_NONE),
         _performance      (),
         _durationMillisec (0) {
+
+    serviceProvider.assertWorkerIsValid (worker);
 }
 
 WorkerRequest::~WorkerRequest () {

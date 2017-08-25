@@ -64,8 +64,7 @@ public:
 
     /**
      * Return a list of all file names representing partitioned tables
-     * of a database and a chunk. The names will be prepended with the name
-     * of a database folder in which the files are located.
+     * of a database and a chunk.
      *
      * @param databaseInfo - the description of the database and tables
      * @param chunk        - the chunk number
@@ -75,8 +74,7 @@ public:
 
     /**
      * Return a list of all file names representing regular tables
-     * of a database. The names will be prepended with the name
-     * of a database folder in which the files are located.
+     * of a database.
      *
      * @param databaseInfo - the description of the database and tables
      */
