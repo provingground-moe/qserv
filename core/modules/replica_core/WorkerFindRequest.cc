@@ -109,9 +109,8 @@ bool
 WorkerFindRequest::execute (bool incremental) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  worker: " << worker()
          << "  database: " << database()
-         << "  chunk: " << chunk());
+         << "  chunk: "    << chunk());
 
     // Set up the result if the operation is over
 
@@ -172,14 +171,13 @@ bool
 WorkerFindRequestPOSIX::execute (bool incremental) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  worker: "   << worker()
          << "  database: " << database()
          << "  chunk: "    << chunk());
 
-    LOCK_DATA_FOLDER;
-
     const WorkerInfo   &workerInfo   = _serviceProvider.config().workerInfo  (worker  ());
     const DatabaseInfo &databaseInfo = _serviceProvider.config().databaseInfo(database());
+
+    LOCK_DATA_FOLDER;
 
     // Check if the data directory exists and it can be read
     
@@ -190,7 +188,6 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
     if (ec) {
         LOGS(_log, LOG_LVL_ERROR, context() << "execute"
             << "  failed to check the status of data directory: " << dataDirPath
-            << "  worker: "   << worker()
             << "  database: " << database()
             << "  chunk: "    << chunk());
         setStatus(STATUS_FAILED);
@@ -199,7 +196,6 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
     if (!dataDirExists) {
         LOGS(_log, LOG_LVL_ERROR, context() << "execute"
             << "  data directory doesn't exist: " << dataDirPath
-            << "  worker: "   << worker()
             << "  database: " << database()
             << "  chunk: "    << chunk());
         setStatus(STATUS_FAILED);
@@ -223,7 +219,6 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
         if (fileStat.type() == fs::status_error) {
             LOGS(_log, LOG_LVL_ERROR, context() << "execute"
                 << "  failed to check the status of file: " << filePath
-                << "  worker: "   << worker()
                 << "  database: " << database()
                 << "  chunk: "    << chunk());
             setStatus(STATUS_FAILED);
@@ -239,8 +234,8 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
             ReplicaInfo::Status::INCOMPLETE;
   
     // Fill in the info on the chunk before finishing the operation    
-    _replicaInfo = ReplicaInfo (status, worker(), database(), chunk());
 
+    _replicaInfo = ReplicaInfo (status, worker(), database(), chunk());
     setStatus(STATUS_SUCCEEDED);
 
     return true;
