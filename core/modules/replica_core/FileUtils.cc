@@ -26,12 +26,48 @@
 
 // System headers
 
+#include <algorithm>
+#include <iterator>
+
 // Qserv headers
 #include "replica_core/Configuration.h"
 
 
 namespace {
-    const std::vector<std::string> extensions{".frm", ".MYD", ".MYI"};
+
+/// Standard file extention of the MyISAM (and derived) engine's table files
+const std::vector<std::string> extensions{"frm", "MYD", "MYI"};
+
+/**
+ * Evaluate if an input string corresponds to a valid file extention
+ *
+ * @param str - the candidate string to be tested
+ *
+ * @return 'true' if this is a valid file extention
+ */
+bool isValidExtention (const std::string &str) {
+    return extensions.end() != std::find(extensions.begin(), extensions.end(), str);
+}
+
+
+/**
+ * Evaluate if an input string corresponds to a valid partitioned table
+ * or its variant.
+ *
+ * @param str          - the candidate string to be tested
+ * @param databaseInfo - database specification
+ *
+ * @return 'true' if this is a valid table name
+ */
+bool isValidPartitionedTable (const std::string                             &str,
+                              const lsst::qserv::replica_core::DatabaseInfo &databaseInfo) {
+    for (const auto &table: databaseInfo.partitionedTables) {
+        if (str == table) return true;
+        if (str == table + "FullOverlap") return true;
+    }
+    return false;
+}
+
 } // namespace
 
 namespace lsst {
@@ -50,11 +86,11 @@ FileUtils::partitionedFiles (const DatabaseInfo &databaseInfo,
         
         const std::string file = table + chunkSuffix;
         for (const auto &ext: ::extensions)
-            result.push_back(file + ext);
+            result.push_back(file + "." + ext);
 
         const std::string fileOverlap = table + "FullOverlap" + chunkSuffix;
         for (const auto &ext: ::extensions)
-            result.push_back(fileOverlap + ext);
+            result.push_back(fileOverlap + "." + ext);
     }
     return result;
 }
@@ -66,10 +102,47 @@ FileUtils::regularFiles (const DatabaseInfo &databaseInfo) {
 
     for (const auto &table : databaseInfo.regularTables) {
         const std::string filename = table;
-        for (const auto &ext : ::extensions)
-            result.push_back(filename + ext);
+        for (const auto &ext: ::extensions)
+            result.push_back(filename + "." + ext);
     }
     return result;
 }
+
+bool
+FileUtils::parsePartitionedFile (std::tuple<std::string, unsigned int, std::string> &parsed,
+                                 const std::string                                  &fileName,
+                                 const DatabaseInfo                                 &databaseInfo) {
+
+    // Find the extention of the file and evaluate it if found
+
+    const std::string::size_type posBeforeExention = fileName.rfind('.');
+    if (posBeforeExention == std::string::npos) return false;               // not found
+
+    const std::string extention = fileName.substr(posBeforeExention + 1);   // excluding '.'
+    if (!::isValidExtention(extention)) return false;                       // unknow file extenton
+
+    // Find and parse the chunk number
+
+    const std::string::size_type posBeforeChunk = fileName.rfind('_');
+    if (posBeforeChunk == std::string::npos) return false;      // not found
+    if (posBeforeChunk >= posBeforeExention) return false;      // no room for chunk
+
+    unsigned int chunk;
+    try {
+        chunk = std::stoul(fileName.substr(posBeforeChunk + 1, posBeforeExention - posBeforeChunk - 1));
+    } catch (const std::invalid_argument&) {
+        return false;
+    }
+
+    // Find the table name and check if it's allowed for the specified database
+
+    const std::string table = fileName.substr(0, posBeforeChunk);
+    if (!::isValidPartitionedTable(table, databaseInfo)) return false;  // unknown table
+
+    // Success
+    parsed = std::make_tuple(table, chunk, extention);
+    return true;
+}
+
 
 }}} // namespace lsst::qserv::replica_core

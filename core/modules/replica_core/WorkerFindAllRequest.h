@@ -112,7 +112,7 @@ protected:
                           const std::string &id,
                           int                priority,
                           const std::string &database);
-private:
+protected:
 
     // Parameters of the request
 

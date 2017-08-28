@@ -26,11 +26,22 @@
 
 // System headers
 
+#include <boost/filesystem.hpp>
+#include <map>
+
 // Qserv headers
 
 #include "lsst/log/Log.h"
 #include "replica_core/Configuration.h"
+#include "replica_core/FileUtils.h"
 #include "replica_core/ServiceProvider.h"
+
+// This macro to appear witin each block which requires thread safety
+
+#define LOCK_DATA_FOLDER \
+std::lock_guard<std::mutex> lock(_mtxDataFolderOperations)
+
+namespace fs = boost::filesystem;
 
 namespace {
 
@@ -97,7 +108,6 @@ bool
 WorkerFindAllRequest::execute (bool incremental) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  worker: "   << _worker
          << "  database: " << database());
 
     // Set up the result if the operation is over
@@ -157,9 +167,83 @@ WorkerFindAllRequestPOSIX::~WorkerFindAllRequestPOSIX () {
 bool
 WorkerFindAllRequestPOSIX::execute (bool incremental) {
 
-    // TODO: provide the actual implementation instead of the dummy one.
+    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+        << "  database: " << database());
 
-    return WorkerRequest::execute(incremental);
+    const WorkerInfo   &workerInfo    = _serviceProvider.config().workerInfo  (worker());
+    const DatabaseInfo &databaseInfo  = _serviceProvider.config().databaseInfo(database());
+
+    // Scan the data directory to find all files which match the expected pattern(s)
+    // and group them by their chunk number
+
+    WorkerRequest::ErrorContext errorContext;
+    boost::system::error_code   ec;
+
+    std::map<unsigned int, size_t> chunk2numFiles;  // the number of files per each chunk
+    {
+        LOCK_DATA_FOLDER;
+        
+        const fs::path dataDir = fs::path(workerInfo.dataDir) / database();
+        const fs::file_status stat = fs::status(dataDir, ec);
+        errorContext = errorContext
+            || reportErrorIf (
+                    stat.type() == fs::status_error,
+                    EXT_STATUS_FOLDER_STAT,
+                    "failed to check the status of directory: " + dataDir.string())
+            || reportErrorIf (
+                    !fs::exists(stat),
+                    EXT_STATUS_NO_FOLDER,
+                    "the directory does not exists: " + dataDir.string());
+        try {
+            for (fs::directory_entry &entry: fs::directory_iterator(dataDir)) {
+                std::tuple<std::string, unsigned int, std::string> parsed;
+                if (FileUtils::parsePartitionedFile (
+                        parsed,
+                        entry.path().filename().string(),
+                        databaseInfo)) {
+
+                    const unsigned chunk = std::get<1>(parsed);
+                    if (chunk2numFiles.count(chunk)) chunk2numFiles[chunk]++;
+                    else                             chunk2numFiles[chunk] = 1;
+
+                    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+                        << "  database: " << database()
+                        << "  file: "     << entry.path().filename()
+                        << "  table: "    << std::get<0>(parsed)
+                        << "  chunk: "    << std::get<1>(parsed)
+                        << "  ext: "      << std::get<2>(parsed));
+                }
+            }
+        } catch (const fs::filesystem_error &ex) {
+            errorContext = errorContext
+                || reportErrorIf (
+                        true,
+                        EXT_STATUS_FOLDER_READ,
+                        "failed to read the directory: " + dataDir.string() + ", error: " + std::string(ex.what()));
+        }
+    }
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
+        return true;
+    }
+
+    // Analyze results to see which chunks are complete using chunk 0 as an example
+    // of the total number of files which are normally associated with each chunk.
+
+    const size_t numFilesPerChunkRequired =
+        FileUtils::partitionedFiles (databaseInfo, 0).size();
+
+    for (auto &entry: chunk2numFiles) {
+        const unsigned int chunk    = entry.first;
+        const size_t       numFiles = entry.second;
+        _replicaInfoCollection.emplace_back (
+                numFiles < numFilesPerChunkRequired ? ReplicaInfo::INCOMPLETE : ReplicaInfo::COMPLETE,
+                worker(),
+                database(),
+                chunk);
+    }
+    setStatus(STATUS_SUCCEEDED);
+    return true;
 }
 
 

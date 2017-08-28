@@ -26,9 +26,22 @@
 
 // System headers
 
+#include <boost/filesystem.hpp>
+
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Configuration.h"
+#include "replica_core/FileUtils.h"
+#include "replica_core/ServiceProvider.h"
+
+
+// This macro to appear witin each block which requires thread safety
+
+#define LOCK_DATA_FOLDER \
+std::lock_guard<std::mutex> lock(_mtxDataFolderOperations)
+
+namespace fs = boost::filesystem;
 
 namespace {
 
@@ -85,11 +98,9 @@ WorkerDeleteRequest::~WorkerDeleteRequest () {
 bool
 WorkerDeleteRequest::execute (bool incremental) {
 
-   LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
-         << "  db: " << database()
-         << "  chunk: " << chunk());
-
-    // TODO: provide the actual implementation instead of the dummy one.
+    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+        << "  db: "    << database()
+        << "  chunk: " << chunk());
 
     const bool complete = WorkerRequest::execute(incremental);
     if (complete) {
@@ -145,9 +156,59 @@ WorkerDeleteRequestPOSIX::~WorkerDeleteRequestPOSIX () {
 bool
 WorkerDeleteRequestPOSIX::execute (bool incremental) {
 
-    // TODO: provide the actual implementation instead of the dummy one.
+    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+         << "  db: "    << database()
+         << "  chunk: " << chunk());
 
-    return WorkerDeleteRequest::execute(incremental);
+    const WorkerInfo   &workerInfo    = _serviceProvider.config().workerInfo  (worker());
+    const DatabaseInfo &databaseInfo  = _serviceProvider.config().databaseInfo(database());
+    
+    const std::vector<std::string> files =
+        FileUtils::partitionedFiles (databaseInfo, chunk());
+
+    // The data folder will be locked while performing the operation
+
+    int numFilesDeleted = 0;
+
+    WorkerRequest::ErrorContext errorContext;
+    boost::system::error_code   ec;
+    {
+        LOCK_DATA_FOLDER;
+
+        const fs::path dataDir = fs::path(workerInfo.dataDir) / database();
+        const fs::file_status stat = fs::status(dataDir, ec);
+        errorContext = errorContext
+            || reportErrorIf (
+                    stat.type() == fs::status_error,
+                    EXT_STATUS_FOLDER_STAT,
+                    "failed to check the status of directory: " + dataDir.string())
+            || reportErrorIf (
+                    !fs::exists(stat),
+                    EXT_STATUS_NO_FOLDER,
+                    "the directory does not exists: " + dataDir.string());
+
+        for (const auto &name: files) {
+            const fs::path file = dataDir / fs::path(name);
+            if (fs::remove(file, ec)) ++numFilesDeleted;
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        EXT_STATUS_FILE_DELETE,
+                        "failed to delete file: " + file.string());
+        }
+    }
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
+        return true;
+    }
+
+    // For now (before finalizing the progress reporting protocol) just return
+    // the perentage of the total number of files removed
+ 
+    _deleteInfo = ReplicaDeleteInfo(100. * numFilesDeleted / files.size());
+
+    setStatus(STATUS_SUCCEEDED);
+    return true;
 }
 
 

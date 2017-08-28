@@ -110,15 +110,6 @@ WorkerReplicationRequest::~WorkerReplicationRequest () {
 
 
 bool
-WorkerReplicationRequest::reportErrorIf (bool               errorCondition,
-                                         const std::string &errorMsg) {
-    if (errorCondition)
-        LOGS(_log, LOG_LVL_ERROR, context() << "execute()" << errorMsg);
-    return errorCondition;
-}
-
-
-bool
 WorkerReplicationRequest::execute (bool incremental) {
 
    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
@@ -245,9 +236,8 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
 
     uintmax_t totalBytes = 0;   // the total number of bytes in all input files to be moved
 
-    bool failed = false;
-
-    boost::system::error_code ec;
+    WorkerRequest::ErrorContext errorContext;
+    boost::system::error_code   ec;
     {
         LOCK_DATA_FOLDER;
 
@@ -255,28 +245,49 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
 
         for (const auto &file: inFiles) {
             const fs::file_status stat = fs::status(file, ec);
-            failed = failed
-                || reportErrorIf (stat.type() == fs::status_error, "failed to check the status of input file: " + file.string())
-                || reportErrorIf (!fs::exists(stat),               "the input file does not exist: "            + file.string());
+            errorContext = errorContext
+                || reportErrorIf (
+                        stat.type() == fs::status_error,
+                        EXT_STATUS_FILE_STAT,
+                        "failed to check the status of input file: " + file.string())
+                || reportErrorIf (
+                        !fs::exists(stat),
+                        EXT_STATUS_NO_FILE,
+                        "the input file does not exist: " + file.string());
 
             totalBytes += fs::file_size(file, ec);
-            failed = failed
-                || reportErrorIf (ec, "failed to get the size of input file: " + file.string());
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        EXT_STATUS_FILE_SIZE,
+                        "failed to get the size of input file: " + file.string());
         }
 
         const bool outDirExists = fs::exists(outDir, ec);
-        failed = failed
-            || reportErrorIf (ec,            "failed to check the status of output directory: " + outDir.string())
-            || reportErrorIf (!outDirExists, "the output directory doesn't exist: "             + outDir.string());
+        errorContext = errorContext
+            || reportErrorIf (
+                    ec,
+                    EXT_STATUS_FOLDER_STAT,
+                    "failed to check the status of output directory: " + outDir.string())
+            || reportErrorIf (
+                    !outDirExists,
+                    EXT_STATUS_NO_FOLDER,
+                    "the output directory doesn't exist: " + outDir.string());
 
         // The files with canonical(!) names should NOT exist at the destination
         // folder.
 
         for (const auto &file: outFiles) {
             const fs::file_status stat = fs::status(file, ec);
-            failed = failed
-                || reportErrorIf (stat.type() == fs::status_error, "failed to check the status of output file: " + file.string())
-                || reportErrorIf (fs::exists(stat),                "the output file already exists: "            + file.string());
+            errorContext = errorContext
+                || reportErrorIf (
+                        stat.type() == fs::status_error,
+                        EXT_STATUS_FILE_STAT,
+                        "failed to check the status of output file: " + file.string())
+                || reportErrorIf (
+                        fs::exists(stat),
+                        EXT_STATUS_FILE_EXISTS,
+                        "the output file already exists: " + file.string());
         }
 
         // Check if there are any files with the temporary names at the destination
@@ -284,13 +295,19 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
 
         for (const auto &file: tmpFiles) {
             const fs::file_status stat = fs::status(file, ec);
-            failed = failed
-                || reportErrorIf (stat.type() == fs::status_error, "failed to check the status of temporary file: " + file.string());
+            errorContext = errorContext
+                || reportErrorIf (
+                        stat.type() == fs::status_error,
+                        EXT_STATUS_FILE_STAT,
+                        "failed to check the status of temporary file: " + file.string());
 
             if (fs::exists(stat)) {
                 fs::remove(file, ec);
-                failed = failed
-                    || reportErrorIf (ec, "failed to remove temporary file: " + file.string());
+                errorContext = errorContext
+                    || reportErrorIf (
+                            ec,
+                            EXT_STATUS_FILE_DELETE,
+                            "failed to remove temporary file: " + file.string());
             }
         }
 
@@ -300,12 +317,18 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
         // NOTE: this operation runs after cleaning up temporary files
 
         const fs::space_info space = fs::space(outDir, ec);
-        failed = failed
-            || reportErrorIf (ec,                            "failed to obtaine space information at output folder: " + outDir.string())
-            || reportErrorIf (space.available < totalBytes , "not enough free space availble at output folder: "      + outDir.string());
+        errorContext = errorContext
+            || reportErrorIf (
+                    ec,
+                    EXT_STATUS_SPACE_REQ,
+                    "failed to obtaine space information at output folder: " + outDir.string())
+            || reportErrorIf (
+                    space.available < totalBytes,
+                    EXT_STATUS_NO_SPACE,
+                    "not enough free space availble at output folder: " + outDir.string());
     }
-    if (failed) {
-        setStatus(STATUS_FAILED);
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
         return true;
     }
 
@@ -313,14 +336,19 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
     // temporary names w/o acquring the directory lock.
 
     for (const auto &file: files) {
+
         const fs::path inFile  = file2inFile [file];
         const fs::path tmpFile = file2tmpFile[file];
+
         fs::copy_file(inFile, tmpFile, ec);
-        failed = failed
-            || reportErrorIf (ec, "failed to copy file: " + inFile.string() + " into: " + tmpFile.string());
+        errorContext = errorContext
+            || reportErrorIf (
+                    ec,
+                    EXT_STATUS_FILE_COPY,
+                    "failed to copy file: " + inFile.string() + " into: " + tmpFile.string());
     }
-    if (failed) {
-        setStatus(STATUS_FAILED);
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
         return true;
     }
 
@@ -335,16 +363,22 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
         // ATTENTION: as per ISO/IEC 9945 thie file rename operation will
         //            remove empty files. Not sure if this should be treated
         //            in a special way?
+
         for (const auto &file: files) {
+
             const fs::path tmpFile = file2tmpFile[file];
             const fs::path outFile = file2outFile[file];
+
             fs::rename(tmpFile, outFile, ec);
-            failed = failed
-                || reportErrorIf (ec, "failed to rename file: " + tmpFile.string());
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        EXT_STATUS_FILE_RENAME,
+                        "failed to rename file: " + tmpFile.string());
         }
     }
-    if (failed) {
-        setStatus(STATUS_FAILED);
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
         return true;
     }
 

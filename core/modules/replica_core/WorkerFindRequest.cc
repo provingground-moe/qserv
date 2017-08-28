@@ -177,28 +177,28 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
     const WorkerInfo   &workerInfo   = _serviceProvider.config().workerInfo  (worker  ());
     const DatabaseInfo &databaseInfo = _serviceProvider.config().databaseInfo(database());
 
-    LOCK_DATA_FOLDER;
-
     // Check if the data directory exists and it can be read
     
-    boost::system::error_code ec;
+    WorkerRequest::ErrorContext errorContext;
+    boost::system::error_code   ec;
 
-    const fs::path dataDirPath   = fs::path(workerInfo.dataDir) / database();
-    const bool     dataDirExists = fs::exists(dataDirPath, ec);
-    if (ec) {
-        LOGS(_log, LOG_LVL_ERROR, context() << "execute"
-            << "  failed to check the status of data directory: " << dataDirPath
-            << "  database: " << database()
-            << "  chunk: "    << chunk());
-        setStatus(STATUS_FAILED);
-        return true;
-    }
-    if (!dataDirExists) {
-        LOGS(_log, LOG_LVL_ERROR, context() << "execute"
-            << "  data directory doesn't exist: " << dataDirPath
-            << "  database: " << database()
-            << "  chunk: "    << chunk());
-        setStatus(STATUS_FAILED);
+    LOCK_DATA_FOLDER;
+
+    const fs::path        dataDir = fs::path(workerInfo.dataDir) / database();
+    const fs::file_status stat    = fs::status(dataDir, ec);
+
+    errorContext = errorContext
+        || reportErrorIf (
+                stat.type() == fs::status_error,
+                EXT_STATUS_FOLDER_STAT,
+                "failed to check the status of directory: " + dataDir.string())
+        || reportErrorIf (
+                !fs::exists(stat),
+                EXT_STATUS_NO_FOLDER,
+                "the directory does not exists: " + dataDir.string());
+
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
         return true;
     }
 
@@ -214,17 +214,21 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
 
     size_t numFilesFound = 0;
     for (const auto &file: files) {
-        const fs::path        filePath = dataDirPath / file;
-        const fs::file_status fileStat = fs::status(filePath, ec);
-        if (fileStat.type() == fs::status_error) {
-            LOGS(_log, LOG_LVL_ERROR, context() << "execute"
-                << "  failed to check the status of file: " << filePath
-                << "  database: " << database()
-                << "  chunk: "    << chunk());
-            setStatus(STATUS_FAILED);
-            return true;
-        }
-        if (fs::exists(fileStat)) ++numFilesFound;
+
+        const fs::path        path = dataDir / file;
+        const fs::file_status stat = fs::status(path, ec);
+
+        errorContext = errorContext
+            || reportErrorIf (
+                    stat.type() == fs::status_error,
+                    EXT_STATUS_FILE_STAT,
+                    "failed to check the status of file: " + path.string());
+
+        if (fs::exists(stat)) ++numFilesFound;
+    }
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
+        return true;
     }
 
     ReplicaInfo::Status status = ReplicaInfo::Status::NOT_FOUND;
