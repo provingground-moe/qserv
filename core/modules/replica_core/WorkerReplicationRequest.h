@@ -114,19 +114,6 @@ protected:
                               unsigned int       chunk,
                               const std::string &sourceWorker);
 
-    /**
-     * Check if the error condition is set and report the error.
-     * The error message will be sent to the corresponding logging
-     * stream.
-     *
-     * @param condition - if set to 'true' then there is a error condition
-     * @param errorMsg  - a message to be reported into the log stream
-     *
-     * @return the input value of parameter 'condition'
-     */
-    bool reportErrorIf (bool               condition,
-                        const std::string &errorMsg);
-
 protected:
 
     // Parameters of the object

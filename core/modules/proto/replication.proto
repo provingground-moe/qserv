@@ -194,7 +194,22 @@ enum ReplicationStatus {
     FAILED        = 5;
     CANCELLED     = 6;
 }
-
+enum ReplicationStatusExt {
+    NONE        = 0;
+    FOLDER_STAT = 1;
+    FILE_STAT   = 2;
+    FILE_SIZE   = 3;
+    FOLDER_READ = 4;
+    FILE_COPY   = 5;
+    FILE_DELETE = 6;
+    FILE_RENAME = 7;
+    FILE_EXISTS = 8;
+    SPACE_REQ   = 9;
+    NO_FOLDER   = 10;
+    NO_FILE     = 11;
+    NO_ACCESS   = 12;
+    NO_SPACE    = 13;
+}
 message ReplicationReplicaCreateInfo {
 
     /// The progress of the operation (YET TO BE REFINED)
@@ -205,16 +220,19 @@ message ReplicationResponseReplicate {
     /// The completion status of the operation
     required ReplicationStatus status = 1;
 
+    /// Extended status of this operation
+    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+
     /// The performance of this operation
-    required ReplicationPerformance performance = 2;
+    required ReplicationPerformance performance = 3;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica creation request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 3;
+    optional ReplicationPerformance target_performance = 4;
 
     /// Extended information on the request
-    optional ReplicationReplicaCreateInfo replication_info = 4;
+    optional ReplicationReplicaCreateInfo replication_info = 5;
 }
 
 message ReplicationReplicaDeleteInfo {
@@ -227,16 +245,19 @@ message ReplicationResponseDelete {
     /// The completion status of the operation
     required ReplicationStatus status = 1;
 
+    /// Extended status of this operation
+    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+
     /// The performance of this operation
-    required ReplicationPerformance performance = 2;
+    required ReplicationPerformance performance = 3;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica deletion request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 3;
+    optional ReplicationPerformance target_performance = 4;
     
     /// Extended information on the request
-    optional ReplicationReplicaDeleteInfo delete_info = 4;
+    optional ReplicationReplicaDeleteInfo delete_info = 5;
 }
 
 message ReplicationReplicaInfo {
@@ -257,16 +278,19 @@ message ReplicationResponseFind {
     /// The completion status of the operation
     required ReplicationStatus status = 1;
 
+    /// Extended status of this operation
+    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+
     /// The performance of this operation
-    required ReplicationPerformance performance = 2;
+    required ReplicationPerformance performance = 3;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica deletion request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 3;
+    optional ReplicationPerformance target_performance = 4;
 
     /// Extended information on the request
-    optional ReplicationReplicaInfo replica_info = 4;
+    optional ReplicationReplicaInfo replica_info = 5;
 }
 
 message ReplicationResponseFindAll {
@@ -274,16 +298,19 @@ message ReplicationResponseFindAll {
     /// The completion status of the operation
     required ReplicationStatus status = 1;
 
+    /// Extended status of this operation
+    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+
     /// The performance of this operation
-    required ReplicationPerformance performance = 2;
+    required ReplicationPerformance performance = 3;
 
     /// The performance of the target operation. This field represents
     /// stats of the replicas lookup request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 3;
+    optional ReplicationPerformance target_performance = 4;
 
     /// Extended information on the request
-    repeated ReplicationReplicaInfo replica_info_many = 4;
+    repeated ReplicationReplicaInfo replica_info_many = 5;
 }
 
 /////////////////////////////////////////////////////////////////////////

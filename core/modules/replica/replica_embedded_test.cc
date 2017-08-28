@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <iostream>
 #include <string>
 
@@ -16,6 +17,15 @@ namespace rc = lsst::qserv::replica_core;
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_worker");
+
+
+const char *usage = "usage: <config> [--enable-controller <max-chunk>]";
+
+// Command line parameters
+
+std::string  configFileName   {""};
+bool         enableController {false};
+unsigned int maxChunk         {0};
 
 
 /**
@@ -117,38 +127,48 @@ void launchRequests (rc::ServiceProvider     &serviceProvider,
  * Instantiate and run all threads. Then block the current thread in
  * a series of repeated timeouts.
  */
-void run (const std::string &configFileName,
-          unsigned int       maxChunk) {
+void run () {
     
     try {
         rc::Configuration        config         {configFileName};
         rc::ServiceProvider      serviceProvider{config};
-        rc::WorkerRequestFactory requestFactory{serviceProvider};
+        rc::WorkerRequestFactory requestFactory {serviceProvider};
 
         // Firts, run the worker servers
 
         runAllWorkers (serviceProvider, requestFactory);
 
-        // Then run the client-side
+        // Then launch the Controller and submit the client-side tests
+        // if requested.
+        if (enableController) {
 
-        rc::Controller::pointer controller = rc::Controller::create(serviceProvider);
-        controller->run();
+            rc::Controller::pointer controller = rc::Controller::create(serviceProvider);
+            controller->run();
+    
+            launchRequests (serviceProvider, controller, "db1", 1, maxChunk);
+    
+            // Block the thread forewer or until an exception happens
+    
+            rc::BlockPost blockPost(1000, 5000);
+            while (true) {
+                blockPost.wait();
+                LOGS(_log, LOG_LVL_INFO, "<CONTROLLER HEARTBEAT>  active requests: " << controller->numActiveRequests());
+            }
+            controller->join();
 
-        launchRequests (serviceProvider, controller, "db1", 1, maxChunk);
-
-        // Block the thread forewer or until an exception happens
-
-        rc::BlockPost blockPost(1000, 5000);
-        while (true) {
-            blockPost.wait();
-            LOGS(_log, LOG_LVL_INFO, "<CONTROLLER HEARTBEAT>  active requests: " << controller->numActiveRequests());
+        } else {
+            
+            // Otherwise, just wait foreever.
+            rc::BlockPost blockPost(1000, 5000);
+            while (true) {
+                blockPost.wait();  
+            }
         }
-        controller->join();
-
     } catch (std::exception& e) {
         LOGS(_log, LOG_LVL_ERROR, e.what());
     }
 }
+
 }  /// namespace
 
 int main (int argc, const char* const argv[]) {
@@ -158,14 +178,31 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
  
-    if (argc != 3) {
-        std::cerr << "usage: <config> <max-chunk>" << std::endl;
+    if (argc < 2) {
+        std::cerr << ::usage<< std::endl;
         return 1;
     }
-    const std::string  configFileName =            argv[1];
-    const unsigned int maxChunk       = std::stoul(argv[2]);
+    ::configFileName = argv[1];
 
-    ::run (configFileName, maxChunk);
+    if (argc > 3) {
+        const std::string optStr = argv[2];
+        if ("--enable-controller" == optStr) {
+            ::enableController = true;
+            const std::string chunkStr = argv[3];
+            try {
+                ::maxChunk = std::stoul(chunkStr);
+            } catch (const std::invalid_argument&) {
+                std::cerr << "failed to translate the chunk: " << chunkStr << "\n"
+                    << ::usage<< std::endl;
+                return 1;
+            }
+        } else {
+            std::cerr << "unknon option: " << optStr << "\n"
+                << ::usage<< std::endl;
+            return 1;
+        }
+    }
+    ::run();
 
     return 0;
 }

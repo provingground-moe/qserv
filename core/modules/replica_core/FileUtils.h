@@ -30,6 +30,7 @@
 // System headers
 
 #include <string>
+#include <tuple>
 #include <vector>
 
 // Qserv headers
@@ -79,6 +80,32 @@ public:
      * @param databaseInfo - the description of the database and tables
      */
     static std::vector<std::string> regularFiles (const DatabaseInfo &databaseInfo);
+
+
+    /**
+     * Parse the file name and if successfull fill in a tuple with components of
+     * the name. The file name are expected to matche one of the following patterns:
+     *
+     *   <table>_<chunk>.<ext>
+     *   <table>FullOverlap_<chunk>.<ext>
+     *
+     * Where:
+     *
+     *   <table> - is the name of a valid partitioned table as per the database info
+     *   <chunk> - is a numeric chunk number
+     *   <ext>   - is one of the database file extentions
+     *
+     * @param parsed       - the tuple to be initialized upon the successfull completion
+     * @param fileName     - the name of a file (no directory name) including its extention
+     * @param databaseInfo - the database specification
+     *
+     * @return 'true' if the file name matches one of the expected pattens. The tuple's elements
+     * will be (in the order of their definition): the name of a table (including 'FullOverlap'
+     * where applies), the number of a chunk, adm its extention (w/o the dot)
+     */
+    static bool parsePartitionedFile (std::tuple<std::string, unsigned int, std::string> &parsed,
+                                      const std::string                                  &fileName,
+                                      const DatabaseInfo                                 &databaseInfo);
 };
 
 }}} // namespace lsst::qserv::replica_core

@@ -71,6 +71,33 @@ WorkerRequest::status2string (CompletionStatus status) {
     throw std::logic_error("WorkerRequest::status2string - unhandled status: " + std::to_string(status));
 }
 
+std::string
+WorkerRequest::status2string (ExtendedCompletionStatus extendedStatus) {
+    switch (extendedStatus) {
+        case EXT_STATUS_NONE:        return "EXT_STATUS_NONE";
+        case EXT_STATUS_FOLDER_STAT: return "EXT_STATUS_FOLDER_STAT";
+        case EXT_STATUS_FILE_STAT:   return "EXT_STATUS_FILE_STAT";
+        case EXT_STATUS_FILE_SIZE:   return "EXT_STATUS_FILE_SIZE";
+        case EXT_STATUS_FOLDER_READ: return "EXT_STATUS_FOLDER_READ";
+        case EXT_STATUS_FILE_COPY:   return "EXT_STATUS_FILE_COPY";
+        case EXT_STATUS_FILE_DELETE: return "EXT_STATUS_FILE_DELETE";
+        case EXT_STATUS_FILE_RENAME: return "EXT_STATUS_FILE_RENAME";
+        case EXT_STATUS_FILE_EXISTS: return "EXT_STATUS_FILE_EXISTS";
+        case EXT_STATUS_SPACE_REQ:   return "EXT_STATUS_SPACE_REQ";
+        case EXT_STATUS_NO_FOLDER:   return "EXT_STATUS_NO_FOLDER";
+        case EXT_STATUS_NO_FILE:     return "EXT_STATUS_NO_FILE";
+        case EXT_STATUS_NO_ACCESS:   return "EXT_STATUS_NO_ACCESS";
+        case EXT_STATUS_NO_SPACE:    return "EXT_STATUS_NO_SPACE";
+    }
+    throw std::logic_error("WorkerRequest::status2string - unhandled status: " + std::to_string(extendedStatus));
+}
+
+std::string
+WorkerRequest::status2string (CompletionStatus         status,
+                              ExtendedCompletionStatus extendedStatus) {
+    return status2string(status) + "::" + status2string(extendedStatus);
+}
+
 WorkerRequest::WorkerRequest (ServiceProvider   &serviceProvider,
                               const std::string &worker,
                               const std::string &type,
@@ -82,6 +109,7 @@ WorkerRequest::WorkerRequest (ServiceProvider   &serviceProvider,
         _id               (id),
         _priority         (priority),
         _status           (STATUS_NONE),
+        _extendedStatus   (EXT_STATUS_NONE),
         _performance      (),
         _durationMillisec (0) {
 
@@ -91,11 +119,26 @@ WorkerRequest::WorkerRequest (ServiceProvider   &serviceProvider,
 WorkerRequest::~WorkerRequest () {
 }
 
+WorkerRequest::ErrorContext
+WorkerRequest::reportErrorIf (bool                      errorCondition,
+                              ExtendedCompletionStatus  extendedStatus,
+                              const std::string        &errorMsg) {
+    WorkerRequest::ErrorContext errorContext;
+    if (errorCondition) {
+        errorContext.failed = true;
+        errorContext.extendedStatus = extendedStatus;
+        LOGS(_log, LOG_LVL_ERROR, context() << "execute()" << errorMsg);
+    }
+    return errorContext;
+}
+
 void
-WorkerRequest::setStatus (CompletionStatus status) {
+WorkerRequest::setStatus (CompletionStatus         status,
+                          ExtendedCompletionStatus extendedStatus) {
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "setStatus  "
-         << WorkerRequest::status2string(_status) << " -> "
-         << WorkerRequest::status2string(status));
+         << WorkerRequest::status2string(_status, _extendedStatus) << " -> "
+         << WorkerRequest::status2string( status,  extendedStatus));
 
     switch (status) {
         case STATUS_NONE:
@@ -127,7 +170,8 @@ WorkerRequest::setStatus (CompletionStatus status) {
         default:
             throw std::logic_error("WorkerRequest::setStatus - unhandled status: " + std::to_string(status));
     }
-    _status = status;
+    _status         = status;
+    _extendedStatus = extendedStatus;
 }
 
 bool

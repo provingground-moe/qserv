@@ -88,6 +88,31 @@ public:
     /// Return the string representation of the status
     static std::string status2string (CompletionStatus status);
 
+    /// Extended completion status (where applies)
+    enum ExtendedCompletionStatus {
+        EXT_STATUS_NONE,            // unspecified problem
+        EXT_STATUS_FOLDER_STAT,     // failed to obtain fstat() for a folder
+        EXT_STATUS_FILE_STAT,       // failed to obtain fstat() for a file
+        EXT_STATUS_FILE_SIZE,       // failed to obtain a size of a file
+        EXT_STATUS_FOLDER_READ,     // failed to read the contents of a folder
+        EXT_STATUS_FILE_COPY,       // failed to copy a file
+        EXT_STATUS_FILE_DELETE,     // failed to delete a file
+        EXT_STATUS_FILE_RENAME,     // failed to rename a file
+        EXT_STATUS_FILE_EXISTS,     // file already exists
+        EXT_STATUS_SPACE_REQ,       // space inquery requst failed
+        EXT_STATUS_NO_FOLDER,       // folder doesn't exist
+        EXT_STATUS_NO_FILE,         // file doesn't exist
+        EXT_STATUS_NO_ACCESS,       // no access to a file or a folder
+        EXT_STATUS_NO_SPACE         // o spce left on a device as required by an operation
+    };
+
+    /// Return the string representation of the extended status
+    static std::string status2string (ExtendedCompletionStatus status);
+
+    /// Return the string representation of the full status
+    static std::string status2string (CompletionStatus         status,
+                                      ExtendedCompletionStatus extendedStatus);
+
     // Default construction and copy semantics are proxibited
 
     WorkerRequest () = delete;
@@ -107,7 +132,8 @@ public:
 
     int priority () const { return _priority; }
 
-    CompletionStatus  status () const { return _status; }
+    CompletionStatus          status         () const { return _status; }
+    ExtendedCompletionStatus  extendedStatus () const { return _extendedStatus; }
 
     /// Return the performance info
     const WorkerPerformance& performance () const { return _performance; }
@@ -117,7 +143,8 @@ public:
      * ATTENTION: this method needs to be called witin a thread-safe context
      * when moving requests between different queues.
      */
-    void setStatus (CompletionStatus status);
+    void setStatus (CompletionStatus         status,
+                    ExtendedCompletionStatus extendedStatus=EXT_STATUS_NONE);
 
     /**
      * This method should be invoked (repeatedly) to execute the request until
@@ -185,6 +212,56 @@ protected:
                    const std::string &type,
                    const std::string &id,
                    int                priority);
+    /**
+     * This structure is used for tracking errors reported by method 'reportErrorIf
+     */
+    struct ErrorContext {
+
+        // State of the object
+
+        bool failed;
+        ExtendedCompletionStatus extendedStatus;
+
+        ErrorContext ()
+            :   failed(false),
+                extendedStatus(EXT_STATUS_NONE) {
+        }
+        
+        /**
+         *  Merge the context of another object into the current one.
+         *  
+         *  Note, only the first error code will be stored when a error condition
+         *  is detected. An assumption is that the first error would usually cause
+         *  a "chain reaction", hence only the first one typically matters.
+         *  Other details could be found in the log files if needed.
+         */
+        ErrorContext& operator|| (const ErrorContext &rhs) {
+            if (&rhs != this) {
+                if (rhs.failed && !failed) {
+                    failed = true;
+                    extendedStatus = rhs.extendedStatus;
+                }
+            }
+            return *this;
+        }
+    };
+
+    /**
+     * Check if the error condition is set and report the error.
+     * The error message will be sent to the corresponding logging
+     * stream.
+     *
+     * @param condition      - if set to 'true' then there is a error condition
+     * @param extendedStatus - extended status corresponding to the condition
+     *                         (will be ignored if no error condition is present)
+     * @param errorMsg       - a message to be reported into the log stream
+     *
+     * @return the context object encapculating values passed in parameters
+     * 'condition' and 'extendedStatus'
+     */
+    ErrorContext reportErrorIf (bool                      condition,
+                                ExtendedCompletionStatus  extendedStatus,
+                                const std::string        &errorMsg);
 
 protected:
 
@@ -196,7 +273,8 @@ protected:
 
     int _priority;
     
-    CompletionStatus _status;
+    CompletionStatus         _status;
+    ExtendedCompletionStatus _extendedStatus;
 
     /// Performance counters
     WorkerPerformance _performance;
