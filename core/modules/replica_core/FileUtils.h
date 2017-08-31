@@ -29,6 +29,7 @@
 
 // System headers
 
+#include <cstdint>      // size_t, uint64_t
 #include <string>
 #include <tuple>
 #include <vector>
@@ -54,6 +55,9 @@ class DatabaseInfo;
 class FileUtils {
 
 public:
+
+    /// The maximum number of bytes to be read during file I/O operations
+    static constexpr size_t MAX_RECORD_SIZE_BYTES = 1024*1024*1024;
 
     // Default construction and copy semantics are prohibited
 
@@ -106,6 +110,23 @@ public:
     static bool parsePartitionedFile (std::tuple<std::string, unsigned int, std::string> &parsed,
                                       const std::string                                  &fileName,
                                       const DatabaseInfo                                 &databaseInfo);
+
+    /**
+     * Compute a simple control sum on the specified file
+     *
+     * The method will throw one of the following exceptions:
+     *   std::runtime_error    - if there was a problem with opening or reading
+     *                           the file
+     *   std::illegal_argument - if the file name is empty or if the record size
+     *                           is 0 or too huge (more than 1GB)
+     *
+     * @param fileName        - the name of a file to read
+     * @param recordSizeBytes - desired record size
+     *
+     * @return the control sum of the file content
+     */
+    static uint64_t compute_cs (const std::string &fileName,
+                                size_t             recordSizeBytes=MAX_RECORD_SIZE_BYTES);
 };
 
 }}} // namespace lsst::qserv::replica_core

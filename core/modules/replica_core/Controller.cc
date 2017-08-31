@@ -374,8 +374,9 @@ ReplicationRequest::pointer
 Controller::replicate (const std::string                 &workerName,
                        const std::string                 &sourceWorkerName,
                        const std::string                 &database,
-                       unsigned int                      chunk,
-                       ReplicationRequest::callback_type  onFinish) {
+                       unsigned int                       chunk,
+                       ReplicationRequest::callback_type  onFinish,
+                       int                                priority) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -392,7 +393,8 @@ Controller::replicate (const std::string                 &workerName,
             chunk,
             [controller] (ReplicationRequest::pointer request) {
                 controller->finish(request->id());
-            }
+            },
+            priority
         );
 
     // Register the request (along with its callback) by its unique
@@ -413,7 +415,8 @@ DeleteRequest::pointer
 Controller::deleteReplica (const std::string            &workerName,
                            const std::string            &database,
                            unsigned int                  chunk,
-                           DeleteRequest::callback_type  onFinish) {
+                           DeleteRequest::callback_type  onFinish,
+                           int                           priority) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -429,7 +432,8 @@ Controller::deleteReplica (const std::string            &workerName,
             chunk,
             [controller] (DeleteRequest::pointer request) {
                 controller->finish(request->id());
-            }
+            },
+            priority
         );
 
     // Register the request (along with its callback) by its unique
@@ -450,7 +454,9 @@ FindRequest::pointer
 Controller::findReplica (const std::string          &workerName,
                          const std::string          &database,
                          unsigned int                chunk,
-                         FindRequest::callback_type  onFinish) {
+                         FindRequest::callback_type  onFinish,
+                         int                         priority,
+                         bool                        computeCheckSum) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -466,7 +472,9 @@ Controller::findReplica (const std::string          &workerName,
             chunk,
             [controller] (FindRequest::pointer request) {
                 controller->finish(request->id());
-            }
+            },
+            priority,
+            computeCheckSum
         );
 
     // Register the request (along with its callback) by its unique
@@ -486,7 +494,9 @@ Controller::findReplica (const std::string          &workerName,
 FindAllRequest::pointer
 Controller::findAllReplicas (const std::string             &workerName,
                              const std::string             &database,
-                             FindAllRequest::callback_type  onFinish) {
+                             FindAllRequest::callback_type  onFinish,
+                             int                            priority,
+                             bool                           computeCheckSum) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -501,7 +511,9 @@ Controller::findAllReplicas (const std::string             &workerName,
             database,
             [controller] (FindAllRequest::pointer request) {
                 controller->finish(request->id());
-            }
+            },
+            priority,
+            computeCheckSum
         );
 
     // Register the request (along with its callback) by its unique

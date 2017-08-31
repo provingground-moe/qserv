@@ -120,7 +120,8 @@ public:
             const std::string &id,
             int                priority,
             const std::string &database,
-            unsigned int       chunk) = 0;
+            unsigned int       chunk,
+            bool               computeCheckSum) = 0;
 
    /**
      * Create an instance of the replicas lookup request
@@ -133,7 +134,8 @@ public:
             const std::string &worker,
             const std::string &id,
             int                priority,
-            const std::string &database) = 0;
+            const std::string &database,
+            bool               computeCheckSum) = 0;
             
 protected:
 
@@ -257,14 +259,16 @@ public:
             const std::string &id,
             int                priority,
             const std::string &database,
-            unsigned int       chunk) override {
+            unsigned int       chunk,
+            bool               computeCheckSum) override {
         
         return _ptr->createFindRequest (
             worker,
             id,
             priority,
             database,
-            chunk);
+            chunk,
+            computeCheckSum);
     }
 
    /**
@@ -276,13 +280,15 @@ public:
             const std::string &worker,
             const std::string &id,
             int                priority,
-            const std::string &database) override {
+            const std::string &database,
+            bool               computeCheckSum) override {
         
         return _ptr->createFindAllRequest (
             worker,
             id,
             priority,
-            database);
+            database,
+            computeCheckSum);
     }
 
 protected:

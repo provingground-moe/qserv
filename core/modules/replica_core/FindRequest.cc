@@ -56,7 +56,8 @@ FindRequest::create (ServiceProvider         &serviceProvider,
                      const std::string       &database,
                      unsigned int             chunk,
                      callback_type            onFinish,
-                     int                      priority) {
+                     int                      priority,
+                     bool                     computeCheckSum) {
 
     return FindRequest::pointer (
         new FindRequest (
@@ -66,7 +67,8 @@ FindRequest::create (ServiceProvider         &serviceProvider,
             database,
             chunk,
             onFinish,
-            priority));
+            priority,
+            computeCheckSum));
 }
 
 FindRequest::FindRequest (ServiceProvider         &serviceProvider,
@@ -75,17 +77,19 @@ FindRequest::FindRequest (ServiceProvider         &serviceProvider,
                           const std::string       &database,
                           unsigned int             chunk,
                           callback_type            onFinish,
-                          int                      priority)
+                          int                      priority,
+                          bool                     computeCheckSum)
     :   Request(serviceProvider,
                 io_service,
                 "REPLICA_FIND",
                 worker,
                 priority),
  
-        _database    (database),
-        _chunk       (chunk),
-        _onFinish    (onFinish),
-        _replicaInfo () {
+        _database        (database),
+        _chunk           (chunk),
+        _computeCheckSum (computeCheckSum),
+        _onFinish        (onFinish),
+        _replicaInfo     () {
 
     _serviceProvider.assertDatabaseIsValid (database);
 }
@@ -117,10 +121,11 @@ FindRequest::beginProtocol () {
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestFind message;
-    message.set_priority (priority());
-    message.set_id       (id());
-    message.set_database (database());
-    message.set_chunk    (chunk());
+    message.set_priority   (priority());
+    message.set_id         (id());
+    message.set_database   (database());
+    message.set_chunk      (chunk());
+    message.set_compute_cs (computeCheckSum());
 
     _bufferPtr->serialize(message);
 

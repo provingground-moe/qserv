@@ -145,12 +145,12 @@ public:
      * The method will throw exception std::invalid_argument if the worker
      * names are equal.
      *
-     * @param workerName            - the name of a worker node from which to copy the chunk
-     * @param sourceWorkerName      - the name of a worker node where the replica will be created
-     * @param database              - database name
-     * @param chunk                 - the chunk number
-     * @param onFinish              - an optional callback function to be called upon
-     *                                the completion of the request
+     * @param workerName       - the name of a worker node from which to copy the chunk
+     * @param sourceWorkerName - the name of a worker node where the replica will be created
+     * @param database         - database name
+     * @param chunk            - the chunk number
+     * @param onFinish         - an optional callback function to be called upon the completion of the request
+     * @param priority         - a priority level of the request
      *
      * @return a pointer to the replication request
      */
@@ -158,7 +158,8 @@ public:
                                           const std::string                &sourceWorkerName,
                                           const std::string                &database,
                                           unsigned int                      chunk,
-                                          ReplicationRequest_callback_type  onFinish=nullptr);
+                                          ReplicationRequest_callback_type  onFinish=nullptr,
+                                          int                               priority=0);
 
     /**
      * Initiate a new replica deletion request.
@@ -166,45 +167,62 @@ public:
      * @param workerName - the name of a worker node where the replica will be deleted
      * @param database   - database name
      * @param chunk      - the chunk number
-     * @param onFinish   - an optional callback function to be called upon
-     *                     the completion of the request
+     * @param onFinish   - an optional callback function to be called upon the completion of the request
+     * @param priority   - a priority level of the request
      *
      * @return a pointer to the replication request
      */
     DeleteRequest_pointer deleteReplica (const std::string           &workerName,
                                          const std::string           &database,
                                          unsigned int                 chunk,
-                                         DeleteRequest_callback_type  onFinish=nullptr);
+                                         DeleteRequest_callback_type  onFinish=nullptr,
+                                         int                          priority=0);
 
     /**
      * Initiate a new replica lookup request.
      *
-     * @param workerName - the name of a worker node where the replica is located
-     * @param database   - database name
-     * @param chunk      - the chunk number
-     * @param onFinish   - an optional callback function to be called upon
-     *                     the completion of the request
+     * PERFORMANCE NOTE: enabling 'computeCheckSum' will require reading each file.
+     *                   Hence this will slow down the operation, and it may also
+     *                   affcet the overall perfromance of Qserv on the corresponding
+     *                   worker node.
+     *
+     * @param workerName      - the name of a worker node where the replica is located
+     * @param database        - database name
+     * @param chunk           - the chunk number
+     * @param onFinish        - an optional callback function to be called upon the completion of the request
+     * @param priority        - a priority level of the request
+     * @param computeCheckSum - tell a worker server to compute check/control sum on each file
      *
      * @return a pointer to the replication request
      */
     FindRequest_pointer findReplica (const std::string         &workerName,
                                      const std::string         &database,
                                      unsigned int               chunk,
-                                     FindRequest_callback_type  onFinish=nullptr);
+                                     FindRequest_callback_type  onFinish=nullptr,
+                                     int                        priority=0,
+                                     bool                       computeCheckSum=false);
 
     /**
      * Initiate a new replicas lookup request.
      *
-     * @param workerName - the name of a worker node where the replicas are located
-     * @param database   - database name
-     * @param onFinish   - an optional callback function to be called upon
-     *                     the completion of the request
+     * PERFORMANCE NOTE: enabling 'computeCheckSum' will require reading each file.
+     *                   Hence this will slow down the operation, and it may also
+     *                   affcet the overall perfromance of Qserv on the corresponding
+     *                   worker node.
+     *
+     * @param workerName      - the name of a worker node where the replicas are located
+     * @param database        - database name
+     * @param onFinish        - an optional callback function to be called upon the completion of the request
+     * @param priority        - a priority level of the request
+     * @param computeCheckSum - tell a worker server to compute check/control sum on each file
      *
      * @return a pointer to the replication request
      */
     FindAllRequest_pointer findAllReplicas (const std::string            &workerName,
                                             const std::string            &database,
-                                            FindAllRequest_callback_type  onFinish=nullptr);
+                                            FindAllRequest_callback_type  onFinish=nullptr,
+                                            int                           priority=0,
+                                            bool                          computeCheckSum=false);
 
     /**
      * Stop an outstanding replication request.

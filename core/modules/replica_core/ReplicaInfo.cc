@@ -54,6 +54,12 @@ void setInfoImpl (const lsst::qserv::replica_core::ReplicaInfo &ri,
     info->set_worker  (ri.worker  ());
     info->set_database(ri.database());
     info->set_chunk   (ri.chunk   ());
+    for (const auto &fi: ri.fileInfo()) {
+        lsst::qserv::proto::ReplicationFileInfo *fileInfo = info->add_file_info_many();
+        fileInfo->set_name(fi.name);
+        fileInfo->set_size(fi.size);
+        fileInfo->set_cs  (fi.cs);
+    }  
 }
 }  // namespace
 
@@ -73,15 +79,24 @@ ReplicaInfo::status2string (Status status) {
     throw std::logic_error("unhandled status " + std::to_string(status) +
                            " in ReplicaInfo::status2string()");
 }
+ReplicaInfo::ReplicaInfo ()
+    :   _status (NOT_FOUND),
+        _worker   (""),
+        _database (""),
+        _chunk    (0),
+        _fileInfo () {
+}
 
 ReplicaInfo::ReplicaInfo (Status             status,
                           const std::string &worker,
                           const std::string &database,
-                          unsigned int       chunk)
+                          unsigned int       chunk,
+                          const ReplicaInfo::FileInfoCollection &fileInfo)
     :   _status   (status),
         _worker   (worker),
         _database (database),
-        _chunk    (chunk) {
+        _chunk    (chunk),
+        _fileInfo (fileInfo) {
 }
 
 ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {
@@ -98,6 +113,17 @@ ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {
     _worker   = info->worker();
     _database = info->database();
     _chunk    = info->chunk();
+
+    for (int idx = 0; idx < info->file_info_many_size(); ++idx) {
+        const proto::ReplicationFileInfo &fileInfo = info->file_info_many(idx);
+        _fileInfo.emplace_back (
+            FileInfo({
+                fileInfo.name(),
+                fileInfo.size(),
+                fileInfo.cs()
+            })
+        );
+    }
 }
 
 
@@ -106,6 +132,7 @@ ReplicaInfo::ReplicaInfo (ReplicaInfo const &ri) {
     _worker   = ri._worker;
     _database = ri._database;
     _chunk    = ri._chunk;
+    _fileInfo = ri._fileInfo;
 }
 
 
@@ -116,6 +143,7 @@ ReplicaInfo::operator= (ReplicaInfo const &ri) {
         _worker   = ri._worker;
         _database = ri._database;
         _chunk    = ri._chunk;
+        _fileInfo = ri._fileInfo;
     }
     return *this;
 }
@@ -137,6 +165,14 @@ ReplicaInfo::setInfo (lsst::qserv::proto::ReplicationReplicaInfo *info) const {
     ::setInfoImpl(*this, info);
 }
 
+std::ostream&
+operator<< (std::ostream& os, const ReplicaInfo::FileInfo &fi) {
+    os  << "FileInfo"
+        << " name: " << fi.name
+        << " size: " << fi.size
+        << " cs: "   << fi.cs;
+    return os;
+}
 
 std::ostream&
 operator<< (std::ostream& os, const ReplicaInfo &ri) {
@@ -144,7 +180,10 @@ operator<< (std::ostream& os, const ReplicaInfo &ri) {
         << " status: " << ReplicaInfo::status2string(ri.status())
         << " worker: "   << ri.worker()
         << " database: " << ri.database()
-        << " chunk: "    << ri.chunk();
+        << " chunk: "    << ri.chunk()
+        << " files: ";
+    for (const auto &fi: ri.fileInfo())
+        os << " (" << fi << ")";
     return os;
 }
 

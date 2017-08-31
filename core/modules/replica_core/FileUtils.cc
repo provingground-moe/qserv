@@ -27,7 +27,10 @@
 // System headers
 
 #include <algorithm>
-#include <iterator>
+#include <cerrno>
+#include <cstring>
+#include <cstdio>
+#include <stdexcept>
 
 // Qserv headers
 #include "replica_core/Configuration.h"
@@ -144,5 +147,44 @@ FileUtils::parsePartitionedFile (std::tuple<std::string, unsigned int, std::stri
     return true;
 }
 
+
+uint64_t
+FileUtils::compute_cs (const std::string &fileName,
+                       size_t             recordSizeBytes) {
+
+    if (fileName.empty())
+        throw std::invalid_argument("empty file name passed into FileUtils::compute_cs");
+
+    if (!recordSizeBytes || recordSizeBytes > MAX_RECORD_SIZE_BYTES)
+        throw std::invalid_argument("invalid record size " + std::to_string(recordSizeBytes) +
+                                    "passed into FileUtils::compute_cs");
+
+    std::FILE* fp = std::fopen (fileName.c_str(), "rb");
+    if (!fp)
+        throw std::runtime_error (
+            std::string("file open error: ") + std::strerror(errno) +
+            std::string(", file: ") + fileName);
+
+    uint8_t *buf = new uint8_t[recordSizeBytes];
+
+    uint64_t cs = 0;
+    size_t num;
+    while ((num = std::fread(buf, sizeof(uint8_t), recordSizeBytes, fp)))
+        for (uint8_t *ptr = buf, *end = buf + num; ptr != end; ++ptr)
+            cs += (uint64_t)(*ptr);
+
+    if (std::ferror(fp)) {
+        const std::string err =
+            std::string("file read error: ") + std::strerror(errno) +
+            std::string(", file: ") + fileName;
+        fclose(fp);
+        delete [] buf;
+        throw std::runtime_error(err);
+    }
+    std::fclose(fp);
+    delete [] buf;
+
+    return cs;
+}
 
 }}} // namespace lsst::qserv::replica_core

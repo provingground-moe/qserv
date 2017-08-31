@@ -54,7 +54,8 @@ FindAllRequest::create (ServiceProvider         &serviceProvider,
                         const std::string       &worker,
                         const std::string       &database,
                         callback_type            onFinish,
-                        int                      priority) {
+                        int                      priority,
+                        bool                     computeCheckSum) {
 
     return FindAllRequest::pointer (
         new FindAllRequest (
@@ -63,7 +64,8 @@ FindAllRequest::create (ServiceProvider         &serviceProvider,
             worker,
             database,
             onFinish,
-            priority));
+            priority,
+            computeCheckSum));
 }
 
 FindAllRequest::FindAllRequest (ServiceProvider         &serviceProvider,
@@ -71,14 +73,17 @@ FindAllRequest::FindAllRequest (ServiceProvider         &serviceProvider,
                                 const std::string       &worker,
                                 const std::string       &database,
                                 callback_type            onFinish,
-                                int                      priority)
+                                int                      priority,
+                                bool                     computeCheckSum)
     :   Request(serviceProvider,
                 io_service,
                 "REPLICA_FIND_ALL",
                 worker,
                 priority),
-        _database (database),
-        _onFinish (onFinish),
+
+        _database              (database),
+        _computeCheckSum       (computeCheckSum),
+        _onFinish              (onFinish),
         _replicaInfoCollection () {
 
     _serviceProvider.assertDatabaseIsValid (database);
@@ -111,9 +116,10 @@ FindAllRequest::beginProtocol () {
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestFindAll message;
-    message.set_priority (priority());
-    message.set_id       (id());
-    message.set_database (database());
+    message.set_priority   (priority());
+    message.set_id         (id());
+    message.set_database   (database());
+    message.set_compute_cs (computeCheckSum());
 
     _bufferPtr->serialize(message);
 
