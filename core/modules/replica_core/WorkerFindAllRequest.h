@@ -72,7 +72,8 @@ public:
                            const std::string &worker,
                            const std::string &id,
                            int                priority,
-                           const std::string &database);
+                           const std::string &database,
+                           bool               computeCheckSum);
 
     // Default construction and copy semantics are proxibited
 
@@ -85,7 +86,8 @@ public:
 
     // Trivial accessors
 
-    const std::string& database () const { return _database; }
+    const std::string& database        () const { return _database; }
+    bool               computeCheckSum () const { return _computeCheckSum; }
 
    /**
      * Return a refernce to a result of the completed request.
@@ -111,12 +113,14 @@ protected:
                           const std::string &worker,
                           const std::string &id,
                           int                priority,
-                          const std::string &database);
+                          const std::string &database,
+                          bool               computeCheckSum);
 protected:
 
     // Parameters of the request
 
     std::string _database;
+    bool        _computeCheckSum;
 
     /// Result of the operation
     ReplicaInfoCollection _replicaInfoCollection;
@@ -145,7 +149,8 @@ public:
                            const std::string &worker,
                            const std::string &id,
                            int                priority,
-                           const std::string &database);
+                           const std::string &database,
+                           bool               computeCheckSum);
 
     // Default construction and copy semantics are proxibited
 
@@ -172,7 +177,8 @@ private:
                                const std::string &worker,
                                const std::string &id,
                                int                priority,
-                               const std::string &database);
+                               const std::string &database,
+                               bool               computeCheckSum);
 };
 
 
@@ -197,7 +203,8 @@ public:
                            const std::string &worker,
                            const std::string &id,
                            int                priority,
-                           const std::string &database);
+                           const std::string &database,
+                           bool               computeCheckSum);
 
     // Default construction and copy semantics are proxibited
 
@@ -224,7 +231,8 @@ private:
                            const std::string &worker,
                            const std::string &id,
                            int                priority,
-                           const std::string &database);
+                           const std::string &database,
+                           bool               computeCheckSum);
 };
 
 

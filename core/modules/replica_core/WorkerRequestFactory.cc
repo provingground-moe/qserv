@@ -146,7 +146,8 @@ public:
              const std::string &id,
              int                priority,
              const std::string &database,
-             unsigned int       chunk) override {
+             unsigned int       chunk,
+             bool               computeCheckSum) override {
 
         return WorkerFindRequest::create (
             _serviceProvider,
@@ -154,7 +155,8 @@ public:
             id,
             priority,
             database,
-            chunk);
+            chunk,
+            computeCheckSum);
     }
 
     /**
@@ -166,14 +168,16 @@ public:
             const std::string &worker,
             const std::string &id,
             int                priority,
-            const std::string &database) override {
+            const std::string &database,
+            bool               computeCheckSum) override {
 
         return WorkerFindAllRequest::create (
             _serviceProvider,
             worker,
             id,
             priority,
-            database);
+            database,
+            computeCheckSum);
     }
 };
 
@@ -265,7 +269,8 @@ public:
              const std::string &id,
              int                priority,
              const std::string &database,
-             unsigned int       chunk) override {
+             unsigned int       chunk,
+             bool               computeCheckSum) override {
 
         return WorkerFindRequestPOSIX::create (
             _serviceProvider,
@@ -273,7 +278,8 @@ public:
             id,
             priority,
             database,
-            chunk);
+            chunk,
+            computeCheckSum);
     }
 
     /**
@@ -285,14 +291,16 @@ public:
             const std::string &worker,
             const std::string &id,
             int                priority,
-            const std::string &database) override {
+            const std::string &database,
+            bool               computeCheckSum) override {
 
         return WorkerFindAllRequestPOSIX::create (
             _serviceProvider,
             worker,
             id,
             priority,
-            database);
+            database,
+            computeCheckSum);
     }
 };
 
@@ -385,7 +393,8 @@ public:
              const std::string &id,
              int                priority,
              const std::string &database,
-             unsigned int       chunk) override {
+             unsigned int       chunk,
+             bool               computeCheckSum) override {
 
         return WorkerFindRequestX::create (
             _serviceProvider,
@@ -393,7 +402,8 @@ public:
             id,
             priority,
             database,
-            chunk);
+            chunk,
+            computeCheckSum);
     }
 
     /**
@@ -405,14 +415,16 @@ public:
             const std::string &worker,
             const std::string &id,
             int                priority,
-            const std::string &database) override {
+            const std::string &database,
+            bool               computeCheckSum) override {
 
         return WorkerFindAllRequestX::create (
             _serviceProvider,
             worker,
             id,
             priority,
-            database);
+            database,
+            computeCheckSum);
     }
 };
 

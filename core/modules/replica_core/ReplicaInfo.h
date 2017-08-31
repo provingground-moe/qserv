@@ -66,6 +66,14 @@ class ReplicaInfo {
 
 public:
 
+    /// An information entry for a file
+    struct FileInfo {
+        std::string name;
+        uint64_t    size;
+        std::string cs;
+    };
+    typedef std::vector<FileInfo> FileInfoCollection;
+
     /// Possible statuses of a replica
     enum Status {
         NOT_FOUND,
@@ -78,17 +86,29 @@ public:
     static std::string status2string (Status status);
 
     /**
-     * Construct with the specified state. This is also the default constructor.
+     * Construct with the default state NOT_FOUND
      *
      * @param status   - object status (see notes above)
      * @param worker   - the name of the worker wre the replica is located
      * @param database - the name of the database
      * @param chunk    - the chunk number
      */
-    explicit ReplicaInfo (Status             status   = NOT_FOUND,
-                          const std::string &worker   = "",
-                          const std::string &database = "",
-                          unsigned int       chunk    = 0);
+    ReplicaInfo ();
+
+    /**
+     * Construct with the specified state.
+     *
+     * @param status   - object status (see notes above)
+     * @param worker   - the name of the worker wre the replica is located
+     * @param database - the name of the database
+     * @param chunk    - the chunk number
+     * @param fileInfo - a collection of info on each file of the chunk
+     */
+    explicit ReplicaInfo (Status                    status,
+                          const std::string        &worker,
+                          const std::string        &database,
+                          unsigned int              chunk,
+                          const FileInfoCollection &fileInfo);
 
     /// Construct from a protobuf object
     explicit ReplicaInfo (const lsst::qserv::proto::ReplicationReplicaInfo *info);
@@ -110,6 +130,8 @@ public:
     const std::string& database () const { return _database; }
 
     unsigned int chunk () const { return _chunk; }
+
+    const FileInfoCollection& fileInfo () const { return _fileInfo; }
 
     /**
      * Return a protobuf object
@@ -134,6 +156,8 @@ private:
     std::string _database;
 
     unsigned int _chunk;
+    
+    FileInfoCollection _fileInfo;
 };
 
 

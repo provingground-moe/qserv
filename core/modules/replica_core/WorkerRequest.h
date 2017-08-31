@@ -95,6 +95,7 @@ public:
         EXT_STATUS_FILE_STAT,       // failed to obtain fstat() for a file
         EXT_STATUS_FILE_SIZE,       // failed to obtain a size of a file
         EXT_STATUS_FOLDER_READ,     // failed to read the contents of a folder
+        EXT_STATUS_FILE_READ,       // failed to read the contents of a file
         EXT_STATUS_FILE_COPY,       // failed to copy a file
         EXT_STATUS_FILE_DELETE,     // failed to delete a file
         EXT_STATUS_FILE_RENAME,     // failed to rename a file

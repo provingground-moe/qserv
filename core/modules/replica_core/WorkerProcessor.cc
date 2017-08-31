@@ -240,7 +240,8 @@ WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
             request.id(),
             request.priority(),
             request.database(),
-            request.chunk());
+            request.chunk(),
+            request.compute_cs());
 
     _newRequests.push(ptr);
 
@@ -268,7 +269,8 @@ WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &requ
             _worker,
             request.id(),
             request.priority(),
-            request.database());
+            request.database(),
+            request.compute_cs());
 
     _newRequests.push(ptr);
 

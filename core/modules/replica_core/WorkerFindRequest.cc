@@ -63,7 +63,8 @@ WorkerFindRequest::create (
         const std::string &id,
         int                priority,
         const std::string &database,
-        unsigned int       chunk) {
+        unsigned int       chunk,
+        bool               computeCheckSum) {
 
     return WorkerFindRequest::pointer (
         new WorkerFindRequest (
@@ -72,7 +73,8 @@ WorkerFindRequest::create (
                 id,
                 priority,
                 database,
-                chunk));
+                chunk,
+                computeCheckSum));
 }
 
 WorkerFindRequest::WorkerFindRequest (
@@ -81,7 +83,8 @@ WorkerFindRequest::WorkerFindRequest (
         const std::string &id,
         int                priority,
         const std::string &database,
-        unsigned int       chunk)
+        unsigned int       chunk,
+        bool               computeCheckSum)
 
     :   WorkerRequest (
             serviceProvider,
@@ -90,9 +93,10 @@ WorkerFindRequest::WorkerFindRequest (
             id,
             priority),
 
-        _database    (database),
-        _chunk       (chunk),
-        _replicaInfo () {
+        _database        (database),
+        _chunk           (chunk),
+        _computeCheckSum (computeCheckSum),
+        _replicaInfo     () {
 
     serviceProvider.assertDatabaseIsValid (database);
 }
@@ -119,7 +123,8 @@ WorkerFindRequest::execute (bool incremental) {
         ReplicaInfo (ReplicaInfo::COMPLETE,
                      worker(),
                      database(),
-                     chunk());
+                     chunk(),
+                     ReplicaInfo::FileInfoCollection());
     return completed;
 }
 
@@ -135,7 +140,8 @@ WorkerFindRequestPOSIX::create (
         const std::string &id,
         int                priority,
         const std::string &database,
-        unsigned int       chunk) {
+        unsigned int       chunk,
+        bool               computeCheckSum) {
 
     return WorkerFindRequestPOSIX::pointer (
         new WorkerFindRequestPOSIX (
@@ -144,7 +150,8 @@ WorkerFindRequestPOSIX::create (
                 id,
                 priority,
                 database,
-                chunk));
+                chunk,
+                computeCheckSum));
 }
 
 WorkerFindRequestPOSIX::WorkerFindRequestPOSIX (
@@ -153,7 +160,8 @@ WorkerFindRequestPOSIX::WorkerFindRequestPOSIX (
         const std::string &id,
         int                priority,
         const std::string &database,
-        unsigned int       chunk)
+        unsigned int       chunk,
+        bool               computeCheckSum)
 
     :   WorkerFindRequest (
             serviceProvider,
@@ -161,7 +169,8 @@ WorkerFindRequestPOSIX::WorkerFindRequestPOSIX (
             id,
             priority,
             database,
-            chunk) {
+            chunk,
+            computeCheckSum) {
 }
 
 WorkerFindRequestPOSIX::~WorkerFindRequestPOSIX () {
@@ -212,7 +221,7 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
     const std::vector<std::string> files =
         FileUtils::partitionedFiles (databaseInfo, chunk());
 
-    size_t numFilesFound = 0;
+    ReplicaInfo::FileInfoCollection fileInfoCollection;
     for (const auto &file: files) {
 
         const fs::path        path = dataDir / file;
@@ -224,7 +233,33 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
                     EXT_STATUS_FILE_STAT,
                     "failed to check the status of file: " + path.string());
 
-        if (fs::exists(stat)) ++numFilesFound;
+        // Pull extra info on the file
+        if (fs::exists(stat)) {
+
+            std::string cs = "";
+            if (_computeCheckSum) {
+                try {
+                    cs = std::to_string(FileUtils::compute_cs (path.string()));
+                } catch (std::exception &ex) {
+                    errorContext = errorContext
+                        || reportErrorIf (true,
+                                          EXT_STATUS_FILE_READ,
+                                          ex.what());
+                }
+            }
+            const uint64_t size = fs::file_size(path, ec);
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        EXT_STATUS_FILE_SIZE,
+                        "failed to read file size: " + path.string());
+                
+            fileInfoCollection.emplace_back (
+                ReplicaInfo::FileInfo({
+                    file, size, cs
+                })
+            );
+        }
     }
     if (errorContext.failed) {
         setStatus(STATUS_FAILED, errorContext.extendedStatus);
@@ -232,14 +267,16 @@ WorkerFindRequestPOSIX::execute (bool incremental) {
     }
 
     ReplicaInfo::Status status = ReplicaInfo::Status::NOT_FOUND;
-    if (numFilesFound)
-        status = files.size() == numFilesFound ?
+    if (fileInfoCollection.size())
+        status = files.size() == fileInfoCollection.size() ?
             ReplicaInfo::Status::COMPLETE :
             ReplicaInfo::Status::INCOMPLETE;
   
     // Fill in the info on the chunk before finishing the operation    
 
-    _replicaInfo = ReplicaInfo (status, worker(), database(), chunk());
+    _replicaInfo = ReplicaInfo (
+            status, worker(), database(), chunk(), fileInfoCollection);
+
     setStatus(STATUS_SUCCEEDED);
 
     return true;
@@ -257,7 +294,8 @@ WorkerFindRequestX::create (
         const std::string &id,
         int                priority,
         const std::string &database,
-        unsigned int       chunk) {
+        unsigned int       chunk,
+        bool               computeCheckSum) {
 
     return WorkerFindRequestX::pointer (
         new WorkerFindRequestX (
@@ -266,7 +304,8 @@ WorkerFindRequestX::create (
                 id,
                 priority,
                 database,
-                chunk));
+                chunk,
+                computeCheckSum));
 }
 
 WorkerFindRequestX::WorkerFindRequestX (
@@ -275,7 +314,8 @@ WorkerFindRequestX::WorkerFindRequestX (
         const std::string &id,
         int                priority,
         const std::string &database,
-        unsigned int       chunk)
+        unsigned int       chunk,
+        bool               computeCheckSum)
 
     :   WorkerFindRequest (
             serviceProvider,
@@ -283,7 +323,8 @@ WorkerFindRequestX::WorkerFindRequestX (
             id,
             priority,
             database,
-            chunk) {
+            chunk,
+            computeCheckSum) {
 }
 
 WorkerFindRequestX::~WorkerFindRequestX () {

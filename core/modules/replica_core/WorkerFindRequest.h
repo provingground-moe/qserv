@@ -73,7 +73,8 @@ public:
                            const std::string &id,
                            int                priority,
                            const std::string &database,
-                           unsigned int       chunk);
+                           unsigned int       chunk,
+                           bool               computeCheckSum);
 
     // Default construction and copy semantics are proxibited
 
@@ -86,8 +87,9 @@ public:
 
     // Trivial accessors
 
-    const std::string& database () const { return _database; }
-    unsigned int       chunk    () const { return _chunk; }
+    const std::string& database        () const { return _database; }
+    unsigned int       chunk           () const { return _chunk; }
+    bool               computeCheckSum () const { return _computeCheckSum; }
 
    /**
      * Return a refernce to a result of the completed request.
@@ -114,13 +116,15 @@ protected:
                        const std::string &id,
                        int                priority,
                        const std::string &database,
-                       unsigned int       chunk);
+                       unsigned int       chunk,
+                       bool               computeCheckSum);
 protected:
 
     // Parameters of the request
 
     std::string  _database;
     unsigned int _chunk;
+    bool         _computeCheckSum;
 
     /// Result of the operation
     ReplicaInfo _replicaInfo;
@@ -150,7 +154,8 @@ public:
                            const std::string &id,
                            int                priority,
                            const std::string &database,
-                           unsigned int       chunk);
+                           unsigned int       chunk,
+                           bool               computeCheckSum);
 
     // Default construction and copy semantics are proxibited
 
@@ -178,7 +183,8 @@ private:
                             const std::string &id,
                             int                priority,
                             const std::string &database,
-                            unsigned int       chunk);
+                            unsigned int       chunk,
+                            bool               computeCheckSum);
 };
 
 
@@ -204,7 +210,8 @@ public:
                            const std::string &id,
                            int                priority,
                            const std::string &database,
-                           unsigned int       chunk);
+                           unsigned int       chunk,
+                           bool               computeCheckSum);
 
     // Default construction and copy semantics are proxibited
 
@@ -232,7 +239,8 @@ private:
                         const std::string &id,
                         int                priority,
                         const std::string &database,
-                        unsigned int       chunk);
+                        unsigned int       chunk,
+                        bool               computeCheckSum);
 };
 
 

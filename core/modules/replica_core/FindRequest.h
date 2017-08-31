@@ -71,8 +71,9 @@ public:
 
     // Trivial acccessors
  
-    const std::string& database () const { return _database; }
-    unsigned int       chunk    () const { return _chunk; }
+    const std::string& database        () const { return _database; }
+    unsigned int       chunk           () const { return _chunk; }
+    bool               computeCheckSum () const { return _computeCheckSum; }
 
     /**
      * Return a refernce to a result obtained from a remote service.
@@ -97,6 +98,7 @@ public:
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      * @param priority         - a priority level of the request
+     * @param computeCheckSum  - tell a worker server to compute check/control sum on each file
      */
     static pointer create (ServiceProvider         &serviceProvider,
                            boost::asio::io_service &io_service,
@@ -104,7 +106,8 @@ public:
                            const std::string       &database,
                            unsigned int             chunk,
                            callback_type            onFinish,
-                           int                      priority=0);
+                           int                      priority=0,
+                           bool                     computeCheckSum=false);
 
 private:
 
@@ -117,7 +120,8 @@ private:
                  const std::string       &database,
                  unsigned int             chunk,
                  callback_type            onFinish,
-                 int                      priority=0);
+                 int                      priority=0,
+                 bool                     computeCheckSum=false);
 
     /**
       * This method is called when a connection is established and
@@ -178,7 +182,8 @@ private:
 
     std::string  _database;
     unsigned int _chunk;
-    
+    bool         _computeCheckSum;
+
     /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
     

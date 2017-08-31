@@ -71,7 +71,8 @@ public:
 
     // Trivial acccessors
  
-    const std::string& database () const { return _database; }
+    const std::string& database        () const { return _database; }
+    bool               computeCheckSum () const { return _computeCheckSum; }
 
    /**
      * Return a refernce to a result of the completed request.
@@ -96,13 +97,15 @@ public:
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      * @param priority         - a priority level of the request
+     * @param computeCheckSum  - tell a worker server to compute check/control sum on each file
      */
     static pointer create (ServiceProvider         &serviceProvider,
                            boost::asio::io_service &io_service,
                            const std::string       &worker,
                            const std::string       &database,
                            callback_type            onFinish,
-                           int                      priority=0);
+                           int                      priority=0,
+                           bool                     computeCheckSum=false);
 
 private:
 
@@ -114,7 +117,8 @@ private:
                     const std::string       &worker,
                     const std::string       &database,
                     callback_type            onFinish,
-                    int                      priority=0);
+                    int                      priority=0,
+                    bool                     computeCheckSum=false);
 
     /**
       * This method is called when a connection is established and
@@ -174,6 +178,7 @@ private:
     // Parameters of the object
 
     std::string _database;
+    bool        _computeCheckSum;
 
     // Registered callback to be called when the operation finishes
 

@@ -79,6 +79,7 @@ WorkerRequest::status2string (ExtendedCompletionStatus extendedStatus) {
         case EXT_STATUS_FILE_STAT:   return "EXT_STATUS_FILE_STAT";
         case EXT_STATUS_FILE_SIZE:   return "EXT_STATUS_FILE_SIZE";
         case EXT_STATUS_FOLDER_READ: return "EXT_STATUS_FOLDER_READ";
+        case EXT_STATUS_FILE_READ:   return "EXT_STATUS_FILE_READ";
         case EXT_STATUS_FILE_COPY:   return "EXT_STATUS_FILE_COPY";
         case EXT_STATUS_FILE_DELETE: return "EXT_STATUS_FILE_DELETE";
         case EXT_STATUS_FILE_RENAME: return "EXT_STATUS_FILE_RENAME";
