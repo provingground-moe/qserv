@@ -213,12 +213,16 @@ protected:
      * @priority              - may affect an execution order of the request by
      *                          the worker service. Higher number means higher
      *                          priority.
+     * @param keepTracking    - keep tracking the request before it finishes or fails
+     *                          NOTE: an availability and an implementation of this option
+     *                          depends on a specific request.
      */
     Request (ServiceProvider         &serviceProvider,
              boost::asio::io_service &io_service,
              const std::string       &type,
              const std::string       &worker,
-             int                      priority=0);
+             int                      priority=0,
+             bool                     keepTracking=true);
 
     /**
      * Request expiration timer's handler. The expiration interval (if any)
@@ -331,7 +335,8 @@ protected:
     std::string _id;
     std::string _worker;
 
-    int _priority;
+    int  _priority;
+    bool _keepTracking;
 
     // Primary and extended states of the request
 

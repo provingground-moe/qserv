@@ -80,20 +80,20 @@ std::ostream&
 operator<< (std::ostream &os, const ServiceManagementRequestBase::ServiceState &ss) {
 
     os  << "ServiceManagementRequestBase::ServiceState:\n"
-        << "  Summary:\n"
+        << "\n  Summary:\n\n"
         << "    service state:              " << ss.state2string() << "\n"
         << "    technology:                 " << ss.technology << "\n"
         << "    total new requests:         " << ss.numNewRequests << "\n"
         << "    total in-progress requests: " << ss.numInProgressRequests << "\n"
         << "    total finished requests:    " << ss.numFinishedRequests << "\n";
 
-    os  << "  New:\n";
+    os  << "\n  New:\n";
     ::dumpRequestInfo(os, ss.newRequests);
 
-    os  << "  In-Progress:\n";
+    os  << "\n  In-Progress:\n";
     ::dumpRequestInfo(os, ss.inProgressRequests);
 
-    os  << "  Finished:\n";
+    os  << "\n  Finished:\n";
     ::dumpRequestInfo(os, ss.finishedRequests);
 
     return os;

@@ -78,8 +78,8 @@ public:
     /**
      * Return a refernce to a result obtained from a remote service.
      *
-     * Note that this operation is only allowed when the request completed
-     * with status SUCCESS. Otherwise the std::logic_error exception will be thrown.
+     * Note that this operation will return a sensible result only if the operation
+     * finishes with status FINISHED::SUCCESS
      */
     const ReplicaInfo& responseData () const;
 
@@ -99,6 +99,7 @@ public:
      *                           the request.
      * @param priority         - a priority level of the request
      * @param computeCheckSum  - tell a worker server to compute check/control sum on each file
+     * @param keepTracking     - keep tracking the request before it finishes or fails
      */
     static pointer create (ServiceProvider         &serviceProvider,
                            boost::asio::io_service &io_service,
@@ -107,7 +108,8 @@ public:
                            unsigned int             chunk,
                            callback_type            onFinish,
                            int                      priority=0,
-                           bool                     computeCheckSum=false);
+                           bool                     computeCheckSum=false,
+                           bool                     keepTracking=true);
 
 private:
 
@@ -121,7 +123,8 @@ private:
                  unsigned int             chunk,
                  callback_type            onFinish,
                  int                      priority=0,
-                 bool                     computeCheckSum=false);
+                 bool                     computeCheckSum=false,
+                 bool                     keepTracking=true);
 
     /**
       * This method is called when a connection is established and
