@@ -248,18 +248,18 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
             errorContext = errorContext
                 || reportErrorIf (
                         stat.type() == fs::status_error,
-                        EXT_STATUS_FILE_STAT,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_STAT,
                         "failed to check the status of input file: " + file.string())
                 || reportErrorIf (
                         !fs::exists(stat),
-                        EXT_STATUS_NO_FILE,
+                        ExtendedCompletionStatus::EXT_STATUS_NO_FILE,
                         "the input file does not exist: " + file.string());
 
             totalBytes += fs::file_size(file, ec);
             errorContext = errorContext
                 || reportErrorIf (
                         ec,
-                        EXT_STATUS_FILE_SIZE,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
                         "failed to get the size of input file: " + file.string());
         }
 
@@ -267,11 +267,11 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
         errorContext = errorContext
             || reportErrorIf (
                     ec,
-                    EXT_STATUS_FOLDER_STAT,
+                    ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT,
                     "failed to check the status of output directory: " + outDir.string())
             || reportErrorIf (
                     !outDirExists,
-                    EXT_STATUS_NO_FOLDER,
+                    ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER,
                     "the output directory doesn't exist: " + outDir.string());
 
         // The files with canonical(!) names should NOT exist at the destination
@@ -282,11 +282,11 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
             errorContext = errorContext
                 || reportErrorIf (
                         stat.type() == fs::status_error,
-                        EXT_STATUS_FILE_STAT,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_STAT,
                         "failed to check the status of output file: " + file.string())
                 || reportErrorIf (
                         fs::exists(stat),
-                        EXT_STATUS_FILE_EXISTS,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS,
                         "the output file already exists: " + file.string());
         }
 
@@ -298,7 +298,7 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
             errorContext = errorContext
                 || reportErrorIf (
                         stat.type() == fs::status_error,
-                        EXT_STATUS_FILE_STAT,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_STAT,
                         "failed to check the status of temporary file: " + file.string());
 
             if (fs::exists(stat)) {
@@ -306,7 +306,7 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
                 errorContext = errorContext
                     || reportErrorIf (
                             ec,
-                            EXT_STATUS_FILE_DELETE,
+                            ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE,
                             "failed to remove temporary file: " + file.string());
             }
         }
@@ -320,11 +320,11 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
         errorContext = errorContext
             || reportErrorIf (
                     ec,
-                    EXT_STATUS_SPACE_REQ,
+                    ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ,
                     "failed to obtaine space information at output folder: " + outDir.string())
             || reportErrorIf (
                     space.available < totalBytes,
-                    EXT_STATUS_NO_SPACE,
+                    ExtendedCompletionStatus::EXT_STATUS_NO_SPACE,
                     "not enough free space availble at output folder: " + outDir.string());
     }
     if (errorContext.failed) {
@@ -344,7 +344,7 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
         errorContext = errorContext
             || reportErrorIf (
                     ec,
-                    EXT_STATUS_FILE_COPY,
+                    ExtendedCompletionStatus::EXT_STATUS_FILE_COPY,
                     "failed to copy file: " + inFile.string() + " into: " + tmpFile.string());
     }
     if (errorContext.failed) {
@@ -373,7 +373,7 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
             errorContext = errorContext
                 || reportErrorIf (
                         ec,
-                        EXT_STATUS_FILE_RENAME,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME,
                         "failed to rename file: " + tmpFile.string());
         }
     }

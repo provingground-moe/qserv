@@ -38,6 +38,7 @@
 
 // Qserv headers
 
+#include "replica_core/Common.h"
 #include "replica_core/Performance.h"
 
 // Forward declarations
@@ -162,6 +163,9 @@ public:
     /// Return the extended state of the request when it finished.
     ExtendedState extendedState () const { return _extendedState; }
 
+    /// Return a status code received from a worker server
+    ExtendedCompletionStatus extendedServerStatus () const { return _extendedServerStatus; }
+
     /// Return the performance info
     const Performance& performance () const { return _performance; }
 
@@ -185,7 +189,10 @@ public:
 
     /// Return the context string for debugging and diagnostic printouts
     std::string context () const {
-        return id() + "  " + type() + "  " + state2string(state(), extendedState()) + "  ";
+        return id() +
+            "  " + type() +
+            "  " + state2string(state(), extendedState()) + "::" + replica_core::status2string(extendedServerStatus()) +
+            "  ";
     }
 
 protected:
@@ -342,6 +349,8 @@ protected:
 
     State         _state;
     ExtendedState _extendedState;
+ 
+    ExtendedCompletionStatus _extendedServerStatus;
 
     /// Performance counters
     Performance _performance;

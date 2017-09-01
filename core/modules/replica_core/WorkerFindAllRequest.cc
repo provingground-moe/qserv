@@ -197,11 +197,11 @@ WorkerFindAllRequestPOSIX::execute (bool incremental) {
         errorContext = errorContext
             || reportErrorIf (
                     stat.type() == fs::status_error,
-                    EXT_STATUS_FOLDER_STAT,
+                    ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT,
                     "failed to check the status of directory: " + dataDir.string())
             || reportErrorIf (
                     !fs::exists(stat),
-                    EXT_STATUS_NO_FOLDER,
+                    ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER,
                     "the directory does not exists: " + dataDir.string());
         try {
             for (fs::directory_entry &entry: fs::directory_iterator(dataDir)) {
@@ -225,7 +225,7 @@ WorkerFindAllRequestPOSIX::execute (bool incremental) {
                         } catch (std::exception &ex) {
                             errorContext = errorContext
                                 || reportErrorIf (true,
-                                                  EXT_STATUS_FILE_READ,
+                                                  ExtendedCompletionStatus::EXT_STATUS_FILE_READ,
                                                   ex.what());
                         }
                     }
@@ -233,7 +233,7 @@ WorkerFindAllRequestPOSIX::execute (bool incremental) {
                     errorContext = errorContext
                         || reportErrorIf (
                                 ec,
-                                EXT_STATUS_FILE_SIZE,
+                                ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
                                 "failed to read file size: " + entry.path().string());
                         
                     const unsigned chunk = std::get<1>(parsed);
@@ -251,7 +251,7 @@ WorkerFindAllRequestPOSIX::execute (bool incremental) {
             errorContext = errorContext
                 || reportErrorIf (
                         true,
-                        EXT_STATUS_FOLDER_READ,
+                        ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ,
                         "failed to read the directory: " + dataDir.string() + ", error: " + std::string(ex.what()));
         }
     }

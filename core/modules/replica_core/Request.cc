@@ -102,9 +102,10 @@ Request::Request (ServiceProvider         &serviceProvider,
         _priority     (priority),
         _keepTracking (keepTracking),
 
-        _state         (CREATED),
-        _extendedState (NONE),
-        _performance   (),
+        _state                (CREATED),
+        _extendedState        (NONE),
+        _extendedServerStatus (ExtendedCompletionStatus::EXT_STATUS_NONE),
+        _performance          (),
 
         _bufferPtr     (new ProtocolBuffer(serviceProvider.config().requestBufferSizeBytes())),
         _workerInfo    (serviceProvider.config().workerInfo(worker)),

@@ -172,7 +172,8 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
     
         _newRequests.push(ptr);
         
-        response.set_status (proto::ReplicationStatus::QUEUED);
+        response.set_status               (proto::ReplicationStatus::QUEUED);
+        response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
         response.set_allocated_performance(ptr->performance().info());
 
         setInfo(ptr, response);
@@ -218,7 +219,8 @@ WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &requ
 
     _newRequests.push(ptr);
 
-    response.set_status (proto::ReplicationStatus::QUEUED);
+    response.set_status               (proto::ReplicationStatus::QUEUED);
+    response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
     response.set_allocated_performance(ptr->performance().info());
  
     setInfo(ptr, response);
@@ -245,7 +247,8 @@ WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
 
     _newRequests.push(ptr);
 
-    response.set_status (proto::ReplicationStatus::QUEUED);
+    response.set_status               (proto::ReplicationStatus::QUEUED);
+    response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
     response.set_allocated_performance(ptr->performance().info());
 
     setInfo(ptr, response);
@@ -274,7 +277,8 @@ WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &requ
 
     _newRequests.push(ptr);
 
-    response.set_status (proto::ReplicationStatus::QUEUED);
+    response.set_status               (proto::ReplicationStatus::QUEUED);
+    response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
     response.set_allocated_performance(ptr->performance().info());
 
     setInfo(ptr, response);
