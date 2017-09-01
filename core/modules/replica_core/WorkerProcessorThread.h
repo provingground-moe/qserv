@@ -30,6 +30,7 @@
 
 // System headers
 
+#include <atomic>
 #include <memory>       // shared_ptr, enable_shared_from_this
 #include <thread>
 
@@ -140,7 +141,7 @@ private:
     
     /// The flag to be raised to tell the running thread to stop.
     /// The thread will reset this flag when it finishes.
-    bool _stop;
+    std::atomic<bool> _stop;
 };
 
 }}} // namespace lsst::qserv::replica_core
