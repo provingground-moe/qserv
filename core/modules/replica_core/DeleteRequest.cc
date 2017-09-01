@@ -55,7 +55,8 @@ DeleteRequest::create (ServiceProvider         &serviceProvider,
                        const std::string       &database,
                        unsigned int             chunk,
                        callback_type            onFinish,
-                       int                      priority) {
+                       int                      priority,
+                       bool                     keepTracking) {
 
     return DeleteRequest::pointer (
         new DeleteRequest (
@@ -65,7 +66,8 @@ DeleteRequest::create (ServiceProvider         &serviceProvider,
             database,
             chunk,
             onFinish,
-            priority));
+            priority,
+            keepTracking));
 }
 
 DeleteRequest::DeleteRequest (ServiceProvider         &serviceProvider,
@@ -74,12 +76,14 @@ DeleteRequest::DeleteRequest (ServiceProvider         &serviceProvider,
                               const std::string       &database,
                               unsigned int             chunk,
                               callback_type            onFinish,
-                              int                      priority)
+                              int                      priority,
+                              bool                     keepTracking)
     :   Request(serviceProvider,
                 io_service,
                 "REPLICA_DELETE",
                 worker,
-                priority),
+                priority,
+                keepTracking),
  
         _database     (database),
         _chunk        (chunk),
@@ -405,13 +409,19 @@ DeleteRequest::analyze (const proto::ReplicationResponseDelete &message) {
             break;
 
         case proto::ReplicationStatus::QUEUED:
+            if (_keepTracking) wait();
+            else               finish (SERVER_QUEUED);
+            break;
+
         case proto::ReplicationStatus::IN_PROGRESS:
+            if (_keepTracking) wait();
+            else               finish (SERVER_IN_PROGRESS);
+            break;
+
         case proto::ReplicationStatus::IS_CANCELLING:
-
-            // Go wait until a definitive response from the worker is received.
-
-            wait();
-            return;
+            if (_keepTracking) wait();
+            else               finish (SERVER_IS_CANCELLING);
+            break;
 
         case proto::ReplicationStatus::BAD:
             finish (SERVER_BAD);

@@ -376,7 +376,8 @@ Controller::replicate (const std::string                 &workerName,
                        const std::string                 &database,
                        unsigned int                       chunk,
                        ReplicationRequest::callback_type  onFinish,
-                       int                                priority) {
+                       int                                priority,
+                       bool                               keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -394,7 +395,8 @@ Controller::replicate (const std::string                 &workerName,
             [controller] (ReplicationRequest::pointer request) {
                 controller->finish(request->id());
             },
-            priority
+            priority,
+            keepTracking
         );
 
     // Register the request (along with its callback) by its unique
@@ -416,7 +418,8 @@ Controller::deleteReplica (const std::string            &workerName,
                            const std::string            &database,
                            unsigned int                  chunk,
                            DeleteRequest::callback_type  onFinish,
-                           int                           priority) {
+                           int                           priority,
+                           bool                          keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -433,7 +436,8 @@ Controller::deleteReplica (const std::string            &workerName,
             [controller] (DeleteRequest::pointer request) {
                 controller->finish(request->id());
             },
-            priority
+            priority,
+            keepTracking
         );
 
     // Register the request (along with its callback) by its unique
@@ -456,7 +460,8 @@ Controller::findReplica (const std::string          &workerName,
                          unsigned int                chunk,
                          FindRequest::callback_type  onFinish,
                          int                         priority,
-                         bool                        computeCheckSum) {
+                         bool                        computeCheckSum,
+                         bool                        keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -474,7 +479,8 @@ Controller::findReplica (const std::string          &workerName,
                 controller->finish(request->id());
             },
             priority,
-            computeCheckSum
+            computeCheckSum,
+            keepTracking
         );
 
     // Register the request (along with its callback) by its unique
@@ -496,7 +502,8 @@ Controller::findAllReplicas (const std::string             &workerName,
                              const std::string             &database,
                              FindAllRequest::callback_type  onFinish,
                              int                            priority,
-                             bool                           computeCheckSum) {
+                             bool                           computeCheckSum,
+                             bool                           keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -513,7 +520,8 @@ Controller::findAllReplicas (const std::string             &workerName,
                 controller->finish(request->id());
             },
             priority,
-            computeCheckSum
+            computeCheckSum,
+            keepTracking
         );
 
     // Register the request (along with its callback) by its unique

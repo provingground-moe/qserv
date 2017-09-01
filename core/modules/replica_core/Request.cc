@@ -90,7 +90,8 @@ Request::Request (ServiceProvider         &serviceProvider,
                   boost::asio::io_service &io_service,
                   const std::string       &type,
                   const std::string       &worker,
-                  int                      priority)
+                  int                      priority,
+                  bool                     keepTracking)
 
     :   _serviceProvider (serviceProvider),
 
@@ -98,7 +99,8 @@ Request::Request (ServiceProvider         &serviceProvider,
         _id     (generateId()),
         _worker (worker),
 
-        _priority (priority),
+        _priority     (priority),
+        _keepTracking (keepTracking),
 
         _state         (CREATED),
         _extendedState (NONE),

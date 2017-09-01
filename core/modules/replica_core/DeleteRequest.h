@@ -91,9 +91,9 @@ public:
      *                           to be located) at a destination of the chunk
      * @param database         - the name of a database
      * @param chunk            - the number of a chunk to replicate (implies all relevant tables)
-     * @param onFinish         - an optional callback function to be called upon a completion of
-     *                           the request.
+     * @param onFinish         - an optional callback function to be called upon a completion of the request.
      * @param priority         - a priority level of the request
+     * @param keepTracking     - keep tracking the request before it finishes or fails
      */
     static pointer create (ServiceProvider         &serviceProvider,
                            boost::asio::io_service &io_service,
@@ -101,7 +101,8 @@ public:
                            const std::string       &database,
                            unsigned int             chunk,
                            callback_type            onFinish,
-                           int                      priority=0);
+                           int                      priority=0,
+                           bool                     keepTracking=true);
 
 private:
 
@@ -114,7 +115,8 @@ private:
                    const std::string       &database,
                    unsigned int             chunk,
                    callback_type            onFinish,
-                   int                      priority=0);
+                   int                      priority=0,
+                   bool                     keepTracking=true);
 
     /**
       * This method is called when a connection is established and

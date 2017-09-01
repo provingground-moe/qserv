@@ -154,9 +154,6 @@ private:
     /// The type of the targer request (must match the identifier)
     lsst::qserv::proto::ReplicationReplicaRequestType  _requestType;
 
-    /// Track mode
-    bool _keepTracking;
-
 protected:
 
     /// The performance of the target operation

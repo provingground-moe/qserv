@@ -59,10 +59,11 @@ StatusRequestBase::StatusRequestBase (ServiceProvider                           
     :   Request(serviceProvider,
                 io_service,
                 requestTypeName,
-                worker),
+                worker,
+                0,
+                keepTracking),
         _targetRequestId (targetRequestId),
-        _requestType     (requestType),
-        _keepTracking    (keepTracking) {
+        _requestType     (requestType) {
 }
 
 StatusRequestBase::~StatusRequestBase () {

@@ -104,11 +104,11 @@ public:
      * @param chunk    - the chunk number
      * @param fileInfo - a collection of info on each file of the chunk
      */
-    explicit ReplicaInfo (Status                    status,
-                          const std::string        &worker,
-                          const std::string        &database,
-                          unsigned int              chunk,
-                          const FileInfoCollection &fileInfo);
+    ReplicaInfo (Status                    status,
+                 const std::string        &worker,
+                 const std::string        &database,
+                 unsigned int              chunk,
+                 const FileInfoCollection &fileInfo);
 
     /// Construct from a protobuf object
     explicit ReplicaInfo (const lsst::qserv::proto::ReplicationReplicaInfo *info);

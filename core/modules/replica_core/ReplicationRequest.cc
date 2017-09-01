@@ -56,7 +56,8 @@ ReplicationRequest::create (ServiceProvider         &serviceProvider,
                             const std::string       &database,
                             unsigned int             chunk,
                             callback_type            onFinish,
-                            int                      priority) {
+                            int                      priority,
+                            bool                     keepTracking) {
 
     return ReplicationRequest::pointer (
         new ReplicationRequest (
@@ -67,7 +68,8 @@ ReplicationRequest::create (ServiceProvider         &serviceProvider,
             database,
             chunk,
             onFinish,
-            priority));
+            priority,
+            keepTracking));
 }
 
 ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider,
@@ -77,12 +79,14 @@ ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider
                                         const std::string       &database,
                                         unsigned int             chunk,
                                         callback_type            onFinish,
-                                        int                      priority)
+                                        int                      priority,
+                                        bool                     keepTracking)
     :   Request(serviceProvider,
                 io_service,
                 "REPLICA_CREATE",
                 worker,
-                priority),
+                priority,
+                keepTracking),
  
         _database     (database),
         _chunk        (chunk),

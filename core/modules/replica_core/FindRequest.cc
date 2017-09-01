@@ -57,7 +57,8 @@ FindRequest::create (ServiceProvider         &serviceProvider,
                      unsigned int             chunk,
                      callback_type            onFinish,
                      int                      priority,
-                     bool                     computeCheckSum) {
+                     bool                     computeCheckSum,
+                     bool                     keepTracking) {
 
     return FindRequest::pointer (
         new FindRequest (
@@ -68,7 +69,8 @@ FindRequest::create (ServiceProvider         &serviceProvider,
             chunk,
             onFinish,
             priority,
-            computeCheckSum));
+            computeCheckSum,
+            keepTracking));
 }
 
 FindRequest::FindRequest (ServiceProvider         &serviceProvider,
@@ -78,12 +80,14 @@ FindRequest::FindRequest (ServiceProvider         &serviceProvider,
                           unsigned int             chunk,
                           callback_type            onFinish,
                           int                      priority,
-                          bool                     computeCheckSum)
+                          bool                     computeCheckSum,
+                          bool                     keepTracking)
     :   Request(serviceProvider,
                 io_service,
                 "REPLICA_FIND",
                 worker,
-                priority),
+                priority,
+                keepTracking),
  
         _database        (database),
         _chunk           (chunk),
@@ -96,11 +100,10 @@ FindRequest::FindRequest (ServiceProvider         &serviceProvider,
 
 FindRequest::~FindRequest () {
 }
+
 const ReplicaInfo&
 FindRequest::responseData () const {
-    if ((state() == FINISHED) && (extendedState() == SUCCESS)) return _replicaInfo;
-    throw std::logic_error("operation is only allowed in state " + state2string(FINISHED, SUCCESS)  +
-                           " in FindRequest::replicaInfo()");
+    return _replicaInfo;
 }
 
     
@@ -418,13 +421,19 @@ FindRequest::analyze (const proto::ReplicationResponseFind &message) {
             break;
 
         case proto::ReplicationStatus::QUEUED:
+            if (_keepTracking) wait();
+            else               finish (SERVER_QUEUED);
+            break;
+
         case proto::ReplicationStatus::IN_PROGRESS:
+            if (_keepTracking) wait();
+            else               finish (SERVER_IN_PROGRESS);
+            break;
+
         case proto::ReplicationStatus::IS_CANCELLING:
-
-            // Go wait until a definitive response from the worker is received.
-
-            wait();
-            return;
+            if (_keepTracking) wait();
+            else               finish (SERVER_IS_CANCELLING);
+            break;
 
         case proto::ReplicationStatus::BAD:
             finish (SERVER_BAD);

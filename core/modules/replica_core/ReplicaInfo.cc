@@ -183,7 +183,7 @@ operator<< (std::ostream& os, const ReplicaInfo &ri) {
         << " chunk: "    << ri.chunk()
         << " files: ";
     for (const auto &fi: ri.fileInfo())
-        os << " (" << fi << ")";
+        os << "\n   (" << fi << ")";
     return os;
 }
 
@@ -191,7 +191,7 @@ std::ostream&
 operator<< (std::ostream &os, const ReplicaInfoCollection &ric) {
     os << "ReplicaInfoCollection";
     for (const auto &ri : ric)
-        os << " (" << ri << ")";
+        os << "\n (" << ri << ")";
     return os;
 }
 

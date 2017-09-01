@@ -87,16 +87,16 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param serviceProvider   - a host of services for various communications
-     * @param io_service        - BOOST ASIO API
-     * @param worker            - the identifier of a worker node (the one to be affectd by the replication)
-     *                            at a destination of the chunk
-     * @param sourceWorker      - the identifier of a worker node at a source of the chunk
-     * @param database          - the name of a database
-     * @param chunk             - the number of a chunk to replicate (implies all relevant tables)
-     * @param onFinish          - an optional callback function to be called upon a completion of
-     *                            the request.
-     * @param priority          - a priority level of the request
+     * @param serviceProvider - a host of services for various communications
+     * @param io_service      - BOOST ASIO API
+     * @param worker          - the identifier of a worker node (the one to be affectd by the replication)
+     *                          at a destination of the chunk
+     * @param sourceWorker    - the identifier of a worker node at a source of the chunk
+     * @param database        - the name of a database
+     * @param chunk           - the number of a chunk to replicate (implies all relevant tables)
+     * @param onFinish        - an optional callback function to be called upon a completion of the request.
+     * @param priority        - a priority level of the request
+     * @param keepTracking    - keep tracking the request before it finishes or fails
      */
     static pointer create (ServiceProvider         &serviceProvider,
                            boost::asio::io_service &io_service,
@@ -105,7 +105,8 @@ public:
                            const std::string       &database,
                            unsigned int             chunk,
                            callback_type            onFinish,
-                           int                      priority=0);
+                           int                      priority=0,
+                           bool                     keepTracking=true);
 
 private:
 
@@ -119,7 +120,8 @@ private:
                         const std::string       &database,
                         unsigned int             chunk,
                         callback_type            onFinish,
-                        int                      priority=0);
+                        int                      priority=0,
+                        bool                     keepTracking=true);
 
     /**
       * This method is called when a connection is established and

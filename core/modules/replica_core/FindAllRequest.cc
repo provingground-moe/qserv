@@ -55,7 +55,8 @@ FindAllRequest::create (ServiceProvider         &serviceProvider,
                         const std::string       &database,
                         callback_type            onFinish,
                         int                      priority,
-                        bool                     computeCheckSum) {
+                        bool                     computeCheckSum,
+                        bool                     keepTracking) {
 
     return FindAllRequest::pointer (
         new FindAllRequest (
@@ -65,7 +66,8 @@ FindAllRequest::create (ServiceProvider         &serviceProvider,
             database,
             onFinish,
             priority,
-            computeCheckSum));
+            computeCheckSum,
+            keepTracking));
 }
 
 FindAllRequest::FindAllRequest (ServiceProvider         &serviceProvider,
@@ -74,12 +76,14 @@ FindAllRequest::FindAllRequest (ServiceProvider         &serviceProvider,
                                 const std::string       &database,
                                 callback_type            onFinish,
                                 int                      priority,
-                                bool                     computeCheckSum)
+                                bool                     computeCheckSum,
+                                bool                     keepTracking)
     :   Request(serviceProvider,
                 io_service,
                 "REPLICA_FIND_ALL",
                 worker,
-                priority),
+                priority,
+                keepTracking),
 
         _database              (database),
         _computeCheckSum       (computeCheckSum),
@@ -94,9 +98,7 @@ FindAllRequest::~FindAllRequest () {
 
 const ReplicaInfoCollection&
 FindAllRequest::responseData () const {
-    if ((state() == FINISHED) && (extendedState() == SUCCESS)) return _replicaInfoCollection;
-    throw std::logic_error("operation is only allowed in state " + state2string(FINISHED, SUCCESS)  +
-                           " in FindAllRequest::replicaInfoCollection()");
+    return _replicaInfoCollection;
 }
 
 void
@@ -414,13 +416,19 @@ FindAllRequest::analyze (const proto::ReplicationResponseFindAll &message) {
             break;
 
         case proto::ReplicationStatus::QUEUED:
+            if (_keepTracking) wait();
+            else               finish (SERVER_QUEUED);
+            break;
+
         case proto::ReplicationStatus::IN_PROGRESS:
+            if (_keepTracking) wait();
+            else               finish (SERVER_IN_PROGRESS);
+            break;
+
         case proto::ReplicationStatus::IS_CANCELLING:
-
-            // Go wait until a definitive response from the worker is received.
-
-            wait();
-            return;
+            if (_keepTracking) wait();
+            else               finish (SERVER_IS_CANCELLING);
+            break;
 
         case proto::ReplicationStatus::BAD:
             finish (SERVER_BAD);
