@@ -47,9 +47,42 @@
 #define LOCK_GUARD \
 std::lock_guard<std::mutex> lock(_mtx)
 
+
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.WorkerProcessor");
+
+namespace replica_core = ::lsst::qserv::replica_core;
+namespace proto        = ::lsst::qserv::proto;
+
+template <class PROTOCOL_RESPONSE_TYPE>
+bool ifDuplicateRequest (PROTOCOL_RESPONSE_TYPE                     &response,
+                         const replica_core::WorkerRequest::pointer &p,
+                         const std::string                          &database,
+                         unsigned int                                chunk) {
+
+    bool isDuplicate = false;
+
+    if (replica_core::WorkerReplicationRequest::pointer ptr =
+        std::dynamic_pointer_cast<replica_core::WorkerReplicationRequest>(p))
+        isDuplicate =
+            (ptr->database() == database) &&
+            (ptr->chunk   () == chunk);
+
+    else if (replica_core::WorkerDeleteRequest::pointer ptr =
+             std::dynamic_pointer_cast<replica_core::WorkerDeleteRequest>(p))
+        isDuplicate =
+            (ptr->database() == database) &&
+            (ptr->chunk   () == chunk);
+
+    if (isDuplicate)
+        replica_core::WorkerProcessor::setDefaultResponse (
+            response,
+            proto::ReplicationStatus::BAD,
+            proto::ReplicationStatusExt::DUPLICATE);
+
+    return isDuplicate;
+}
 
 } /// namespace
 
@@ -161,6 +194,25 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
         << "  chunk: "  << request.chunk()
         << "  worker: " << request.worker());    
 
+    // Verify a scope of the request to ensure it won't duplicate or interfere (with)
+    // existing requests in the active (non-completed) queues. A reason why we're ignoring
+    // the completed is that this replica may have already been deleted from this worker.
+
+    for (auto ptr : _newRequests)
+        if (::ifDuplicateRequest(response,
+                                 ptr,
+                                 request.database(),
+                                 request.chunk())) return;
+
+    for (auto ptr : _inProgressRequests)
+        if (::ifDuplicateRequest(response,
+                                 ptr,
+                                 request.database(),
+                                 request.chunk())) return;
+    
+    // The code below may catch exceptions if other parameters of the requites
+    // won't pass further validation against the present configuration of the request
+    // procesisng service.
     try {
         WorkerRequest::pointer ptr = _requestFactory.createReplicationRequest (
             _worker,
@@ -172,28 +224,19 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
     
         _newRequests.push(ptr);
         
-        response.set_status               (proto::ReplicationStatus::QUEUED);
-        response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
-        response.set_allocated_performance(ptr->performance().info());
+        response.set_status                (proto::ReplicationStatus::QUEUED);
+        response.set_status_ext            (proto::ReplicationStatusExt::NONE);
+        response.set_allocated_performance (ptr->performance().info());
 
         setInfo(ptr, response);
-        
-        return;
 
     } catch (const std::invalid_argument &ec) {
         LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForReplication  " << ec.what());
+
+        setDefaultResponse (response,
+                            proto::ReplicationStatus::BAD,
+                            proto::ReplicationStatusExt::INVALID_PARAM);
     }
-
-    // If the above stated conditions weren't met then assume a fallback
-    // scenario of a bad request. Note that we only need to set response
-    // fields which are strictly required by the protocol definition.
-
-    WorkerPerformance performance;
-    performance.setUpdateStart();
-    performance.setUpdateFinish();
-    response.set_allocated_performance(performance.info());
-
-    response.set_status (proto::ReplicationStatus::BAD);
 }
 
 void
@@ -205,25 +248,50 @@ WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &requ
         << "  id: "    << request.id()
         << "  db: "    << request.database()
         << "  chunk: " << request.chunk());
+
+    // Verify a scope of the request to ensure it won't duplicate or interfere (with)
+    // existing requests in the active (non-completed) queues. A reason why we're ignoring
+    // the completed is that this replica may have already been deleted from this worker.
+
+    for (auto ptr : _newRequests)
+        if (::ifDuplicateRequest(response,
+                                 ptr,
+                                 request.database(),
+                                 request.chunk())) return;
+
+    for (auto ptr : _inProgressRequests)
+        if (::ifDuplicateRequest(response,
+                                 ptr,
+                                 request.database(),
+                                 request.chunk())) return;
     
-    // TODO: run the sanity check to ensure no such request is found in any
-    //       of the queue. Return 'DUPLICATE' error status if teh one is found.
+    // The code below may catch exceptions if other parameters of the requites
+    // won't pass further validation against the present configuration of the request
+    // procesisng service.
+    try {
+        WorkerRequest::pointer ptr =
+            _requestFactory.createDeleteRequest (
+                _worker,
+                request.id(),
+                request.priority(),
+                request.database(),
+                request.chunk());
+    
+        _newRequests.push(ptr);
+    
+        response.set_status                (proto::ReplicationStatus::QUEUED);
+        response.set_status_ext            (proto::ReplicationStatusExt::NONE);
+        response.set_allocated_performance (ptr->performance().info());
+     
+        setInfo(ptr, response);
 
-    WorkerRequest::pointer ptr =
-        _requestFactory.createDeleteRequest (
-            _worker,
-            request.id(),
-            request.priority(),
-            request.database(),
-            request.chunk());
+    } catch (const std::invalid_argument &ec) {
+        LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForDeletion  " << ec.what());
 
-    _newRequests.push(ptr);
-
-    response.set_status               (proto::ReplicationStatus::QUEUED);
-    response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
-    response.set_allocated_performance(ptr->performance().info());
- 
-    setInfo(ptr, response);
+        setDefaultResponse (response,
+                            proto::ReplicationStatus::BAD,
+                            proto::ReplicationStatusExt::INVALID_PARAM);
+    }
 }
 
 void
@@ -247,9 +315,9 @@ WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
 
     _newRequests.push(ptr);
 
-    response.set_status               (proto::ReplicationStatus::QUEUED);
-    response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
-    response.set_allocated_performance(ptr->performance().info());
+    response.set_status                (proto::ReplicationStatus::QUEUED);
+    response.set_status_ext            (proto::ReplicationStatusExt::NONE);
+    response.set_allocated_performance (ptr->performance().info());
 
     setInfo(ptr, response);
 }
@@ -277,9 +345,9 @@ WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &requ
 
     _newRequests.push(ptr);
 
-    response.set_status               (proto::ReplicationStatus::QUEUED);
-    response.set_status_ext           (replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
-    response.set_allocated_performance(ptr->performance().info());
+    response.set_status                (proto::ReplicationStatus::QUEUED);
+    response.set_status_ext            (proto::ReplicationStatusExt::NONE);
+    response.set_allocated_performance (ptr->performance().info());
 
     setInfo(ptr, response);
 }
@@ -437,8 +505,8 @@ WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "setServiceResponse");
 
-    response.set_status    (status);
-    response.set_technology(_requestFactory.technology());
+    response.set_status     (status);
+    response.set_technology (_requestFactory.technology());
 
     switch (state()) {
 

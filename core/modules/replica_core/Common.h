@@ -46,6 +46,9 @@ namespace replica_core {
 /// Extended completion status of the worker side file operations
 enum ExtendedCompletionStatus {
     EXT_STATUS_NONE,            // unspecified problem
+    EXT_STATUS_INVALID_PARAM,   // invalid parameter(s) of a request
+    EXT_STATUS_INVALID_ID,      // an invalid request identifier
+    EXT_STATUS_DUPLICATE,       // a duplicate request
     EXT_STATUS_FOLDER_STAT,     // failed to obtain fstat() for a folder
     EXT_STATUS_FILE_STAT,       // failed to obtain fstat() for a file
     EXT_STATUS_FILE_SIZE,       // failed to obtain a size of a file
