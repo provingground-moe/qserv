@@ -41,21 +41,24 @@ namespace replica_core {
 std::string
 status2string (ExtendedCompletionStatus status) {
     switch (status) {
-        case ExtendedCompletionStatus::EXT_STATUS_NONE:        return "EXT_STATUS_NONE";
-        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT: return "EXT_STATUS_FOLDER_STAT";
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_STAT:   return "EXT_STATUS_FILE_STAT";
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE:   return "EXT_STATUS_FILE_SIZE";
-        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ: return "EXT_STATUS_FOLDER_READ";
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:   return "EXT_STATUS_FILE_READ";
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:   return "EXT_STATUS_FILE_COPY";
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE: return "EXT_STATUS_FILE_DELETE";
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME: return "EXT_STATUS_FILE_RENAME";
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS: return "EXT_STATUS_FILE_EXISTS";
-        case ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ:   return "EXT_STATUS_SPACE_REQ";
-        case ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER:   return "EXT_STATUS_NO_FOLDER";
-        case ExtendedCompletionStatus::EXT_STATUS_NO_FILE:     return "EXT_STATUS_NO_FILE";
-        case ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS:   return "EXT_STATUS_NO_ACCESS";
-        case ExtendedCompletionStatus::EXT_STATUS_NO_SPACE:    return "EXT_STATUS_NO_SPACE";
+        case ExtendedCompletionStatus::EXT_STATUS_NONE:             return "EXT_STATUS_NONE";
+        case ExtendedCompletionStatus::EXT_STATUS_INVALID_PARAM:    return "EXT_STATUS_INVALID_PARAM";
+        case ExtendedCompletionStatus::EXT_STATUS_INVALID_ID:       return "EXT_STATUS_INVALID_ID";
+        case ExtendedCompletionStatus::EXT_STATUS_DUPLICATE:        return "EXT_STATUS_DUPLICATE";
+        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT:      return "EXT_STATUS_FOLDER_STAT";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_STAT:        return "EXT_STATUS_FILE_STAT";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE:        return "EXT_STATUS_FILE_SIZE";
+        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ:      return "EXT_STATUS_FOLDER_READ";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:        return "EXT_STATUS_FILE_READ";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:        return "EXT_STATUS_FILE_COPY";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE:      return "EXT_STATUS_FILE_DELETE";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME:      return "EXT_STATUS_FILE_RENAME";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS:      return "EXT_STATUS_FILE_EXISTS";
+        case ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ:        return "EXT_STATUS_SPACE_REQ";
+        case ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER:        return "EXT_STATUS_NO_FOLDER";
+        case ExtendedCompletionStatus::EXT_STATUS_NO_FILE:          return "EXT_STATUS_NO_FILE";
+        case ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS:        return "EXT_STATUS_NO_ACCESS";
+        case ExtendedCompletionStatus::EXT_STATUS_NO_SPACE:         return "EXT_STATUS_NO_SPACE";
     }
     throw std::logic_error("Common::status2string(ExtendedCompletionStatus) - unhandled status: " + std::to_string(status));
 }
@@ -63,21 +66,24 @@ status2string (ExtendedCompletionStatus status) {
 ExtendedCompletionStatus
 translate (proto::ReplicationStatusExt status) {
     switch (status) {
-        case proto::ReplicationStatusExt::NONE:        return ExtendedCompletionStatus::EXT_STATUS_NONE;
-        case proto::ReplicationStatusExt::FOLDER_STAT: return ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT;
-        case proto::ReplicationStatusExt::FILE_STAT:   return ExtendedCompletionStatus::EXT_STATUS_FILE_STAT;
-        case proto::ReplicationStatusExt::FILE_SIZE:   return ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE;
-        case proto::ReplicationStatusExt::FOLDER_READ: return ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ;
-        case proto::ReplicationStatusExt::FILE_READ:   return ExtendedCompletionStatus::EXT_STATUS_FILE_READ;
-        case proto::ReplicationStatusExt::FILE_COPY:   return ExtendedCompletionStatus::EXT_STATUS_FILE_COPY;
-        case proto::ReplicationStatusExt::FILE_DELETE: return ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE;
-        case proto::ReplicationStatusExt::FILE_RENAME: return ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME;
-        case proto::ReplicationStatusExt::FILE_EXISTS: return ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS;
-        case proto::ReplicationStatusExt::SPACE_REQ:   return ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ;
-        case proto::ReplicationStatusExt::NO_FOLDER:   return ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER;
-        case proto::ReplicationStatusExt::NO_FILE:     return ExtendedCompletionStatus::EXT_STATUS_NO_FILE;
-        case proto::ReplicationStatusExt::NO_ACCESS:   return ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS;
-        case proto::ReplicationStatusExt::NO_SPACE:    return ExtendedCompletionStatus::EXT_STATUS_NO_SPACE;
+        case proto::ReplicationStatusExt::NONE:             return ExtendedCompletionStatus::EXT_STATUS_NONE;
+        case proto::ReplicationStatusExt::INVALID_PARAM:    return ExtendedCompletionStatus::EXT_STATUS_INVALID_PARAM;
+        case proto::ReplicationStatusExt::INVALID_ID:       return ExtendedCompletionStatus::EXT_STATUS_INVALID_ID;
+        case proto::ReplicationStatusExt::DUPLICATE:        return ExtendedCompletionStatus::EXT_STATUS_DUPLICATE;
+        case proto::ReplicationStatusExt::FOLDER_STAT:      return ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT;
+        case proto::ReplicationStatusExt::FILE_STAT:        return ExtendedCompletionStatus::EXT_STATUS_FILE_STAT;
+        case proto::ReplicationStatusExt::FILE_SIZE:        return ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE;
+        case proto::ReplicationStatusExt::FOLDER_READ:      return ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ;
+        case proto::ReplicationStatusExt::FILE_READ:        return ExtendedCompletionStatus::EXT_STATUS_FILE_READ;
+        case proto::ReplicationStatusExt::FILE_COPY:        return ExtendedCompletionStatus::EXT_STATUS_FILE_COPY;
+        case proto::ReplicationStatusExt::FILE_DELETE:      return ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE;
+        case proto::ReplicationStatusExt::FILE_RENAME:      return ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME;
+        case proto::ReplicationStatusExt::FILE_EXISTS:      return ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS;
+        case proto::ReplicationStatusExt::SPACE_REQ:        return ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ;
+        case proto::ReplicationStatusExt::NO_FOLDER:        return ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER;
+        case proto::ReplicationStatusExt::NO_FILE:          return ExtendedCompletionStatus::EXT_STATUS_NO_FILE;
+        case proto::ReplicationStatusExt::NO_ACCESS:        return ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS;
+        case proto::ReplicationStatusExt::NO_SPACE:         return ExtendedCompletionStatus::EXT_STATUS_NO_SPACE;
     }
     throw std::logic_error("Common::translate(proto::ReplicationStatusExt) - unhandled status: " + std::to_string(status));
 }
@@ -85,21 +91,24 @@ translate (proto::ReplicationStatusExt status) {
 proto::ReplicationStatusExt
 translate (ExtendedCompletionStatus status) {
     switch (status) {
-        case ExtendedCompletionStatus::EXT_STATUS_NONE:        return proto::ReplicationStatusExt::NONE;
-        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT: return proto::ReplicationStatusExt::FOLDER_STAT;
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_STAT:   return proto::ReplicationStatusExt::FILE_STAT;
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE:   return proto::ReplicationStatusExt::FILE_SIZE;
-        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ: return proto::ReplicationStatusExt::FOLDER_READ;
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:   return proto::ReplicationStatusExt::FILE_READ;
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:   return proto::ReplicationStatusExt::FILE_COPY;
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE: return proto::ReplicationStatusExt::FILE_DELETE;
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME: return proto::ReplicationStatusExt::FILE_RENAME;
-        case ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS: return proto::ReplicationStatusExt::FILE_EXISTS;
-        case ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ:   return proto::ReplicationStatusExt::SPACE_REQ;
-        case ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER:   return proto::ReplicationStatusExt::NO_FOLDER;
-        case ExtendedCompletionStatus::EXT_STATUS_NO_FILE:     return proto::ReplicationStatusExt::NO_FILE;
-        case ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS:   return proto::ReplicationStatusExt::NO_ACCESS;
-        case ExtendedCompletionStatus::EXT_STATUS_NO_SPACE:    return proto::ReplicationStatusExt::NO_SPACE;
+        case ExtendedCompletionStatus::EXT_STATUS_NONE:             return proto::ReplicationStatusExt::NONE;
+        case ExtendedCompletionStatus::EXT_STATUS_INVALID_PARAM:    return proto::ReplicationStatusExt::INVALID_PARAM;
+        case ExtendedCompletionStatus::EXT_STATUS_INVALID_ID:       return proto::ReplicationStatusExt::INVALID_ID;
+        case ExtendedCompletionStatus::EXT_STATUS_DUPLICATE:        return proto::ReplicationStatusExt::DUPLICATE;
+        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT:      return proto::ReplicationStatusExt::FOLDER_STAT;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_STAT:        return proto::ReplicationStatusExt::FILE_STAT;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE:        return proto::ReplicationStatusExt::FILE_SIZE;
+        case ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ:      return proto::ReplicationStatusExt::FOLDER_READ;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:        return proto::ReplicationStatusExt::FILE_READ;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:        return proto::ReplicationStatusExt::FILE_COPY;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE:      return proto::ReplicationStatusExt::FILE_DELETE;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME:      return proto::ReplicationStatusExt::FILE_RENAME;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS:      return proto::ReplicationStatusExt::FILE_EXISTS;
+        case ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ:        return proto::ReplicationStatusExt::SPACE_REQ;
+        case ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER:        return proto::ReplicationStatusExt::NO_FOLDER;
+        case ExtendedCompletionStatus::EXT_STATUS_NO_FILE:          return proto::ReplicationStatusExt::NO_FILE;
+        case ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS:        return proto::ReplicationStatusExt::NO_ACCESS;
+        case ExtendedCompletionStatus::EXT_STATUS_NO_SPACE:         return proto::ReplicationStatusExt::NO_SPACE;
     }
     throw std::logic_error("Common::translate(ExtendedCompletionStatus) - unhandled status: " + std::to_string(status));
 }

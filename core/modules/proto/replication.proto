@@ -202,21 +202,24 @@ enum ReplicationStatus {
     CANCELLED     = 6;
 }
 enum ReplicationStatusExt {
-    NONE        = 0;
-    FOLDER_STAT = 1;
-    FILE_STAT   = 2;
-    FILE_SIZE   = 3;
-    FOLDER_READ = 4;
-    FILE_READ   = 5;
-    FILE_COPY   = 6;
-    FILE_DELETE = 7;
-    FILE_RENAME = 8;
-    FILE_EXISTS = 9;
-    SPACE_REQ   = 10;
-    NO_FOLDER   = 11;
-    NO_FILE     = 12;
-    NO_ACCESS   = 13;
-    NO_SPACE    = 14;
+    NONE          = 0;
+    INVALID_PARAM = 1;
+    INVALID_ID    = 2;
+    DUPLICATE     = 3;
+    FOLDER_STAT   = 4;
+    FILE_STAT     = 5;
+    FILE_SIZE     = 6;
+    FOLDER_READ   = 7;
+    FILE_READ     = 8;
+    FILE_COPY     = 9;
+    FILE_DELETE   = 10;
+    FILE_RENAME   = 11;
+    FILE_EXISTS   = 12;
+    SPACE_REQ     = 13;
+    NO_FOLDER     = 14;
+    NO_FILE       = 15;
+    NO_ACCESS     = 16;
+    NO_SPACE      = 17;
 }
 message ReplicationReplicaCreateInfo {
 

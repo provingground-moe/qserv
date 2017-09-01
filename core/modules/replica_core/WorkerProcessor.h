@@ -187,6 +187,27 @@ public:
                             proto::ReplicationResponseFindAll      &response);
 
     /**
+     * Set default values to protocol response which has 3 mandatory fields:
+     *
+     *   status
+     *   status_ext
+     *   performance
+     */
+    template <class PROTOCOL_RESPONSE_TYPE>
+    static void setDefaultResponse (PROTOCOL_RESPONSE_TYPE      &response,
+                                    proto::ReplicationStatus     status,
+                                    proto::ReplicationStatusExt  extendedStatus) {
+    
+        WorkerPerformance performance;
+        performance.setUpdateStart();
+        performance.setUpdateFinish();
+        response.set_allocated_performance(performance.info());
+    
+        response.set_status     (status);
+        response.set_status_ext (extendedStatus);
+    }
+
+    /**
      * Dequeue replication request
      *
      * If the request is not being processed yet then it wil be simply removed
@@ -202,17 +223,11 @@ public:
     void dequeueOrCancel (const proto::ReplicationRequestStop &request,
                           RESPONSE_MSG_TYPE                   &response) {
 
-        // The default status, unless finding the right request below
-
-        response.set_status    (proto::ReplicationStatus::BAD);
-        response.set_status_ext(replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
-
-        // This type of requsts has 'instant' performance.
-
-        WorkerPerformance performance;
-        performance.setUpdateStart();
-        performance.setUpdateFinish();
-        response.set_allocated_performance(performance.info());
+        // Set this response unless an exact request (same type and identifier)
+        // will be found.
+        setDefaultResponse (response,
+                            proto::ReplicationStatus::BAD,
+                            proto::ReplicationStatusExt::INVALID_ID);
 
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
@@ -228,8 +243,8 @@ public:
                 response.set_status    (translateReplicationStatus(ptr->status()));
                 response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
 
-            } catch (const std::logic_error &ex) {
-                return;
+            } catch (const std::logic_error&e) {
+                ;
             }
         }
     }
@@ -245,17 +260,11 @@ public:
     void checkStatus (const proto::ReplicationRequestStatus &request,
                       RESPONSE_MSG_TYPE                     &response) {
 
-        // The default status, unless finding the right request below
-
-        response.set_status    (proto::ReplicationStatus::BAD);
-        response.set_status_ext(replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
-
-        // This type of requsts has 'instant' performance.
-
-        WorkerPerformance performance;
-        performance.setUpdateStart();
-        performance.setUpdateFinish();
-        response.set_allocated_performance(performance.info());
+        // Set this response unless an exact request (same type and identifier)
+        // will be found.
+        setDefaultResponse (response,
+                            proto::ReplicationStatus::BAD,
+                            proto::ReplicationStatusExt::INVALID_ID);
 
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
@@ -271,8 +280,8 @@ public:
                 response.set_status    (translateReplicationStatus(ptr->status()));
                 response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
 
-            } catch (const std::logic_error &ex) {
-                return;
+            } catch (const std::logic_error&) {
+                ;
             }
         }
     }
