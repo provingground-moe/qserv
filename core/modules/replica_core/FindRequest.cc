@@ -399,6 +399,9 @@ FindRequest::analyze (const proto::ReplicationResponseFind &message) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(message.status()));
 
+    // Always get the latest status reported by the remote server
+    _extendedServerStatus = replica_core::translate(message.status_ext());
+
     // Performance counters are updated from either of two sources,
     // depending on the availability of the 'target' performance counters
     // filled in by the 'STATUS' queries. If the later is not available

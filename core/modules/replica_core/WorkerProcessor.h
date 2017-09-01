@@ -204,7 +204,8 @@ public:
 
         // The default status, unless finding the right request below
 
-        response.set_status(proto::ReplicationStatus::BAD);
+        response.set_status    (proto::ReplicationStatus::BAD);
+        response.set_status_ext(replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
 
         // This type of requsts has 'instant' performance.
 
@@ -224,8 +225,9 @@ public:
                 setInfo(ptr, response);
 
                 // The status field is present in all response types
-                response.set_status(translateReplicationStatus(ptr->status()));
-            
+                response.set_status    (translateReplicationStatus(ptr->status()));
+                response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
+
             } catch (const std::logic_error &ex) {
                 return;
             }
@@ -245,7 +247,8 @@ public:
 
         // The default status, unless finding the right request below
 
-        response.set_status(proto::ReplicationStatus::BAD);
+        response.set_status    (proto::ReplicationStatus::BAD);
+        response.set_status_ext(replica_core::translate(ExtendedCompletionStatus::EXT_STATUS_NONE));
 
         // This type of requsts has 'instant' performance.
 
@@ -265,7 +268,8 @@ public:
                 setInfo(ptr, response);
 
                 // The status field is present in all response types
-                response.set_status(translateReplicationStatus(ptr->status()));
+                response.set_status    (translateReplicationStatus(ptr->status()));
+                response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
 
             } catch (const std::logic_error &ex) {
                 return;

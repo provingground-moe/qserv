@@ -277,11 +277,12 @@ private:
 
         // Extract request-specific data from the response regardless of
         // the completion status of the request.
-
         POLICY::extractResponseData(message, _responseData);
 
-        // Always update performance counters obtained from the worker service
+        // Always get the latest status reported by the remote server
+        _extendedServerStatus = replica_core::translate(message.status_ext());
 
+        // Always update performance counters obtained from the worker service
         _performance.update(message.performance());
 
         // Set the optional performance of the target operation

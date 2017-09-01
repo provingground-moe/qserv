@@ -54,7 +54,6 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-
 std::mutex
 WorkerRequest::_mtxDataFolderOperations;
     
@@ -72,31 +71,9 @@ WorkerRequest::status2string (CompletionStatus status) {
 }
 
 std::string
-WorkerRequest::status2string (ExtendedCompletionStatus extendedStatus) {
-    switch (extendedStatus) {
-        case EXT_STATUS_NONE:        return "EXT_STATUS_NONE";
-        case EXT_STATUS_FOLDER_STAT: return "EXT_STATUS_FOLDER_STAT";
-        case EXT_STATUS_FILE_STAT:   return "EXT_STATUS_FILE_STAT";
-        case EXT_STATUS_FILE_SIZE:   return "EXT_STATUS_FILE_SIZE";
-        case EXT_STATUS_FOLDER_READ: return "EXT_STATUS_FOLDER_READ";
-        case EXT_STATUS_FILE_READ:   return "EXT_STATUS_FILE_READ";
-        case EXT_STATUS_FILE_COPY:   return "EXT_STATUS_FILE_COPY";
-        case EXT_STATUS_FILE_DELETE: return "EXT_STATUS_FILE_DELETE";
-        case EXT_STATUS_FILE_RENAME: return "EXT_STATUS_FILE_RENAME";
-        case EXT_STATUS_FILE_EXISTS: return "EXT_STATUS_FILE_EXISTS";
-        case EXT_STATUS_SPACE_REQ:   return "EXT_STATUS_SPACE_REQ";
-        case EXT_STATUS_NO_FOLDER:   return "EXT_STATUS_NO_FOLDER";
-        case EXT_STATUS_NO_FILE:     return "EXT_STATUS_NO_FILE";
-        case EXT_STATUS_NO_ACCESS:   return "EXT_STATUS_NO_ACCESS";
-        case EXT_STATUS_NO_SPACE:    return "EXT_STATUS_NO_SPACE";
-    }
-    throw std::logic_error("WorkerRequest::status2string - unhandled status: " + std::to_string(extendedStatus));
-}
-
-std::string
 WorkerRequest::status2string (CompletionStatus         status,
                               ExtendedCompletionStatus extendedStatus) {
-    return status2string(status) + "::" + status2string(extendedStatus);
+    return status2string(status) + "::" + replica_core::status2string(extendedStatus);
 }
 
 WorkerRequest::WorkerRequest (ServiceProvider   &serviceProvider,
@@ -110,7 +87,7 @@ WorkerRequest::WorkerRequest (ServiceProvider   &serviceProvider,
         _id               (id),
         _priority         (priority),
         _status           (STATUS_NONE),
-        _extendedStatus   (EXT_STATUS_NONE),
+        _extendedStatus   (ExtendedCompletionStatus::EXT_STATUS_NONE),
         _performance      (),
         _durationMillisec (0) {
 

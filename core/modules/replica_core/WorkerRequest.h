@@ -37,6 +37,7 @@
 
 // Qserv headers
 
+#include "replica_core/Common.h"        // ExtendedCompletionStatus
 #include "replica_core/Performance.h"
 
 // Forward declarations
@@ -88,28 +89,6 @@ public:
     /// Return the string representation of the status
     static std::string status2string (CompletionStatus status);
 
-    /// Extended completion status (where applies)
-    enum ExtendedCompletionStatus {
-        EXT_STATUS_NONE,            // unspecified problem
-        EXT_STATUS_FOLDER_STAT,     // failed to obtain fstat() for a folder
-        EXT_STATUS_FILE_STAT,       // failed to obtain fstat() for a file
-        EXT_STATUS_FILE_SIZE,       // failed to obtain a size of a file
-        EXT_STATUS_FOLDER_READ,     // failed to read the contents of a folder
-        EXT_STATUS_FILE_READ,       // failed to read the contents of a file
-        EXT_STATUS_FILE_COPY,       // failed to copy a file
-        EXT_STATUS_FILE_DELETE,     // failed to delete a file
-        EXT_STATUS_FILE_RENAME,     // failed to rename a file
-        EXT_STATUS_FILE_EXISTS,     // file already exists
-        EXT_STATUS_SPACE_REQ,       // space inquery requst failed
-        EXT_STATUS_NO_FOLDER,       // folder doesn't exist
-        EXT_STATUS_NO_FILE,         // file doesn't exist
-        EXT_STATUS_NO_ACCESS,       // no access to a file or a folder
-        EXT_STATUS_NO_SPACE         // o spce left on a device as required by an operation
-    };
-
-    /// Return the string representation of the extended status
-    static std::string status2string (ExtendedCompletionStatus status);
-
     /// Return the string representation of the full status
     static std::string status2string (CompletionStatus         status,
                                       ExtendedCompletionStatus extendedStatus);
@@ -133,8 +112,8 @@ public:
 
     int priority () const { return _priority; }
 
-    CompletionStatus          status         () const { return _status; }
-    ExtendedCompletionStatus  extendedStatus () const { return _extendedStatus; }
+    CompletionStatus         status         () const { return _status; }
+    ExtendedCompletionStatus extendedStatus () const { return _extendedStatus; }
 
     /// Return the performance info
     const WorkerPerformance& performance () const { return _performance; }
@@ -145,7 +124,7 @@ public:
      * when moving requests between different queues.
      */
     void setStatus (CompletionStatus         status,
-                    ExtendedCompletionStatus extendedStatus=EXT_STATUS_NONE);
+                    ExtendedCompletionStatus extendedStatus=ExtendedCompletionStatus::EXT_STATUS_NONE);
 
     /**
      * This method should be invoked (repeatedly) to execute the request until
@@ -225,7 +204,7 @@ protected:
 
         ErrorContext ()
             :   failed(false),
-                extendedStatus(EXT_STATUS_NONE) {
+                extendedStatus(ExtendedCompletionStatus::EXT_STATUS_NONE) {
         }
         
         /**

@@ -180,11 +180,11 @@ WorkerDeleteRequestPOSIX::execute (bool incremental) {
         errorContext = errorContext
             || reportErrorIf (
                     stat.type() == fs::status_error,
-                    EXT_STATUS_FOLDER_STAT,
+                    ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT,
                     "failed to check the status of directory: " + dataDir.string())
             || reportErrorIf (
                     !fs::exists(stat),
-                    EXT_STATUS_NO_FOLDER,
+                    ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER,
                     "the directory does not exists: " + dataDir.string());
 
         for (const auto &name: files) {
@@ -193,7 +193,7 @@ WorkerDeleteRequestPOSIX::execute (bool incremental) {
             errorContext = errorContext
                 || reportErrorIf (
                         ec,
-                        EXT_STATUS_FILE_DELETE,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE,
                         "failed to delete file: " + file.string());
         }
     }
