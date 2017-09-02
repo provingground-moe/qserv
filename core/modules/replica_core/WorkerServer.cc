@@ -85,7 +85,7 @@ WorkerServer::run () {
     _processor.run();
 
     // Begin accepting the specified number of connections simultaneously.
-    // The run the service to allow asynchronous operations.
+    // Then run the service to allow asynchronous operations.
 
     for (size_t i = 0; i < _serviceProvider.config().workerNumConnectionsLimit(); ++i) {
         beginAccept();

@@ -364,7 +364,7 @@ message ReplicationServiceRequestInfo {
 message ReplicationServiceResponse {
 
     // Completion status of the operation
-    
+
     enum Status {
         SUCCESS = 0;
         FAILED  = 1;
@@ -391,4 +391,28 @@ message ReplicationServiceResponse {
     repeated ReplicationServiceRequestInfo new_requests         = 8;
     repeated ReplicationServiceRequestInfo in_progress_requests = 9;
     repeated ReplicationServiceRequestInfo finished_requests    = 10;
+}
+
+
+/////////////////////////////
+// The FileServer protocol //
+/////////////////////////////
+
+message ReplicationFileRequest {
+
+    /// The name of a database
+    required string database = 1;
+
+    /// The name of a file (including its extention and excluding any path)
+    required string file = 2;
+}
+
+message ReplicationFileResponse {
+
+    /// The flag indicating if the earlier requested file is available,
+    /// and it can be read by the server.
+    required bool available = 1;
+
+    /// The file size (bytes)
+    required uint64 size = 2;
 }
