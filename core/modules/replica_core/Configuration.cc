@@ -38,19 +38,22 @@ namespace {
 
 // Some reasonable defaults
   
-const size_t       defaultRequestBufferSizeBytes     {1024};
-const unsigned int defaultRetryTimeoutSec            {1};
-const uint16_t     defaultControllerHttpPort         {80};
-const size_t       defaultControllerHttpThreads      {1};
-const unsigned int defaultControllerRequestTimeoutSec{3600};
-const std::string  defaultWorkerTechnology           {"TEST"};
-const size_t       defaultWorkerNumConnectionsLimit  {1};
-const size_t       defaultWorkerNumProcessingThreads {1};
-const std::string  defaultWorkerSvcHost              {"localhost"};
-const uint16_t     defaultWorkerSvcPort              {50000};
-const std::string  defaultWorkerXrootdHost           {"localhost"};
-const uint16_t     defaultWorkerXrootdPort           {1094};
-const std::string  defaultDataDir                    {"{worker}"};
+const size_t       defaultRequestBufferSizeBytes      {1024};
+const unsigned int defaultRetryTimeoutSec             {1};
+const uint16_t     defaultControllerHttpPort          {80};
+const size_t       defaultControllerHttpThreads       {1};
+const unsigned int defaultControllerRequestTimeoutSec {3600};
+const std::string  defaultWorkerTechnology            {"TEST"};
+const size_t       defaultWorkerNumConnectionsLimit   {1};
+const size_t       defaultWorkerNumProcessingThreads  {1};
+const size_t       defaultWorkerNumFsProcessingThreads{1};
+const size_t       defaultWorkerFsBufferSizeBytes     {1048576};
+const std::string  defaultWorkerSvcHost               {"localhost"};
+const uint16_t     defaultWorkerSvcPort               {50000};
+const uint16_t     defaultWorkerFsPort                {50001};
+const std::string  defaultWorkerXrootdHost            {"localhost"};
+const uint16_t     defaultWorkerXrootdPort            {1094};
+const std::string  defaultDataDir                     {"{worker}"};
 
 /**
  * Fetch and parse a value of the specified key into. Return the specified
@@ -97,16 +100,18 @@ namespace qserv {
 namespace replica_core {
 
 Configuration::Configuration (const std::string &configFile)
-    :   _configFile                 (configFile),
-        _workers                    (),
-        _requestBufferSizeBytes     (defaultRequestBufferSizeBytes),
-        _retryTimeoutSec            (defaultRetryTimeoutSec),
-        _controllerHttpPort         (defaultControllerHttpPort),
-        _controllerHttpThreads      (defaultControllerHttpThreads),
-        _controllerRequestTimeoutSec(defaultControllerRequestTimeoutSec),
-        _workerTechnology           (defaultWorkerTechnology),
-        _workerNumConnectionsLimit  (defaultWorkerNumConnectionsLimit),
-        _workerNumProcessingThreads (defaultWorkerNumProcessingThreads) {
+    :   _configFile                   (configFile),
+        _workers                      (),
+        _requestBufferSizeBytes       (defaultRequestBufferSizeBytes),
+        _retryTimeoutSec              (defaultRetryTimeoutSec),
+        _controllerHttpPort           (defaultControllerHttpPort),
+        _controllerHttpThreads        (defaultControllerHttpThreads),
+        _controllerRequestTimeoutSec  (defaultControllerRequestTimeoutSec),
+        _workerTechnology             (defaultWorkerTechnology),
+        _workerNumConnectionsLimit    (defaultWorkerNumConnectionsLimit),
+        _workerNumProcessingThreads   (defaultWorkerNumProcessingThreads),
+        _workerNumFsProcessingThreads (defaultWorkerNumFsProcessingThreads),
+        _workerFsBufferSizeBytes      (defaultWorkerFsBufferSizeBytes) {
 
     loadConfiguration();
 }
@@ -157,23 +162,28 @@ Configuration::loadConfiguration () {
         _databases = std::vector<std::string>(begin, end);
     }
 
-    ::parseKeyVal(configStore, "common.request_buf_size_bytes",     _requestBufferSizeBytes,      defaultRequestBufferSizeBytes);
-    ::parseKeyVal(configStore, "common.request_retry_interval_sec", _retryTimeoutSec,             defaultRetryTimeoutSec);
+    ::parseKeyVal(configStore, "common.request_buf_size_bytes",     _requestBufferSizeBytes,       defaultRequestBufferSizeBytes);
+    ::parseKeyVal(configStore, "common.request_retry_interval_sec", _retryTimeoutSec,              defaultRetryTimeoutSec);
 
-    ::parseKeyVal(configStore, "controller.http_server_port",       _controllerHttpPort,          defaultControllerHttpPort);
-    ::parseKeyVal(configStore, "controller.http_server_threads",    _controllerHttpThreads,       defaultControllerHttpThreads);
-    ::parseKeyVal(configStore, "controller.request_timeout_sec",    _controllerRequestTimeoutSec, defaultControllerRequestTimeoutSec);
+    ::parseKeyVal(configStore, "controller.http_server_port",       _controllerHttpPort,           defaultControllerHttpPort);
+    ::parseKeyVal(configStore, "controller.http_server_threads",    _controllerHttpThreads,        defaultControllerHttpThreads);
+    ::parseKeyVal(configStore, "controller.request_timeout_sec",    _controllerRequestTimeoutSec,  defaultControllerRequestTimeoutSec);
 
-    ::parseKeyVal(configStore, "worker.technology",                 _workerTechnology,            defaultWorkerTechnology);
-    ::parseKeyVal(configStore, "worker.max_connections",            _workerNumConnectionsLimit,   defaultWorkerNumConnectionsLimit);
-    ::parseKeyVal(configStore, "worker.num_processing_threads",     _workerNumProcessingThreads,  defaultWorkerNumProcessingThreads);
+    ::parseKeyVal(configStore, "worker.technology",                 _workerTechnology,             defaultWorkerTechnology);
+    ::parseKeyVal(configStore, "worker.max_connections",            _workerNumConnectionsLimit,    defaultWorkerNumConnectionsLimit);
+    ::parseKeyVal(configStore, "worker.num_processing_threads",     _workerNumProcessingThreads,   defaultWorkerNumProcessingThreads);
+    ::parseKeyVal(configStore, "worker.num_fs_processing_threads",  _workerNumFsProcessingThreads, defaultWorkerNumFsProcessingThreads);
+    ::parseKeyVal(configStore, "worker.fs_buf_size_bytes",          _workerFsBufferSizeBytes,      defaultWorkerFsBufferSizeBytes);
+
 
     // Optional common parameters for workers
 
     uint16_t commonWorkerSvcPort;
+    uint16_t commonWorkerFsPort;
     uint16_t commonWorkerXrootdPort;
 
     ::parseKeyVal(configStore, "worker.svc_port",    commonWorkerSvcPort,    defaultWorkerSvcPort);
+    ::parseKeyVal(configStore, "worker.fs_port",     commonWorkerFsPort,     defaultWorkerFsPort);
     ::parseKeyVal(configStore, "worker.xrootd_port", commonWorkerXrootdPort, defaultWorkerXrootdPort);
 
     std::string commonDataDir;
@@ -195,6 +205,7 @@ Configuration::loadConfiguration () {
 
         ::parseKeyVal(configStore, section+".svc_host",    _workerInfo[name].svcHost,    defaultWorkerSvcHost);
         ::parseKeyVal(configStore, section+".svc_port",    _workerInfo[name].svcPort,    commonWorkerSvcPort);
+        ::parseKeyVal(configStore, section+".fs_port",     _workerInfo[name].fsPort,     commonWorkerFsPort);
         ::parseKeyVal(configStore, section+".xrootd_host", _workerInfo[name].xrootdHost, defaultWorkerXrootdHost);
         ::parseKeyVal(configStore, section+".xrootd_port", _workerInfo[name].xrootdPort, commonWorkerXrootdPort);
 

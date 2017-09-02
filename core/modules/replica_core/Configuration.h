@@ -55,6 +55,9 @@ struct WorkerInfo {
     /// The port number of the worker service
     uint16_t svcPort;
 
+    /// The port number for the file service run on a worker node
+    uint16_t fsPort;
+
     /// The host name (or IP address) of the XRootD service
     std::string xrootdHost;
 
@@ -193,6 +196,12 @@ public:
     /// The number of request processing threads in each worker service
     size_t workerNumProcessingThreads () const { return _workerNumProcessingThreads; }
 
+    /// The number of request processing threads in each worker's file service
+    size_t workerNumFsProcessingThreads () const { return _workerNumFsProcessingThreads; }
+
+    /// Return the buffer size for the file I/O operations
+    size_t workerFsBufferSizeBytes () const { return _workerFsBufferSizeBytes; }
+
 private:
 
     /**
@@ -226,6 +235,8 @@ private:
     std::string  _workerTechnology;
     size_t       _workerNumConnectionsLimit;
     size_t       _workerNumProcessingThreads;
+    size_t       _workerNumFsProcessingThreads;
+    size_t       _workerFsBufferSizeBytes;
     
     std::map<std::string, DatabaseInfo> _databaseInfo;
     std::map<std::string, WorkerInfo>   _workerInfo;
