@@ -27,12 +27,17 @@
 // System headers
 
 #include <boost/filesystem.hpp>
+#include <cerrno>
+#include <cstdio>           // std::FILE, C-style file I/O
+#include <cstring>
 #include <map>
+#include <stdexcept>
 
 // Qserv headers
 
 #include "lsst/log/Log.h"
 #include "replica_core/Configuration.h"
+#include "replica_core/FileClient.h"
 #include "replica_core/FileUtils.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -346,6 +351,299 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
                     ec,
                     ExtendedCompletionStatus::EXT_STATUS_FILE_COPY,
                     "failed to copy file: " + inFile.string() + " into: " + tmpFile.string());
+    }
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
+        return true;
+    }
+
+    // Rename temporary files into the canonical ones
+    // Note that this operation changes the directory namespace in a way
+    // which may affect other users (like replica lookup operations, etc.). Hence we're
+    // acquering the directory lock to guarantee a consistent view onto the folder.
+
+    {
+        LOCK_DATA_FOLDER;
+
+        // ATTENTION: as per ISO/IEC 9945 thie file rename operation will
+        //            remove empty files. Not sure if this should be treated
+        //            in a special way?
+
+        for (const auto &file: files) {
+
+            const fs::path tmpFile = file2tmpFile[file];
+            const fs::path outFile = file2outFile[file];
+
+            fs::rename(tmpFile, outFile, ec);
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME,
+                        "failed to rename file: " + tmpFile.string());
+        }
+    }
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
+        return true;
+    }
+
+    // For now (before finalizing the progress reporting protocol) just return
+    // the perentage of the total amount of data moved
+ 
+    _replicationInfo = ReplicaCreateInfo(100.);
+
+    setStatus(STATUS_SUCCEEDED);
+    return true;
+}
+
+
+/////////////////////////////////////////////////////////////////////
+///////////////////// WorkerReplicationRequestFS ////////////////////
+/////////////////////////////////////////////////////////////////////
+
+WorkerReplicationRequestFS::pointer
+WorkerReplicationRequestFS::create (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker) {
+
+    return WorkerReplicationRequestFS::pointer (
+        new WorkerReplicationRequestFS (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk,
+                sourceWorker));
+}
+
+WorkerReplicationRequestFS::WorkerReplicationRequestFS (
+        ServiceProvider   &serviceProvider,
+        const std::string &worker,
+        const std::string &id,
+        int                priority,
+        const std::string &database,
+        unsigned int       chunk,
+        const std::string &sourceWorker)
+
+    :   WorkerReplicationRequest (
+                serviceProvider,
+                worker,
+                id,
+                priority,
+                database,
+                chunk,
+                sourceWorker),
+
+        _buf     (0),
+        _bufSize (serviceProvider.config().workerFsBufferSizeBytes()) {
+
+    _buf = new uint8_t[_bufSize];
+    if (!_buf)
+        throw std::runtime_error("WorkerReplicationRequestFS::WorkerReplicationRequestFS  buffer allocation failed");
+}
+
+WorkerReplicationRequestFS::~WorkerReplicationRequestFS () {
+    delete [] _buf;
+}
+
+bool
+WorkerReplicationRequestFS::execute (bool incremental) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
+         << "  sourceWorker: " << sourceWorker()
+         << "  database: "     << database()
+         << "  chunk: "        << chunk());
+
+    // Obtain the list of files to be migrated
+    //
+    // IMPLEMENTATION NOTES:
+    //
+    // - Note using the overloaded operator '/' which is used to form
+    //   folders and files path names below. The operator will concatename
+    //   names and also insert a file separator for an operationg system
+    //   on which this code will get compiled.
+    //
+    // - Temporary file names at a destination folders are prepended with
+    //   prefix '_' to prevent colliding with the canonical names. They will
+    //   be renamed in the last step.
+    //
+    // - All operations with the file system namespace (creating new non-temporary
+    //   files, checking for folders and files, renaming files, creating folders, etc.)
+    //   are guarded by acquering LOCK_DATA_FOLDER where it's needed.
+
+    const WorkerInfo   &inWorkerInfo  = _serviceProvider.config().workerInfo  (sourceWorker());
+    const WorkerInfo   &outWorkerInfo = _serviceProvider.config().workerInfo  (worker());
+    const DatabaseInfo &databaseInfo  = _serviceProvider.config().databaseInfo(database());
+
+    const fs::path outDir = fs::path(outWorkerInfo.dataDir) / database();
+
+    const std::vector<std::string> files =
+        FileUtils::partitionedFiles (databaseInfo, chunk());
+
+    std::vector<fs::path> tmpFiles;
+    std::vector<fs::path> outFiles;
+
+    std::map<std::string,fs::path> file2tmpFile;
+    std::map<std::string,fs::path> file2outFile;
+
+    for (const auto &file: files) {
+
+        const fs::path tmpFile = outDir / ("_" + file);
+        tmpFiles.push_back(tmpFile);
+        file2tmpFile[file] = tmpFile;
+
+        const fs::path outFile = outDir / file;
+        outFiles.push_back(outFile);
+        file2outFile[file] = outFile;
+    }
+
+    // Check and sanitize the destination folder
+
+    WorkerRequest::ErrorContext errorContext;
+    boost::system::error_code   ec;
+    {
+        LOCK_DATA_FOLDER;
+
+        const bool outDirExists = fs::exists(outDir, ec);
+        errorContext = errorContext
+            || reportErrorIf (
+                    ec,
+                    ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT,
+                    "failed to check the status of output directory: " + outDir.string())
+            || reportErrorIf (
+                    !outDirExists,
+                    ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER,
+                    "the output directory doesn't exist: " + outDir.string());
+
+        // The files with canonical(!) names should NOT exist at the destination
+        // folder.
+
+        for (const auto &file: outFiles) {
+            const fs::file_status stat = fs::status(file, ec);
+            errorContext = errorContext
+                || reportErrorIf (
+                        stat.type() == fs::status_error,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_STAT,
+                        "failed to check the status of output file: " + file.string())
+                || reportErrorIf (
+                        fs::exists(stat),
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_EXISTS,
+                        "the output file already exists: " + file.string());
+        }
+
+        // Check if there are any files with the temporary names at the destination
+        // folder and if so then get rid of them.
+
+        for (const auto &file: tmpFiles) {
+            const fs::file_status stat = fs::status(file, ec);
+            errorContext = errorContext
+                || reportErrorIf (
+                        stat.type() == fs::status_error,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_STAT,
+                        "failed to check the status of temporary file: " + file.string());
+
+            if (fs::exists(stat)) {
+                fs::remove(file, ec);
+                errorContext = errorContext
+                    || reportErrorIf (
+                            ec,
+                            ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE,
+                            "failed to remove temporary file: " + file.string());
+            }
+        }
+    }
+    if (errorContext.failed) {
+        setStatus(STATUS_FAILED, errorContext.extendedStatus);
+        return true;
+    }
+
+    // Begin copying files into the destination folder under their
+    // temporary names w/o acquring the directory lock.
+
+    for (const auto &file: files) {
+
+        // Open the file on the remote server
+        FileClient::pointer inFilePtr =
+            FileClient::open (_serviceProvider,
+                              inWorkerInfo.name,
+                              databaseInfo.name,
+                              file);
+        errorContext = errorContext
+            || reportErrorIf (
+                !inFilePtr,
+                ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN,
+                "failed to open input file on remote worker: " + inWorkerInfo.name +
+                ", database: " + databaseInfo.name +
+                ", file: " + file);
+
+        if (errorContext.failed) {
+            setStatus(STATUS_FAILED, errorContext.extendedStatus);
+            return true;
+        }
+
+        // Create a temporary output file locally
+
+        const fs::path tmpFile = file2tmpFile[file];
+
+        std::FILE* tmpFilePtr = std::fopen(tmpFile.string().c_str(), "wb");
+        errorContext = errorContext
+            || reportErrorIf (
+                !tmpFilePtr,
+                ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE,
+                "failed to open/create temporary file: " + tmpFile.string() +
+                ", error: " + std::strerror(errno));
+        if (errorContext.failed) {
+            setStatus(STATUS_FAILED, errorContext.extendedStatus);
+            return true;
+        }
+
+        // Copy the file content and make sure exact number of bytes is read        
+ 
+        try {
+            size_t totalRead = 0;
+            size_t num;
+            while ((num = inFilePtr->read(_buf, _bufSize))) {
+                totalRead += num;
+                if (num != std::fwrite(_buf, sizeof(uint8_t), num, tmpFilePtr)) {
+                    errorContext = errorContext
+                        || reportErrorIf (
+                            true,
+                            ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE,
+                            "failed to write into temporary file: " + tmpFile.string() +
+                            ", error: " + std::strerror(errno));
+                    break;
+                }
+            }
+            errorContext = errorContext
+                || reportErrorIf (
+                    totalRead != inFilePtr->size(),
+                    ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE,
+                    "short file transfer of " + std::to_string(totalRead) + " out of " + std::to_string(inFilePtr->size()) +
+                    "bytes when reading from remote worker: " + inWorkerInfo.name +
+                    ", database: " + databaseInfo.name +
+                    ", file: " + file +
+                    " into temporary file: " + tmpFile.string());
+                
+        } catch (const FileClientError &ex) {
+            errorContext = errorContext
+                || reportErrorIf (
+                    true,
+                    ExtendedCompletionStatus::EXT_STATUS_FILE_READ,
+                    "failed to read input file from remote worker: " + inWorkerInfo.name +
+                    ", database: " + databaseInfo.name +
+                    ", file: " + file);
+        }
+        
+        // Unconditionally flush & close to prevent leaks
+
+        std::fflush(tmpFilePtr);
+        std::fclose(tmpFilePtr);
     }
     if (errorContext.failed) {
         setStatus(STATUS_FAILED, errorContext.extendedStatus);

@@ -184,6 +184,10 @@ public:
      *   'POSIX'  - request objects based on the direct manipulation of files
      *              on a POSIX file system.
      *
+     *   'FS'     - request objects based on the direct manipulation of local files
+     *              on a POSIX file system and for reading remote files using
+     *              the built-into-worker simple file server.
+     *
      *   'XROOTD' - request objects based on the in-direct manipulation of files
      *              using the XRootD services.
      *

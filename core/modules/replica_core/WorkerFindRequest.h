@@ -189,6 +189,16 @@ private:
 
 
 /**
+  * Class WorkerFindRequestFS provides an actual implementation for
+  * the replica deletion based on the direct manipulation of files on
+  * a POSIX file system.
+  *
+  * Note, this is just a typedef to class WorkerDeleteRequestPOSIX.
+  */
+typedef WorkerFindRequestPOSIX WorkerFindRequestFS;
+
+
+/**
   * Class WorkerFindRequestX provides an actual implementation for
   * the replica lookup requests using XRootD.
   */

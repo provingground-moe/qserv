@@ -50,6 +50,9 @@ status2string (ExtendedCompletionStatus status) {
         case ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE:        return "EXT_STATUS_FILE_SIZE";
         case ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ:      return "EXT_STATUS_FOLDER_READ";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:        return "EXT_STATUS_FILE_READ";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN:       return "EXT_STATUS_FILE_ROPEN";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE:      return "EXT_STATUS_FILE_CREATE";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE:       return "EXT_STATUS_FILE_WRITE";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:        return "EXT_STATUS_FILE_COPY";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE:      return "EXT_STATUS_FILE_DELETE";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME:      return "EXT_STATUS_FILE_RENAME";
@@ -75,6 +78,9 @@ translate (proto::ReplicationStatusExt status) {
         case proto::ReplicationStatusExt::FILE_SIZE:        return ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE;
         case proto::ReplicationStatusExt::FOLDER_READ:      return ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ;
         case proto::ReplicationStatusExt::FILE_READ:        return ExtendedCompletionStatus::EXT_STATUS_FILE_READ;
+        case proto::ReplicationStatusExt::FILE_ROPEN:       return ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN;
+        case proto::ReplicationStatusExt::FILE_CREATE:      return ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE;
+        case proto::ReplicationStatusExt::FILE_WRITE:       return ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE;
         case proto::ReplicationStatusExt::FILE_COPY:        return ExtendedCompletionStatus::EXT_STATUS_FILE_COPY;
         case proto::ReplicationStatusExt::FILE_DELETE:      return ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE;
         case proto::ReplicationStatusExt::FILE_RENAME:      return ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME;
@@ -100,6 +106,9 @@ translate (ExtendedCompletionStatus status) {
         case ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE:        return proto::ReplicationStatusExt::FILE_SIZE;
         case ExtendedCompletionStatus::EXT_STATUS_FOLDER_READ:      return proto::ReplicationStatusExt::FOLDER_READ;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:        return proto::ReplicationStatusExt::FILE_READ;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN:       return proto::ReplicationStatusExt::FILE_ROPEN;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE:      return proto::ReplicationStatusExt::FILE_CREATE;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE:       return proto::ReplicationStatusExt::FILE_WRITE;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:        return proto::ReplicationStatusExt::FILE_COPY;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE:      return proto::ReplicationStatusExt::FILE_DELETE;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME:      return proto::ReplicationStatusExt::FILE_RENAME;
