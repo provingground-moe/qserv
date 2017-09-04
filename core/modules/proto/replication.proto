@@ -211,15 +211,18 @@ enum ReplicationStatusExt {
     FILE_SIZE     = 6;
     FOLDER_READ   = 7;
     FILE_READ     = 8;
-    FILE_COPY     = 9;
-    FILE_DELETE   = 10;
-    FILE_RENAME   = 11;
-    FILE_EXISTS   = 12;
-    SPACE_REQ     = 13;
-    NO_FOLDER     = 14;
-    NO_FILE       = 15;
-    NO_ACCESS     = 16;
-    NO_SPACE      = 17;
+    FILE_ROPEN    = 9;
+    FILE_CREATE   = 10;
+    FILE_WRITE    = 11;
+    FILE_COPY     = 12;
+    FILE_DELETE   = 13;
+    FILE_RENAME   = 14;
+    FILE_EXISTS   = 15;
+    SPACE_REQ     = 16;
+    NO_FOLDER     = 17;
+    NO_FILE       = 18;
+    NO_ACCESS     = 19;
+    NO_SPACE      = 20;
 }
 message ReplicationReplicaCreateInfo {
 

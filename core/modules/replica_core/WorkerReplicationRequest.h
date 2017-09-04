@@ -185,6 +185,72 @@ protected:
 
 
 /**
+  * Class WorkerReplicationRequestFS provides an actual implementation for
+  * the replication requests based on the direct manipulation of local files
+  * on a POSIX file system and for reading remote files using the built-into-worker
+  * simple file server.
+  */
+class WorkerReplicationRequestFS
+    :   public WorkerReplicationRequest {
+
+public:
+
+    /// Pointer to self
+    typedef std::shared_ptr<WorkerReplicationRequestFS> pointer;
+
+    /**
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     */
+    static pointer create (ServiceProvider   &serviceProvider,
+                           const std::string &worker,
+                           const std::string &id,
+                           int                priority,
+                           const std::string &database,
+                           unsigned int       chunk,
+                           const std::string &sourceWorker);
+
+    // Default construction and copy semantics are proxibited
+
+    WorkerReplicationRequestFS () = delete;
+    WorkerReplicationRequestFS (WorkerReplicationRequestFS const&) = delete;
+    WorkerReplicationRequestFS & operator= (WorkerReplicationRequestFS const&) = delete;
+
+    /// Destructor
+    ~WorkerReplicationRequestFS () override;
+
+    /**
+     * This method implements the virtual method of the base class
+     *
+     * @see WorkerReplicationRequest::execute
+     */
+    bool execute (bool incremental=true) override;
+
+protected:
+
+    /**
+     * The normal constructor of the class.
+     */
+    WorkerReplicationRequestFS (ServiceProvider   &serviceProvider,
+                                const std::string &worker,
+                                const std::string &id,
+                                int                priority,
+                                const std::string &database,
+                                unsigned int       chunk,
+                                const std::string &sourceWorker);
+
+private:
+
+    /// The buffer for records read from the remote service
+    uint8_t *_buf;
+
+    /// The size of the buffer
+    size_t _bufSize;
+};
+
+
+/**
   * Class WorkerReplicationRequestX provides an actual implementation for
   * the replication requests using XRootD.
   */

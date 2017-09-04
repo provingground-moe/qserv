@@ -305,6 +305,130 @@ public:
 };
 
 
+/////////////////////////////////////////////////////////////////
+///////////////////// WorkerRequestFactoryFS ////////////////////
+/////////////////////////////////////////////////////////////////
+
+/**
+  * Class WorkerRequestFactoryFS creates request objects based on the direct
+  * manipulation of local files on a POSIX file system and for reading remote
+  * files using the built-into-worker simple file server.
+  */
+class WorkerRequestFactoryFS
+    :   public WorkerRequestFactoryBase {
+
+public:
+
+    // Default construction and copy semantics are proxibited
+
+    WorkerRequestFactoryFS () = delete;
+    WorkerRequestFactoryFS (WorkerRequestFactoryFS const&) = delete;
+    WorkerRequestFactoryFS & operator= (WorkerRequestFactoryFS const&) = delete;
+
+    /// Normal constructor
+    WorkerRequestFactoryFS (ServiceProvider &serviceProvider)
+        :   WorkerRequestFactoryBase (serviceProvider) {}
+    
+    /// Destructor
+    ~WorkerRequestFactoryFS () override {}
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::technology
+     */
+    std::string technology () const { return "FS"; }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createReplicationRequest
+     */
+    WorkerReplicationRequest_pointer createReplicationRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk,
+            const std::string &sourceWorker) override {
+
+        return WorkerReplicationRequestFS::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk,
+            sourceWorker);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createDeleteRequest
+     */
+    WorkerDeleteRequest_pointer createDeleteRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            unsigned int       chunk) override {
+
+        return WorkerDeleteRequestFS::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindRequest
+     */
+    WorkerFindRequest_pointer createFindRequest (
+            const std::string &worker,
+             const std::string &id,
+             int                priority,
+             const std::string &database,
+             unsigned int       chunk,
+             bool               computeCheckSum) override {
+
+        return WorkerFindRequestFS::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            chunk,
+            computeCheckSum);
+    }
+
+    /**
+     * Implements the corresponding method of the base class
+     *
+     * @see WorkerReplicationRequestBase::createFindAllRequest
+     */
+    WorkerFindAllRequest_pointer createFindAllRequest (
+            const std::string &worker,
+            const std::string &id,
+            int                priority,
+            const std::string &database,
+            bool               computeCheckSum) override {
+
+        return WorkerFindAllRequestFS::create (
+            _serviceProvider,
+            worker,
+            id,
+            priority,
+            database,
+            computeCheckSum);
+    }
+};
+
+
 ////////////////////////////////////////////////////////////////
 ///////////////////// WorkerRequestFactoryX ////////////////////
 ////////////////////////////////////////////////////////////////
@@ -442,6 +566,7 @@ WorkerRequestFactory::WorkerRequestFactory (ServiceProvider   &serviceProvider,
 
     if      (finalTechnology == "TEST")   _ptr = new WorkerRequestFactoryTest  (serviceProvider);
     else if (finalTechnology == "POSIX")  _ptr = new WorkerRequestFactoryPOSIX (serviceProvider);
+    else if (finalTechnology == "FS")     _ptr = new WorkerRequestFactoryFS    (serviceProvider);
     else if (finalTechnology == "XROOTD") _ptr = new WorkerRequestFactoryX     (serviceProvider);
     else
         throw std::invalid_argument("WorkerRequestFactory::WorkerRequestFactory() unknown technology: '" +
