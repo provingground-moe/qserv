@@ -6,6 +6,7 @@
 #include "proto/replication.pb.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
+#include "replica_core/FileServer.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerProcessor.h"
 #include "replica_core/WorkerRequestFactory.h"
@@ -29,24 +30,33 @@ void service (const std::string &configFileName,
         rc::ServiceProvider      provider      {config};
         rc::WorkerRequestFactory requestFactory{provider};
 
-        rc::WorkerServer::pointer server =
-            rc::WorkerServer::create (provider, requestFactory, workerName);
+        rc::WorkerServer::pointer reqProcSvr =
+            rc::WorkerServer::create (provider,
+                                      requestFactory,
+                                      workerName);
+        std::thread reqProcSvrThread ([reqProcSvr]() {
+            reqProcSvr->run();
+        });
 
-        std::thread requestsAcceptorThread ([server]() {
-            server->run();
+        rc::FileServer::pointer fileSvr =
+            rc::FileServer::create (provider,
+                                    workerName);
+        std::thread fileSvrThread ([fileSvr]() {
+            fileSvr->run();
         });
         rc::BlockPost blockPost (1000, 5000);
         while (true) {
             blockPost.wait();
             LOGS(_log, LOG_LVL_INFO, "HEARTBEAT"
-                << "  worker: " << server->worker()
-                << "  processor: " << rc::WorkerProcessor::state2string(server->processor().state())
+                << "  worker: " << reqProcSvr->worker()
+                << "  processor: " << rc::WorkerProcessor::state2string(reqProcSvr->processor().state())
                 << "  new, in-progress, finished: "
-                << server->processor().numNewRequests() << ", "
-                << server->processor().numInProgressRequests() << ", "
-                << server->processor().numFinishedRequests());
+                << reqProcSvr->processor().numNewRequests() << ", "
+                << reqProcSvr->processor().numInProgressRequests() << ", "
+                << reqProcSvr->processor().numFinishedRequests());
         }
-        requestsAcceptorThread.join();
+        reqProcSvrThread.join();
+        fileSvrThread.join();
 
     } catch (std::exception& e) {
         LOGS(_log, LOG_LVL_ERROR, e.what());
