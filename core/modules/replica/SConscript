@@ -3,7 +3,7 @@ Import('env')
 import os.path
 
 module_build_targets = []
-env.Append(LIBPATH=Glob("/home/gapon/development/replication/qserv/lib"))
+env.Append(LIBPATH=['$build_dir'] + env['LIBPATH'])
 for f in env.Glob("*.cc"):
     source = os.path.basename(str(f))
     target = source[:-3]
