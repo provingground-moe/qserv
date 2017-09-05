@@ -7,6 +7,7 @@
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
+#include "replica_core/FileServer.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerRequestFactory.h"
@@ -18,15 +19,61 @@ namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_worker");
 
-
-const char *usage = "usage: <config> [--enable-controller <max-chunk>]";
-
 // Command line parameters
 
 std::string  configFileName   {""};
+bool         enableFileServer {false};
 bool         enableController {false};
 unsigned int maxChunk         {0};
 
+/**
+ * Parse command-line parameters and options into above defined
+ * variables.
+ */
+void parseParameters (int argc, const char* const argv[]) {
+
+    const char *usage = "usage: <config> [--enable-file-server] [--enable-controller <max-chunk>]";
+
+    if (argc < 2) {
+        std::cerr << usage << std::endl;
+        std::exit(1);
+    }
+    ::configFileName = argv[1];
+
+    if (argc > 2) {
+        int nextArg = 2;
+        while (nextArg < argc) {
+            const std::string opt = argv[nextArg++];
+            if ("--enable-file-server" == opt) {
+                ::enableFileServer = true;
+            } else if ("--enable-controller" == opt) {
+                if (nextArg >= argc) {
+                    std::cerr << "missing parameter for option " << opt << "\n"
+                        << usage << std::endl;
+                    std::exit(1);
+                }                
+                const std::string val = argv[nextArg++];
+                try {
+                    ::maxChunk = std::stoul(val);
+                    ::enableController = true;
+                } catch (const std::invalid_argument&) {
+                    std::cerr << "failed to translate the chunk: " << val << "\n"
+                        << usage << std::endl;
+                    std::exit(1);
+                }
+            } else {
+                std::cerr << "unknon option: " << opt << "\n"
+                    << usage << std::endl;
+                std::exit(1);
+            }
+        }
+        if (nextArg != argc) {
+            std::cerr << "unrecognized parameters or options were found in the command line\n"
+                << usage << std::endl;
+            std::exit(1);
+        }
+    }
+}
 
 /**
  * Launch all worker servers in dedicated detached threads. Also run
@@ -37,30 +84,45 @@ void runAllWorkers (rc::ServiceProvider      &provider,
 
     for (const std::string &workerName : provider.config().workers()) {
         
-        // Create the server and run it within a dedicated thread
+        // Create the request pocessing server and run it within a dedicated thread
+        // because it's the blocking operation fr the launching thread.
 
-        rc::WorkerServer::pointer server =
+        rc::WorkerServer::pointer reqProcSrv =
             rc::WorkerServer::create (provider, requestFactory, workerName);
 
-        std::thread workerSvcThread ([server]() {
-            server->run();
+        std::thread reqProcSrvThread ([reqProcSrv]() {
+            reqProcSrv->run();
         });
-        workerSvcThread.detach();
+        reqProcSrvThread.detach();
         
         // Run the heartbeat monitor for the server within another thread
  
-        std::thread heartbeatThread ([server]() {
+        std::thread reqProcMonThread ([reqProcSrv]() {
             rc::BlockPost blockPost(1000, 5000);
             while (true) {
                 blockPost.wait();
-                LOGS(_log, LOG_LVL_INFO, "<WORKER:" << server->worker() << " HEARTBEAT> "
-                    << " processor state: " << rc::WorkerProcessor::state2string(server->processor().state())
-                    << " new:"              << server->processor().numNewRequests()
-                    << " in-progress: "     << server->processor().numInProgressRequests()
-                    << " finished: "        << server->processor().numFinishedRequests());
+                LOGS(_log, LOG_LVL_INFO, "<WORKER:" << reqProcSrv->worker() << " HEARTBEAT> "
+                    << " processor state: " << rc::WorkerProcessor::state2string(reqProcSrv->processor().state())
+                    << " new:"              << reqProcSrv->processor().numNewRequests()
+                    << " in-progress: "     << reqProcSrv->processor().numInProgressRequests()
+                    << " finished: "        << reqProcSrv->processor().numFinishedRequests());
             }
         });
-        heartbeatThread.detach();
+        reqProcMonThread.detach();
+
+        // If requested then also create and run the file server. Note the server
+        // should be running in a separate thread because it's the blocking
+        // operation fr the launching thread.
+
+        if (enableFileServer) {
+            rc::FileServer::pointer fileSrv =
+                rc::FileServer::create (provider, workerName);
+    
+            std::thread fileSrvThread ([fileSrv]() {
+                fileSrv->run();
+            });
+            fileSrvThread.detach();
+        }
     }
 }
 
@@ -178,30 +240,7 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
  
-    if (argc < 2) {
-        std::cerr << ::usage<< std::endl;
-        return 1;
-    }
-    ::configFileName = argv[1];
-
-    if (argc > 3) {
-        const std::string optStr = argv[2];
-        if ("--enable-controller" == optStr) {
-            ::enableController = true;
-            const std::string chunkStr = argv[3];
-            try {
-                ::maxChunk = std::stoul(chunkStr);
-            } catch (const std::invalid_argument&) {
-                std::cerr << "failed to translate the chunk: " << chunkStr << "\n"
-                    << ::usage<< std::endl;
-                return 1;
-            }
-        } else {
-            std::cerr << "unknon option: " << optStr << "\n"
-                << ::usage<< std::endl;
-            return 1;
-        }
-    }
+    ::parseParameters(argc, argv);
     ::run();
 
     return 0;

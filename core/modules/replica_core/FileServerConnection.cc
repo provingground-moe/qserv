@@ -221,7 +221,7 @@ FileServerConnection::requestReceived (const boost::system::error_code &ec,
     proto::ReplicationFileRequest request;
     if (!::readMessage (_socket, _bufferPtr, _bufferPtr->parseLength(), request)) return;
    
-    LOGS(_log, LOG_LVL_INFO, context << "requestReceived  database: " << request.database()
+    LOGS(_log, LOG_LVL_INFO, context << "requestReceived  <OPEN> database: " << request.database()
          << ", file: " << request.file());
     
     // Find a file requested by a client
@@ -331,7 +331,7 @@ FileServerConnection::sendData () {
         if (std::ferror(_filePtr))
             LOGS(_log, LOG_LVL_ERROR, context << "sendData  file read error: " << std::strerror(errno) << ", file: " << _fileName);
         else if (std::feof(_filePtr))
-            LOGS(_log, LOG_LVL_INFO, context << "sendData  end of file: " << _fileName);
+            LOGS(_log, LOG_LVL_INFO, context << "sendData  <CLOSE> file: " << _fileName);
         else
             ;   // This file was empty, or the previous read was aligned exactly on
                 // the end of the file.
