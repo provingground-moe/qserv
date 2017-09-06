@@ -460,6 +460,9 @@ private:
     /// Current state of the processor
     State _state;
 
+    /// When the processor started (milliseconds since UNIX Epoch)
+    uint64_t _startTime;
+
     /// A pool of threads for processing requests
     std::vector<WorkerProcessorThread::pointer> _threads;
     

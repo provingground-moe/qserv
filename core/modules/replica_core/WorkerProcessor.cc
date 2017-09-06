@@ -35,6 +35,7 @@
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
+#include "replica_core/Performance.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerDeleteRequest.h"
 #include "replica_core/WorkerFindRequest.h"
@@ -125,7 +126,8 @@ WorkerProcessor::WorkerProcessor (ServiceProvider      &serviceProvider,
     :   _serviceProvider (serviceProvider),
         _requestFactory  (requestFactory),
         _worker          (worker),
-        _state           (STATE_IS_STOPPED) {
+        _state           (STATE_IS_STOPPED),
+        _startTime       (PerformanceUtils::now()) {
 }
 
 WorkerProcessor::~WorkerProcessor () {
@@ -507,6 +509,7 @@ WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &
 
     response.set_status     (status);
     response.set_technology (_requestFactory.technology());
+    response.set_start_time (_startTime);
 
     switch (state()) {
 
