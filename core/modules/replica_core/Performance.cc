@@ -38,29 +38,23 @@ namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.Performance");
 
+} /// namespace
+
+namespace lsst {
+namespace qserv {
+namespace replica_core {
+
+
 ////////////////////////////////////////////////////////////
 ///////////////////// PerformanceUtils /////////////////////
 ////////////////////////////////////////////////////////////
 
-/**
- * Utilities shared by all classes in this scope
- */
-struct PerformanceUtils {
-    /// Return the current time in milliseconds since Epoch
-    static uint64_t now ();    
-};
 
 uint64_t
 PerformanceUtils::now () {
     return std::chrono::duration_cast<std::chrono::milliseconds>
         (std::chrono::system_clock::now().time_since_epoch()).count();
 }
-
-} /// namespace
-
-namespace lsst {
-namespace qserv {
-namespace replica_core {
 
 
 ///////////////////////////////////////////////////////

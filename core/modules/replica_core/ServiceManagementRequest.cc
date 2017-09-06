@@ -33,6 +33,7 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Performance.h"
 #include "replica_core/ProtocolBuffer.h"
 
 namespace proto = lsst::qserv::proto;
@@ -76,13 +77,52 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+
+void
+ServiceManagementRequestBase::ServiceState::set (
+        const proto::ReplicationServiceResponse &message) {
+
+    switch (message.service_state()) {
+        case proto::ReplicationServiceResponse::SUSPEND_IN_PROGRESS:
+            state = ServiceManagementRequestBase::ServiceState::State::SUSPEND_IN_PROGRESS;
+            break;
+        case proto::ReplicationServiceResponse::SUSPENDED:
+            state = ServiceManagementRequestBase::ServiceState::State::SUSPENDED;
+            break;
+        case proto::ReplicationServiceResponse::RUNNING:
+            state = ServiceManagementRequestBase::ServiceState::State::RUNNING;
+            break;
+        default:
+            throw std::runtime_error(
+                "ServiceManagementRequestBase::ServiceState::set() service state found in protocol is unknown");
+    }
+    technology = message.technology();
+    startTime  = message.start_time();
+
+    numNewRequests        = message.num_new_requests        ();
+    numInProgressRequests = message.num_in_progress_requests();
+    numFinishedRequests   = message.num_finished_requests   ();
+
+    for (int num = message.new_requests_size(), idx = 0; idx < num; ++idx)
+        newRequests.emplace_back(message.new_requests(idx));
+
+    for (int num = message.in_progress_requests_size(), idx = 0; idx < num; ++idx)
+        inProgressRequests.emplace_back(message.in_progress_requests(idx));
+
+    for (int num = message.finished_requests_size(), idx = 0; idx < num; ++idx)
+       finishedRequests.emplace_back(message.finished_requests(idx));
+}
+
 std::ostream&
 operator<< (std::ostream &os, const ServiceManagementRequestBase::ServiceState &ss) {
+
+    const unsigned int secondsAgo = (PerformanceUtils::now() - ss.startTime ) / 1000.0f;
 
     os  << "ServiceManagementRequestBase::ServiceState:\n"
         << "\n  Summary:\n\n"
         << "    service state:              " << ss.state2string() << "\n"
         << "    technology:                 " << ss.technology << "\n"
+        << "    start time [ms]:            " << ss.startTime << " (" << secondsAgo << " seconds ago)\n"
         << "    total new requests:         " << ss.numNewRequests << "\n"
         << "    total in-progress requests: " << ss.numInProgressRequests << "\n"
         << "    total finished requests:    " << ss.numFinishedRequests << "\n";
@@ -275,32 +315,7 @@ ServiceManagementRequestBase::analyze (const proto::ReplicationServiceResponse &
             // Transfer the state of the remote service into a local data member
             // before initiating state transition of the request object.
     
-            switch (message.service_state()) {
-                case proto::ReplicationServiceResponse::SUSPEND_IN_PROGRESS:
-                    _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPEND_IN_PROGRESS;
-                    break;
-                case proto::ReplicationServiceResponse::SUSPENDED:
-                    _serviceState.state = ServiceManagementRequestBase::ServiceState::State::SUSPENDED;
-                    break;
-                case proto::ReplicationServiceResponse::RUNNING:
-                    _serviceState.state = ServiceManagementRequestBase::ServiceState::State::RUNNING;
-                    break;
-                default:
-                    throw std::runtime_error("service state found in protocol is unknown");
-            }
-            _serviceState.technology            = message.technology              ();
-            _serviceState.numNewRequests        = message.num_new_requests        ();
-            _serviceState.numInProgressRequests = message.num_in_progress_requests();
-            _serviceState.numFinishedRequests   = message.num_finished_requests   ();
- 
-            for (int num = message.new_requests_size(), idx = 0; idx < num; ++idx)
-                _serviceState.newRequests.emplace_back(message.new_requests(idx));
-
-            for (int num = message.in_progress_requests_size(), idx = 0; idx < num; ++idx)
-                _serviceState.inProgressRequests.emplace_back(message.in_progress_requests(idx));
-
-            for (int num = message.finished_requests_size(), idx = 0; idx < num; ++idx)
-                _serviceState.finishedRequests.emplace_back(message.finished_requests(idx));
+            _serviceState.set(message);
 
             finish (SUCCESS);
             break;

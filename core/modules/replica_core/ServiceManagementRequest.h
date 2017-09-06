@@ -68,17 +68,11 @@ public:
     /// The pointer type for instances of the class
     typedef std::shared_ptr<ServiceManagementRequestBase> pointer;
 
-    // Default construction and copy semantics are proxibited
-
-    ServiceManagementRequestBase () = delete;
-    ServiceManagementRequestBase (ServiceManagementRequestBase const&) = delete;
-    ServiceManagementRequestBase & operator= (ServiceManagementRequestBase const&) = delete;
-
-    /// Destructor
-    virtual ~ServiceManagementRequestBase ();
-
-    /// Various parameters representing the state of the service which
-    /// are available upon the completion of the request.
+    /**
+     * This structure encapsulates various parameters representing the state
+     * of the remote request processing service. The parameters are available
+     * upon the completion of the request.
+     */
     struct ServiceState {
 
         // Its state
@@ -102,6 +96,9 @@ public:
         /// The backend technology
         std::string technology;
 
+        /// When the service started (milliseconds since UNIX Epoch)
+        uint64_t startTime;
+
         // Counters for requests known to the service since its last start
 
         uint32_t numNewRequests;
@@ -111,7 +108,19 @@ public:
         std::vector<lsst::qserv::proto::ReplicationServiceRequestInfo> newRequests;
         std::vector<lsst::qserv::proto::ReplicationServiceRequestInfo> inProgressRequests;
         std::vector<lsst::qserv::proto::ReplicationServiceRequestInfo> finishedRequests;
+        
+        /// Set parameter values from a protobuf object
+        void set (const lsst::qserv::proto::ReplicationServiceResponse &message);
     };
+
+    // Default construction and copy semantics are proxibited
+
+    ServiceManagementRequestBase () = delete;
+    ServiceManagementRequestBase (ServiceManagementRequestBase const&) = delete;
+    ServiceManagementRequestBase & operator= (ServiceManagementRequestBase const&) = delete;
+
+    /// Destructor
+    virtual ~ServiceManagementRequestBase ();
 
     /**
      * Get the state of the worker-side service
