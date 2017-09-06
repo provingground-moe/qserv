@@ -53,11 +53,13 @@ FileClient::open (ServiceProvider   &serviceProvider,
                   const std::string &databaseName,
                   const std::string &fileName) {
     try {
+        const bool readContent = true;
         FileClient::pointer ptr(
             new FileClient(serviceProvider,
                            workerName,
                            databaseName,
-                           fileName));
+                           fileName,
+                           readContent));
 
         if (ptr->openImpl()) return ptr;
 
@@ -71,14 +73,43 @@ FileClient::open (ServiceProvider   &serviceProvider,
     return nullptr;
 }
 
-FileClient::FileClient (ServiceProvider         &serviceProvider,
-                        const std::string       &workerName,
-                        const std::string       &databaseName,
-                        const std::string       &fileName)
+
+FileClient::pointer
+FileClient::stat (ServiceProvider   &serviceProvider,
+                  const std::string &workerName,
+                  const std::string &databaseName,
+                  const std::string &fileName) {
+    try {
+        const bool readContent = true;
+        FileClient::pointer ptr(
+            new FileClient(serviceProvider,
+                           workerName,
+                           databaseName,
+                           fileName,
+                           readContent));
+
+        if (ptr->openImpl()) return ptr;
+
+    } catch (std::exception &ex) {
+        LOGS(_log, LOG_LVL_ERROR, "FileClient::open  failed to construct an object for "
+             << "worker: " << workerName
+             << "database: " << databaseName
+             << "file: " << fileName
+             << ", error: " << ex.what());
+    }
+    return nullptr;
+}
+
+FileClient::FileClient (ServiceProvider   &serviceProvider,
+                        const std::string &workerName,
+                        const std::string &databaseName,
+                        const std::string &fileName,
+                        bool               readContent)
 
     :   _workerInfo  (serviceProvider.config().workerInfo  (workerName)),
         _databaseInfo(serviceProvider.config().databaseInfo(databaseName)),
         _fileName    (fileName),
+        _readContent (readContent),
 
         _bufferPtr (
             new ProtocolBuffer(serviceProvider.config().requestBufferSizeBytes())),
@@ -254,6 +285,13 @@ size_t
 FileClient::read (uint8_t* buf, size_t bufSize) {
 
     LOGS(_log, LOG_LVL_DEBUG, "FileClient::read");
+
+    if (!_readContent)
+        throw FileClientError (
+            "FileClient::read  this file was open in 'stat' mode, server: "
+            + _workerInfo.svcHost + ":" + std::to_string(_workerInfo.fsPort) +
+            ", database: " + database() +
+            ", file: " + file());
 
     if (!buf || !bufSize)
         throw std::invalid_argument("FileClient::read  zero buffer pointer or buffer size passed into the method");

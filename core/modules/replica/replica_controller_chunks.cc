@@ -56,8 +56,9 @@ bool test () {
                           rc::FindAllRequest::pointer>> requests;
 
         // The counter of requests which will be updated
-        std::atomic<size_t> numLaunched(0);
-        std::atomic<size_t> numFinished(0);
+        std::atomic<size_t> numSuccess(0);
+        std::atomic<size_t> numFailure(0);
+        std::atomic<size_t> numTotal  (0);
 
         // Launch requests against all workers and databases
         //
@@ -77,12 +78,15 @@ bool test () {
 
         for (const auto &database: databaseNames) {
             for (const auto &worker: workerNames) {
-                numLaunched++;
+                numTotal++;
                 requests[database][worker] =
                     controller->findAllReplicas (
                         worker, database,
-                        [&numFinished] (rc::FindAllRequest::pointer request) {
-                            numFinished++;
+                        [&numSuccess, &numFailure] (rc::FindAllRequest::pointer request) {
+                            if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
+                                numSuccess++;
+                            else
+                                numFailure++;
                         });
             }
         }
@@ -90,11 +94,17 @@ bool test () {
         // Wait before all request are finished
 
         rc::BlockPost blockPost (100, 200);
-        while (numFinished < numLaunched) {
-            std::cout << "...processing: " << numFinished << "/" << numLaunched << std::endl;
+        while (numSuccess + numFailure < numTotal) {
+            std::cout << "success / failure / total: "
+                << numSuccess << " / "
+                << numFailure << " / "
+                << numTotal   << std::endl;
             blockPost.wait();
         }
-        std::cout << "...processing: " << numFinished << "/" << numLaunched << std::endl;
+        std::cout << "success / failure / total: "
+            << numSuccess << " / "
+            << numFailure << " / "
+            << numTotal   << std::endl;
 
         // Analyse and display results
 

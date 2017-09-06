@@ -59,8 +59,9 @@ bool test () {
                           rc::FindAllRequest::pointer>> findAllRequests;
 
         // The counter of requests which will be updated
-        std::atomic<size_t> numFindAllRequstsLaunched(0);
-        std::atomic<size_t> numFindAllRequstsFinished(0);
+        std::atomic<size_t> numFindAllRequstsSuccess(0);
+        std::atomic<size_t> numFindAllRequstsFailure(0);
+        std::atomic<size_t> numFindAllRequstsTotal  (0);
 
         // Launch requests against all workers and databases
         //
@@ -70,12 +71,15 @@ bool test () {
 
         for (const auto &database: databaseNames) {
             for (const auto &worker: workerNames) {
-                numFindAllRequstsLaunched++;
+                numFindAllRequstsTotal++;
                 findAllRequests[database][worker] =
                     controller->findAllReplicas (
                         worker, database,
-                        [&numFindAllRequstsFinished] (rc::FindAllRequest::pointer request) {
-                            numFindAllRequstsFinished++;
+                        [&numFindAllRequstsSuccess,&numFindAllRequstsFailure] (rc::FindAllRequest::pointer request) {
+                            if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
+                                numFindAllRequstsSuccess++;
+                            else
+                                numFindAllRequstsFailure++;
                         });
             }
         }
@@ -83,11 +87,17 @@ bool test () {
         // Wait before all request are finished
 
         rc::BlockPost blockPost (100, 200);
-        while (numFindAllRequstsFinished < numFindAllRequstsLaunched) {
-            std::cout << "...processing: " << numFindAllRequstsFinished << "/" << numFindAllRequstsLaunched << std::endl;
+        while (numFindAllRequstsSuccess + numFindAllRequstsFailure < numFindAllRequstsTotal) {
+            std::cout << "success / failure / total: "
+                << numFindAllRequstsSuccess << " / "
+                << numFindAllRequstsFailure << " / "
+                << numFindAllRequstsTotal   << std::endl;
             blockPost.wait();
         }
-        std::cout << "...processing: " << numFindAllRequstsFinished << "/" << numFindAllRequstsLaunched << std::endl;
+        std::cout << "success / failure / total: "
+            << numFindAllRequstsSuccess << " / "
+            << numFindAllRequstsFailure << " / "
+            << numFindAllRequstsTotal   << std::endl;
 
         // Analyse results and prepare a replication plan to create extra
         // replocas for under-represented chunks 
@@ -97,8 +107,9 @@ bool test () {
                  std::map<std::string,
                           std::list<rc::ReplicationRequest::pointer>>> replicationRequests;
 
-        std::atomic<size_t> numReplicationRequestsLaunched(0);
-        std::atomic<size_t> numReplicationRequestsFinished(0);
+        std::atomic<size_t> numReplicationRequestsSuccess(0);
+        std::atomic<size_t> numReplicationRequestsFailure(0);
+        std::atomic<size_t> numReplicationRequestsTotal  (0);
 
         for (const auto &database: databaseNames) {
             
@@ -189,12 +200,15 @@ bool test () {
                     // Finally, launch and register for further tracking the replication
                     // request.
                     
-                    numReplicationRequestsLaunched++;
+                    numReplicationRequestsTotal++;
                     replicationRequests[database][destinationWorker].push_back (
                         controller->replicate (
                             destinationWorker, sourceWorker, database, chunk,
-                            [&numReplicationRequestsFinished] (rc::ReplicationRequest::pointer request) {
-                                ++numReplicationRequestsFinished;
+                            [&numReplicationRequestsSuccess,&numReplicationRequestsFailure] (rc::ReplicationRequest::pointer request) {
+                                if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
+                                    numReplicationRequestsSuccess++;
+                                else
+                                    numReplicationRequestsFailure++;
                             }
                         )
                     );
@@ -205,11 +219,17 @@ bool test () {
         // Wait before all request are finished
 
         rc::BlockPost longBlockPost (1000, 2000);
-        while (numReplicationRequestsFinished < numReplicationRequestsLaunched) {
-            std::cout << "...processing: " << numReplicationRequestsFinished << "/" << numReplicationRequestsLaunched << std::endl;
+        while (numReplicationRequestsSuccess + numReplicationRequestsFailure < numReplicationRequestsTotal) {
+            std::cout << "success / failure / total: "
+                << numReplicationRequestsSuccess << " / "
+                << numReplicationRequestsFailure << " / "
+                << numReplicationRequestsTotal   << std::endl;
             longBlockPost.wait();
         }
-        std::cout << "...processing: " << numReplicationRequestsFinished << "/" << numReplicationRequestsLaunched << std::endl;
+        std::cout << "success / failure / total: "
+            << numReplicationRequestsSuccess << " / "
+            << numReplicationRequestsFailure << " / "
+            << numReplicationRequestsTotal   << std::endl;
     
         // Shutdown the controller and join with its thread
         controller->stop();

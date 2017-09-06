@@ -408,6 +408,11 @@ message ReplicationFileRequest {
 
     /// The name of a file (including its extention and excluding any path)
     required string file = 2;
+    
+    /// Tell the server to begin sending file content immediatelly
+    /// after sending the response message. Otherwise the server will just
+    /// close a connection.
+    required bool send_content = 3;
 }
 
 message ReplicationFileResponse {
