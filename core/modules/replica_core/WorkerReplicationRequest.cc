@@ -268,6 +268,8 @@ WorkerReplicationRequestPOSIX::execute (bool incremental) {
                         "failed to get the size of input file: " + file.string());
         }
 
+        // Check and sanitize the output directory
+
         const bool outDirExists = fs::exists(outDir, ec);
         errorContext = errorContext
             || reportErrorIf (
@@ -503,12 +505,41 @@ WorkerReplicationRequestFS::execute (bool incremental) {
         file2outFile[file] = outFile;
     }
 
-    // Check and sanitize the destination folder
+    // Check input files, check and sanitize the destination folder
+
+    uintmax_t totalBytes = 0;   // the total number of bytes in all input files to be moved
 
     WorkerRequest::ErrorContext errorContext;
     boost::system::error_code   ec;
     {
         LOCK_DATA_FOLDER;
+
+        // Check for a presence of input files and calculate space requirement
+
+        for (const auto &file: files) {
+
+            // Open the file on the remote server in the no-content-read mode
+            FileClient::pointer inFilePtr =
+                FileClient::stat (_serviceProvider,
+                                  inWorkerInfo.name,
+                                  databaseInfo.name,
+                                  file);
+            errorContext = errorContext
+                || reportErrorIf (
+                    !inFilePtr,
+                    ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN,
+                    "failed to open input file on remote worker: " + inWorkerInfo.name +
+                    ", database: " + databaseInfo.name +
+                    ", file: " + file);
+    
+            if (errorContext.failed) {
+                setStatus(STATUS_FAILED, errorContext.extendedStatus);
+                return true;
+            }
+            totalBytes += inFilePtr->size();
+        }
+
+        // Check and sanitize the output directory
 
         const bool outDirExists = fs::exists(outDir, ec);
         errorContext = errorContext
@@ -557,6 +588,22 @@ WorkerReplicationRequestFS::execute (bool incremental) {
                             "failed to remove temporary file: " + file.string());
             }
         }
+
+        // Make sure a file system at the destination has enough space
+        // to accomodate new files
+        //
+        // NOTE: this operation runs after cleaning up temporary files
+
+        const fs::space_info space = fs::space(outDir, ec);
+        errorContext = errorContext
+            || reportErrorIf (
+                    ec,
+                    ExtendedCompletionStatus::EXT_STATUS_SPACE_REQ,
+                    "failed to obtaine space information at output folder: " + outDir.string())
+            || reportErrorIf (
+                    space.available < totalBytes,
+                    ExtendedCompletionStatus::EXT_STATUS_NO_SPACE,
+                    "not enough free space availble at output folder: " + outDir.string());
     }
     if (errorContext.failed) {
         setStatus(STATUS_FAILED, errorContext.extendedStatus);

@@ -253,13 +253,15 @@ FileServerConnection::requestReceived (const boost::system::error_code &ec,
             break;
         }
 
-        // Open the file and leave its descriptor open
+        // If requested open the file and leave its descriptor open
 
         _fileName = file.string();
-        _filePtr  = std::fopen (file.string().c_str(), "rb");
-        if (!_filePtr) {
-            LOGS(_log, LOG_LVL_ERROR, context << "requestReceived  file open error: " << std::strerror(errno) << ", file: " << file);
-            break;
+        if (request.send_content()) {
+            _filePtr  = std::fopen (file.string().c_str(), "rb");
+            if (!_filePtr) {
+                LOGS(_log, LOG_LVL_ERROR, context << "requestReceived  file open error: " << std::strerror(errno) << ", file: " << file);
+                break;
+            }
         }
         available = true;
         
@@ -305,9 +307,12 @@ FileServerConnection::responseSent (const boost::system::error_code &ec,
 
     if (::isErrorCode (ec, "sent")) return;
     
-    // If the file pointer is not set it means there was a problem with
-    // locating/accessing/opening the file. Hence we just finish the protocol
-    // right here.
+    // If the file pointer is not set it means one of two reasons:
+    //
+    // - there was a problem with locating/accessing/opening the file, or
+    // - a client indicated no interest in receiving the content of the file
+    //
+    // In either case just finish the protocol right here.
 
     if (!_filePtr) return;
     

@@ -78,18 +78,42 @@ public:
 
     /**
      * Open a file and return a smart pointer to an object of this class.
-     * The method will return the null pointer of the file couldn't be open.
+     * If the operation is successfull then a valid pointer will be returned
+     * and the file content could be read via method FileClient::read().
+     * Otherwise return the null pointer.
      *
      * @param serviceProvider - for configuration, etc. services
-     * @workerName            - the name of a worker where the file resides
-     * @databaseName          - the name of ad atabase the file belongs to
-     * @fileName              - the file to read
+     * @param workerName      - the name of a worker where the file resides
+     * @param databaseName    - the name of a atabase the file belongs to
+     * @param fileName        - the file to read or examine
      */
     static pointer open (ServiceProvider   &serviceProvider,
                          const std::string &workerName,
                          const std::string &databaseName,
                          const std::string &fileName);
-
+    /**
+     * Open a file and return a smart pointer to an object of this class.
+     * If the operation is successfull then a valid pointer will be returned.
+     * If the operation failes the method will return the null pointer.
+     * 
+     * ATTENTION:
+     *   Unlike the previous method FileClient::open() the returned file object
+     *   can't be used to read the file content (via FileClient::read()).
+     *   The method of opening files is meant to be used for checking the availability
+     *   of files and getting various metadata (size, etc.) about the files.
+     *   Any attempts to call method FileClient::read() will result in
+     *   throwing FileClientError.
+     *
+     * @param serviceProvider - for configuration, etc. services
+     * @param workerName      - the name of a worker where the file resides
+     * @param databaseName    - the name of a atabase the file belongs to
+     * @param fileName        - the file to read or examine
+     */
+    static pointer stat (ServiceProvider   &serviceProvider,
+                         const std::string &workerName,
+                         const std::string &databaseName,
+                         const std::string &fileName);
+    
     // Default construction and copy semantics are proxibited
 
     FileClient () = delete;
@@ -132,14 +156,16 @@ private:
      * validating its arguments.
      * 
      * @param serviceProvider - for configuration, etc. services
-     * @workerName            - the name of a worker where the file resides
-     * @databaseName          - the name of a atabase the file belongs to
-     * @fileName              - the file to read
+     * @param workerName      - the name of a worker where the file resides
+     * @param databaseName    - the name of a atabase the file belongs to
+     * @param fileName        - the file to read or examine
+     * @param readContent     - indicates if a file is open for reading its content   
      */
     FileClient (ServiceProvider   &serviceProvider,
                 const std::string &workerName,
                 const std::string &databaseName,
-                const std::string &fileName);
+                const std::string &fileName,
+                bool               readContent);
 
     /**
      * Try opening the file. Return 'true' if successfull.
@@ -154,8 +180,12 @@ private:
     /// Cached parameters of the validated worker
     const DatabaseInfo &_databaseInfo;
 
-    // The name of a file to be read
+    /// The name of a file to be read
     std::string _fileName;
+
+    /// The flag indicating of the file was open with an intend of reading
+    // its content
+    bool _readContent;
 
     /// Buffer for data moved over the network
     std::auto_ptr<ProtocolBuffer> _bufferPtr;
