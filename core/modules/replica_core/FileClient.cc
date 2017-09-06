@@ -190,8 +190,9 @@ FileClient::openImpl () {
         _bufferPtr->resize();
     
         proto::ReplicationFileRequest request;
-        request.set_database(database());
-        request.set_file    (file());
+        request.set_database    (database());
+        request.set_file        (file());
+        request.set_send_content(_readContent);
     
         _bufferPtr->serialize(request);
     
