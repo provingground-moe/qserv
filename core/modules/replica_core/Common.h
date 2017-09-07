@@ -56,6 +56,8 @@ enum ExtendedCompletionStatus {
     EXT_STATUS_FILE_READ,       // failed to read the contents of a file
     EXT_STATUS_FILE_ROPEN,      // failed to open a remote file
     EXT_STATUS_FILE_CREATE,     // failed to create a file
+    EXT_STATUS_FILE_OPEN,       // failed to open a file
+    EXT_STATUS_FILE_RESIZE,     // failed to resize a file
     EXT_STATUS_FILE_WRITE,      // failed to write into a file
     EXT_STATUS_FILE_COPY,       // failed to copy a file
     EXT_STATUS_FILE_DELETE,     // failed to delete a file

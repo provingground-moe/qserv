@@ -507,14 +507,15 @@ WorkerReplicationRequestFS::execute (bool incremental) {
 
     // Check input files, check and sanitize the destination folder
 
-    uintmax_t totalBytes = 0;   // the total number of bytes in all input files to be moved
-
     WorkerRequest::ErrorContext errorContext;
     boost::system::error_code   ec;
     {
         LOCK_DATA_FOLDER;
 
         // Check for a presence of input files and calculate space requirement
+
+        uintmax_t totalBytes = 0;                   // the total number of bytes in all input files to be moved
+        std::map<std::string,uintmax_t> file2size;  // the number of bytes in each file
 
         for (const auto &file: files) {
 
@@ -536,7 +537,8 @@ WorkerReplicationRequestFS::execute (bool incremental) {
                 setStatus(STATUS_FAILED, errorContext.extendedStatus);
                 return true;
             }
-            totalBytes += inFilePtr->size();
+            file2size[file] = inFilePtr->size();
+            totalBytes     += inFilePtr->size();
         }
 
         // Check and sanitize the output directory
@@ -604,6 +606,34 @@ WorkerReplicationRequestFS::execute (bool incremental) {
                     space.available < totalBytes,
                     ExtendedCompletionStatus::EXT_STATUS_NO_SPACE,
                     "not enough free space availble at output folder: " + outDir.string());
+
+        // Precreate temporary files with the final size to assert disk space
+        // availability before filling these files with the actual payload.
+
+        for (const auto &file: files) {
+            
+            const fs::path tmpFile = file2tmpFile[file];
+
+            // Create a file of size 0
+
+            std::FILE* tmpFilePtr = std::fopen(tmpFile.string().c_str(), "wb");
+            errorContext = errorContext
+                || reportErrorIf (
+                        !tmpFilePtr,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE,
+                        "failed to open/create temporary file: " + tmpFile.string() +
+                        ", error: " + std::strerror(errno));
+            std::fclose(tmpFilePtr);
+            
+            // Resize the file (will be filled with \0)
+
+            fs::resize_file(tmpFile, file2size[file], ec);
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_RESIZE,
+                        "failed to resize the temporary file: " + tmpFile.string());
+        }
     }
     if (errorContext.failed) {
         setStatus(STATUS_FAILED, errorContext.extendedStatus);
@@ -634,21 +664,23 @@ WorkerReplicationRequestFS::execute (bool incremental) {
             return true;
         }
 
-        // Create a temporary output file locally
+        // Reopen a temporary output file locally in the 'append binary mode'
+        // then 'rewind' to the begining of the file before writing into it.
 
         const fs::path tmpFile = file2tmpFile[file];
 
-        std::FILE* tmpFilePtr = std::fopen(tmpFile.string().c_str(), "wb");
+        std::FILE* tmpFilePtr = std::fopen(tmpFile.string().c_str(), "ab");
         errorContext = errorContext
             || reportErrorIf (
                 !tmpFilePtr,
-                ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE,
-                "failed to open/create temporary file: " + tmpFile.string() +
+                ExtendedCompletionStatus::EXT_STATUS_FILE_OPEN,
+                "failed to open temporary file: " + tmpFile.string() +
                 ", error: " + std::strerror(errno));
         if (errorContext.failed) {
             setStatus(STATUS_FAILED, errorContext.extendedStatus);
             return true;
         }
+        std::rewind(tmpFilePtr);
 
         // Copy the file content and make sure exact number of bytes is read        
  
