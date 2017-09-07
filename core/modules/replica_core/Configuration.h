@@ -190,9 +190,6 @@ public:
     /// Return the name of the default technology for implementing requests
     const std::string& workerTechnology () const { return _workerTechnology; }
 
-    /// The maximum number of paralle network connections allowed by each worker
-    size_t workerNumConnectionsLimit () const { return _workerNumConnectionsLimit; }
-
     /// The number of request processing threads in each worker service
     size_t workerNumProcessingThreads () const { return _workerNumProcessingThreads; }
 
@@ -233,10 +230,10 @@ private:
     unsigned int _controllerRequestTimeoutSec;
 
     std::string  _workerTechnology;
-    size_t       _workerNumConnectionsLimit;
-    size_t       _workerNumProcessingThreads;
-    size_t       _workerNumFsProcessingThreads;
-    size_t       _workerFsBufferSizeBytes;
+
+    size_t _workerNumProcessingThreads;
+    size_t _workerNumFsProcessingThreads;
+    size_t _workerFsBufferSizeBytes;
     
     std::map<std::string, DatabaseInfo> _databaseInfo;
     std::map<std::string, WorkerInfo>   _workerInfo;
