@@ -44,7 +44,6 @@ const uint16_t     defaultControllerHttpPort          {80};
 const size_t       defaultControllerHttpThreads       {1};
 const unsigned int defaultControllerRequestTimeoutSec {3600};
 const std::string  defaultWorkerTechnology            {"TEST"};
-const size_t       defaultWorkerNumConnectionsLimit   {1};
 const size_t       defaultWorkerNumProcessingThreads  {1};
 const size_t       defaultWorkerNumFsProcessingThreads{1};
 const size_t       defaultWorkerFsBufferSizeBytes     {1048576};
@@ -108,7 +107,6 @@ Configuration::Configuration (const std::string &configFile)
         _controllerHttpThreads        (defaultControllerHttpThreads),
         _controllerRequestTimeoutSec  (defaultControllerRequestTimeoutSec),
         _workerTechnology             (defaultWorkerTechnology),
-        _workerNumConnectionsLimit    (defaultWorkerNumConnectionsLimit),
         _workerNumProcessingThreads   (defaultWorkerNumProcessingThreads),
         _workerNumFsProcessingThreads (defaultWorkerNumFsProcessingThreads),
         _workerFsBufferSizeBytes      (defaultWorkerFsBufferSizeBytes) {
@@ -170,8 +168,7 @@ Configuration::loadConfiguration () {
     ::parseKeyVal(configStore, "controller.request_timeout_sec",    _controllerRequestTimeoutSec,  defaultControllerRequestTimeoutSec);
 
     ::parseKeyVal(configStore, "worker.technology",                 _workerTechnology,             defaultWorkerTechnology);
-    ::parseKeyVal(configStore, "worker.max_connections",            _workerNumConnectionsLimit,    defaultWorkerNumConnectionsLimit);
-    ::parseKeyVal(configStore, "worker.num_processing_threads",     _workerNumProcessingThreads,   defaultWorkerNumProcessingThreads);
+    ::parseKeyVal(configStore, "worker.num_svc_processing_threads", _workerNumProcessingThreads,   defaultWorkerNumProcessingThreads);
     ::parseKeyVal(configStore, "worker.num_fs_processing_threads",  _workerNumFsProcessingThreads, defaultWorkerNumFsProcessingThreads);
     ::parseKeyVal(configStore, "worker.fs_buf_size_bytes",          _workerFsBufferSizeBytes,      defaultWorkerFsBufferSizeBytes);
 
