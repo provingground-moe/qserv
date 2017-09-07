@@ -52,6 +52,8 @@ status2string (ExtendedCompletionStatus status) {
         case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:        return "EXT_STATUS_FILE_READ";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN:       return "EXT_STATUS_FILE_ROPEN";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE:      return "EXT_STATUS_FILE_CREATE";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_OPEN:        return "EXT_STATUS_FILE_OPEN";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_RESIZE:      return "EXT_STATUS_FILE_RESIZE";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE:       return "EXT_STATUS_FILE_WRITE";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:        return "EXT_STATUS_FILE_COPY";
         case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE:      return "EXT_STATUS_FILE_DELETE";
@@ -80,6 +82,8 @@ translate (proto::ReplicationStatusExt status) {
         case proto::ReplicationStatusExt::FILE_READ:        return ExtendedCompletionStatus::EXT_STATUS_FILE_READ;
         case proto::ReplicationStatusExt::FILE_ROPEN:       return ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN;
         case proto::ReplicationStatusExt::FILE_CREATE:      return ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE;
+        case proto::ReplicationStatusExt::FILE_OPEN:        return ExtendedCompletionStatus::EXT_STATUS_FILE_OPEN;
+        case proto::ReplicationStatusExt::FILE_RESIZE:      return ExtendedCompletionStatus::EXT_STATUS_FILE_RESIZE;
         case proto::ReplicationStatusExt::FILE_WRITE:       return ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE;
         case proto::ReplicationStatusExt::FILE_COPY:        return ExtendedCompletionStatus::EXT_STATUS_FILE_COPY;
         case proto::ReplicationStatusExt::FILE_DELETE:      return ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE;
@@ -108,6 +112,8 @@ translate (ExtendedCompletionStatus status) {
         case ExtendedCompletionStatus::EXT_STATUS_FILE_READ:        return proto::ReplicationStatusExt::FILE_READ;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_ROPEN:       return proto::ReplicationStatusExt::FILE_ROPEN;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE:      return proto::ReplicationStatusExt::FILE_CREATE;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_OPEN:        return proto::ReplicationStatusExt::FILE_OPEN;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_RESIZE:      return proto::ReplicationStatusExt::FILE_RESIZE;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE:       return proto::ReplicationStatusExt::FILE_WRITE;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_COPY:        return proto::ReplicationStatusExt::FILE_COPY;
         case ExtendedCompletionStatus::EXT_STATUS_FILE_DELETE:      return proto::ReplicationStatusExt::FILE_DELETE;
