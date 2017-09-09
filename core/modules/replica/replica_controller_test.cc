@@ -6,6 +6,7 @@
 
 #include "lsst/log/Log.h"
 #include "proto/replication.pb.h"
+#include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
@@ -14,12 +15,20 @@
 #include "replica_core/StatusRequest.h"
 #include "replica_core/StopRequest.h"
 
+namespace r  = lsst::qserv::replica;
 namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_controller_test");
 
+// Command line parameters
+
+std::string workerName;
+std::string sourceWorkerName;
+std::string database;
+std::string configFileName;
+    
 /**
  * The helper class for generating various requests. The main purpose
  * of the class is to reduce code duplication in the tests.
@@ -190,10 +199,7 @@ void reportControllerStatus (rc::Controller::pointer controller) {
 /**
  * Run the test
  */
-void test (const std::string &configFileName,
-           const std::string &workerName,
-           const std::string &sourceWorkerName,
-           const std::string &database) {
+void test () {
 
     try {
 
@@ -307,16 +313,34 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    if (argc != 5) {
-        std::cerr << "Usage: <config> <worker> <source_worker> <database>" << std::endl;
+    // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <worker> <source_worker> <database> [--config=<file>]\n"
+            "\n"
+            "Parameters:\n"
+            "  <worker>           - the name of a destination worker\n"
+            "  <source_worker>    - the name of a source worker\n"
+            "  <database>         - the name of a database\n"
+            "\n"
+            "Flags and options:\n"
+            "  --config           - the name of the configuration file.\n"
+            "                       [ DEFAULT: replication.cfg ]\n");
+
+        ::workerName       = parser.parameter<std::string> (1);
+        ::sourceWorkerName = parser.parameter<std::string> (2);
+        ::database         = parser.parameter<std::string> (3);
+
+        ::configFileName   = parser.option   <std::string> ("config", "replication.cfg");
+
+    } catch (std::exception const& ex) {
         return 1;
-    }
-    const std::string configFileName       = argv[1];
-    const std::string     workerName       = argv[2];
-    const std::string     sourceWorkerName = argv[3];
-    const std::string     database         = argv[4];
-    
-    ::test (configFileName, workerName, sourceWorkerName, database);
+    } 
+    ::test ();
 
     return 0;
 }
