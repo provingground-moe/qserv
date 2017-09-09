@@ -623,8 +623,9 @@ WorkerReplicationRequestFS::execute (bool incremental) {
                         ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE,
                         "failed to open/create temporary file: " + tmpFile.string() +
                         ", error: " + std::strerror(errno));
-            std::fclose(tmpFilePtr);
-            
+            if (tmpFilePtr)
+                std::fclose(tmpFilePtr);
+ 
             // Resize the file (will be filled with \0)
 
             fs::resize_file(tmpFile, file2size[file], ec);
@@ -721,8 +722,10 @@ WorkerReplicationRequestFS::execute (bool incremental) {
         
         // Unconditionally flush & close to prevent leaks
 
-        std::fflush(tmpFilePtr);
-        std::fclose(tmpFilePtr);
+        if (tmpFilePtr) {
+            std::fflush(tmpFilePtr);
+            std::fclose(tmpFilePtr);
+        }
     }
     if (errorContext.failed) {
         setStatus(STATUS_FAILED, errorContext.extendedStatus);

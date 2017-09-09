@@ -261,6 +261,11 @@ shlibs["qserv_czar"] = dict(mods="""ccontrol czar parser qana query qdisp qproc 
 shlibs["replica_core"] = dict(mods="""replica_core""",
                               libs="""qserv_common XrdCl boost_system""")
 
+# library of tools for building binary applications of the replication subsystem
+shlibs["replica"] = dict(mods="""replica""",
+                         libs="""qserv_common replica_core XrdCl util protobuf boost_filesystem boost_system
+                              log log4cxx""")
+
 # library with Lua bindings for czar C++ code
 shlibs["czarProxy"] = dict(mods="""proxy""",
                            libs="""qserv_czar""",

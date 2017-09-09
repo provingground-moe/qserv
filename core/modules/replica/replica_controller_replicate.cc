@@ -10,228 +10,183 @@
 #include <string>
 
 #include "proto/replication.pb.h"
-#include "replica_core/BlockPost.h"
+#include "replica/CmdParser.h"
+#include "replica/ReplicaFinder.h"
+#include "replica/RequestTracker.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
-#include "replica_core/FindAllRequest.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceProvider.h"
 
+namespace r  = lsst::qserv::replica;
 namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-const char* usage =
-    "Usage:\n"
-    "  <config> <database> <num-replicas>\n";
-
-
 // Command line parameters
 
-std::string  configFileName;
 std::string  databaseName;
 unsigned int numReplicas;
+bool         progressReport;
+bool         errorReport;
+std::string  configFileName;
 
 /// Run the test
 bool test () {
 
     try {
 
+        ///////////////////////////////////////////////////////////////////////
+        // Start the controller in its own thread before injecting any requests
+        // Note that omFinish callbak which are activated upon a completion
+        // of the requsts will be run in that Controller's thread.
+
         rc::Configuration   config  {configFileName};
         rc::ServiceProvider provider{config};
 
         rc::Controller::pointer controller = rc::Controller::create(provider);
 
-        // Start the controller in its own thread before injecting any requests
         controller->run();
 
-        
-        // Get the names of all workers and databases from the configuration,
-        // and ask each worker which replicas it has.
+        ////////////////////////////////////////
+        // Find all replicas accross all workers
 
-        const auto workerNames   = config.workers();
-        const auto databaseNames = databaseName.empty() ? config.databases() : std::vector<std::string>{databaseName};
+        r::ReplicaFinder finder (controller,
+                                 databaseName,
+                                 std::cout,
+                                 progressReport,
+                                 errorReport);
 
-        // Registry of  FindAll requests groupped by [<database>][<worker>]        
-        std::map<std::string,
-                 std::map<std::string,
-                          rc::FindAllRequest::pointer>> findAllRequests;
-
-        // The counter of requests which will be updated
-        std::atomic<size_t> numFindAllRequstsSuccess(0);
-        std::atomic<size_t> numFindAllRequstsFailure(0);
-        std::atomic<size_t> numFindAllRequstsTotal  (0);
-
-        // Launch requests against all workers and databases
-        //
-        // ATTENTION: calbacks on the request completion callbacks of the requests will
-        //            be executed within the Contoller's thread. Watch for proper
-        //            synchronization when inspecting/updating shared variables.
-
-        for (const auto &database: databaseNames) {
-            for (const auto &worker: workerNames) {
-                numFindAllRequstsTotal++;
-                findAllRequests[database][worker] =
-                    controller->findAllReplicas (
-                        worker, database,
-                        [&numFindAllRequstsSuccess,&numFindAllRequstsFailure] (rc::FindAllRequest::pointer request) {
-                            if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
-                                numFindAllRequstsSuccess++;
-                            else
-                                numFindAllRequstsFailure++;
-                        });
-            }
-        }
-
-        // Wait before all request are finished
-
-        rc::BlockPost blockPost (100, 200);
-        while (numFindAllRequstsSuccess + numFindAllRequstsFailure < numFindAllRequstsTotal) {
-            std::cout << "success / failure / total: "
-                << numFindAllRequstsSuccess << " / "
-                << numFindAllRequstsFailure << " / "
-                << numFindAllRequstsTotal   << std::endl;
-            blockPost.wait();
-        }
-        std::cout << "success / failure / total: "
-            << numFindAllRequstsSuccess << " / "
-            << numFindAllRequstsFailure << " / "
-            << numFindAllRequstsTotal   << std::endl;
-
+        /////////////////////////////////////////////////////////////////
         // Analyse results and prepare a replication plan to create extra
         // replocas for under-represented chunks 
-
-        // Registry of  replication requests groupped by [<database>][<worker>]        
-        std::map<std::string,
-                 std::map<std::string,
-                          std::list<rc::ReplicationRequest::pointer>>> replicationRequests;
-
-        std::atomic<size_t> numReplicationRequestsSuccess(0);
-        std::atomic<size_t> numReplicationRequestsFailure(0);
-        std::atomic<size_t> numReplicationRequestsTotal  (0);
-
-        for (const auto &database: databaseNames) {
             
-            // A collection of workers for each chunk
-            std::map<unsigned int, std::list<std::string>> chunk2workers;
-            std::map<std::string, std::list<unsigned int>> worker2chunks;
+        // All workers which have a chunk
+        std::map<unsigned int, std::list<std::string>> chunk2workers;
 
-            for (const auto &worker: workerNames) {
+        /// All chunks hosted by a worker
+        std::map<std::string, std::list<unsigned int>> worker2chunks;
 
-                auto &request = findAllRequests[database][worker];
-                if ((request->state()         == rc::Request::State::FINISHED) &&
-                    (request->extendedState() == rc::Request::ExtendedState::SUCCESS)) {
+        // Failed workers
+        std::set<std::string> failedWorkers;
 
-                    const auto &replicaInfoCollection = request->responseData ();
-                    for (const auto &replicaInfo: replicaInfoCollection) {
-                        if (replicaInfo.status() == rc::ReplicaInfo::Status::COMPLETE) {
-                            chunk2workers[replicaInfo.chunk ()].push_back(replicaInfo.worker());
-                            worker2chunks[replicaInfo.worker()].push_back(replicaInfo.chunk ());
+        for (const auto& ptr: finder.requests)
+
+            if ((ptr->state()         == rc::Request::State::FINISHED) &&
+                (ptr->extendedState() == rc::Request::ExtendedState::SUCCESS)) {
+
+                for (const auto &replica: ptr->responseData ())
+                    if (replica.status() == rc::ReplicaInfo::Status::COMPLETE) {
+                        chunk2workers[replica.chunk ()].push_back(replica.worker());
+                        worker2chunks[replica.worker()].push_back(replica.chunk ());
+                    }
+
+            } else{
+                failedWorkers.insert(ptr->worker());
+            }
+
+        /////////////////////////////////////////////////////////////////////
+        // Check which chunks are under-represented. Then find a least loaded
+        // worker and launch a replication request.
+
+        r::CommonRequestTracker<rc::ReplicationRequest> tracker (std::cout,
+                                                                 progressReport,
+                                                                 errorReport);
+
+        // This counter will be used for optimization purposes as the upper limit for
+        // the number of chunks per worker in the load balancing algorithm below.
+        const size_t numUniqueChunks = chunk2workers.size();
+
+        for (auto &entry: chunk2workers) {
+
+            const unsigned int chunk{entry.first};
+
+            // Take a copy of the non-modified list of workers with chunk's replicas
+            // and cache it here to know which workers are allowed to be used as reliable
+            // sources vs chunk2workers[chunk] which will be modified below as new replicas
+            // will get created.
+            const std::list<std::string> replicas{entry.second};
+
+            // Pick the first worker which has this chunk as the 'sourceWorker'
+            // in case if we'll decide to replica the chunk within the loop below
+            const std::string &sourceWorker = *(replicas.begin());
+
+            // Note that some chunks may have more replicas than required. In that case
+            // the difference would be negative.
+            const int numReplicas2create = numReplicas - replicas.size();
+
+            for (int i = 0; i < numReplicas2create; ++i) {
+
+                // Find a candidate worker with the least number of chunks.
+                // This worker will be select as the 'destinationWorker' for the new replica.
+                //
+                // ATTENTION: workers which were previously found as 'failed'
+                //            are going to be excluded from the search.
+
+                std::string destinationWorker;
+                size_t      numChunksPerDestinationWorker = numUniqueChunks;
+
+                for (const auto &worker: config.workers()) {
+
+                    // Exclude failed workers
+
+                    if (failedWorkers.count(worker)) continue;
+
+                    // Exclude workers which already have this chunk, or for which
+                    // there is an outstanding replication requsts. Both kinds of
+                    // replicas are registered in chunk2workers[chunk]
+
+                    if (chunk2workers[chunk].end() == std::find(chunk2workers[chunk].begin(),
+                                                                chunk2workers[chunk].end(),
+                                                                worker)) {
+                        if (worker2chunks[worker].size() < numChunksPerDestinationWorker) {
+                            destinationWorker = worker;
+                            numChunksPerDestinationWorker = worker2chunks[worker].size();
                         }
                     }
                 }
-            }
-
-            // Check which chunks are under-represented. Then find a least loaded
-            // worker and launch a replication request.
-
-            // This counter will be used for optimization purposes as the upper limit for
-            // the number of chunks per worker in the load balancing algorithm below.
-            const size_t numUniqueChunks = chunk2workers.size();
-
-            for (auto &entry: chunk2workers) {
-
-                const unsigned int chunk{entry.first};
-
-                // Take a copy of the non-modified list of workers with chunk's replicas
-                // and cache it here to know which workers are allowed to be used as reliable
-                // sources vs chunk2workers[chunk] which will be modified below as new replicas
-                // will get created.
-                const std::list<std::string> replicas{entry.second};
-
-                // Pick the first worker which has this chunk as the 'sourceWorker'
-                // in case if we'll decide to replica the chunk within the loop below
-                const std::string &sourceWorker = *(replicas.begin());
-
-                // Note that some chunks may have more replicas than required. In that case
-                // the difference would be negative.
-                const int numReplicas2create = numReplicas - replicas.size();
-
-                for (int i = 0; i < numReplicas2create; ++i) {
-
-                    // Find a candidate worker with the least number of chunks.
-                    // This worker will be select as the 'destinationWorker' for the new replica.
-
-                    std::string destinationWorker;
-                    size_t      numChunksPerDestinationWorker = numUniqueChunks;
-
-                    for (const auto &worker: workerNames) {
-
-                        // Exclude workers which already have this chunk, or for which
-                        // there is an outstanding replication requsts. Both kinds of
-                        // replicas are registered in chunk2workers[chunk]
-
-                        if (chunk2workers[chunk].end() == std::find(chunk2workers[chunk].begin(),
-                                                                    chunk2workers[chunk].end(),
-                                                                    worker)) {
-                            if (worker2chunks[worker].size() < numChunksPerDestinationWorker) {
-                                destinationWorker = worker;
-                                numChunksPerDestinationWorker = worker2chunks[worker].size();
-                            }
-                        }
-                    }
-                    if (destinationWorker.empty()) {
-                        std::cerr << "failed to find the least populated worker for replicating chunk: " << chunk
-                            << ", skipping this chunk" << std::endl;
-                        break;
-                    }
-                     
-                    // Register this chunk with the worker to bump the number of chunks per
-                    // the worker so that this updated stats will be accounted for later as
-                    // the replication process goes.
-                    worker2chunks[destinationWorker].push_back(chunk);
-
-                    // Also register the worker in the chunk2workers[chunk] to prevent it
-                    // from being select as the 'destinationWorker' for the same replica
-                    // in case if more than one replica needs to be created.
-                    chunk2workers[chunk].push_back(destinationWorker);
-                    
-                    // Finally, launch and register for further tracking the replication
-                    // request.
-                    
-                    numReplicationRequestsTotal++;
-                    replicationRequests[database][destinationWorker].push_back (
-                        controller->replicate (
-                            destinationWorker, sourceWorker, database, chunk,
-                            [&numReplicationRequestsSuccess,&numReplicationRequestsFailure] (rc::ReplicationRequest::pointer request) {
-                                if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
-                                    numReplicationRequestsSuccess++;
-                                else
-                                    numReplicationRequestsFailure++;
-                            }
-                        )
-                    );
+                if (destinationWorker.empty()) {
+                    std::cerr << "failed to find the least populated worker for replicating chunk: " << chunk
+                        << ", skipping this chunk" << std::endl;
+                    break;
                 }
+                 
+                // Register this chunk with the worker to bump the number of chunks per
+                // the worker so that this updated stats will be accounted for later as
+                // the replication process goes.
+                worker2chunks[destinationWorker].push_back(chunk);
+
+                // Also register the worker in the chunk2workers[chunk] to prevent it
+                // from being select as the 'destinationWorker' for the same replica
+                // in case if more than one replica needs to be created.
+                chunk2workers[chunk].push_back(destinationWorker);
+                
+                // Finally, launch and register for further tracking the replication
+                // request.
+                
+                tracker.add (
+                    controller->replicate (
+                        destinationWorker,
+                        sourceWorker,
+                        databaseName,
+                        chunk,
+                        [&tracker] (rc::ReplicationRequest::pointer ptr) {
+                            tracker.onFinish(ptr);
+                        }
+                    )
+                );
             }
         }
 
-        // Wait before all request are finished
+        // Wait before all request are finished and report
+        // failed requests.
 
-        rc::BlockPost longBlockPost (1000, 2000);
-        while (numReplicationRequestsSuccess + numReplicationRequestsFailure < numReplicationRequestsTotal) {
-            std::cout << "success / failure / total: "
-                << numReplicationRequestsSuccess << " / "
-                << numReplicationRequestsFailure << " / "
-                << numReplicationRequestsTotal   << std::endl;
-            longBlockPost.wait();
-        }
-        std::cout << "success / failure / total: "
-            << numReplicationRequestsSuccess << " / "
-            << numReplicationRequestsFailure << " / "
-            << numReplicationRequestsTotal   << std::endl;
-    
+        tracker.track();
+
+        ///////////////////////////////////////////////////
         // Shutdown the controller and join with its thread
+
         controller->stop();
         controller->join();
 
@@ -249,22 +204,34 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    if (argc != 4) {
-        std::cerr << ::usage << std::endl;
-        return 1;
-    }
-    ::configFileName = argv[1];
-    ::databaseName   = argv[2];
+    // Parse command line parameters
     try {
-        ::numReplicas = std::stoul(argv[3]);
-        if (!::numReplicas || ::numReplicas > 3)
-            throw std::invalid_argument("the number of replicas must be in a range of 1 to 3");
-    } catch (std::invalid_argument&) {
-        std::cerr << "invalid number of chunks found in the command line\n"
-            << ::usage << std::endl;
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <database> <num-replicas> [--progress-report] [--error-report] [--config=<file>]\n"
+            "\n"
+            "Parameters:\n"
+            "  <database>         - the name of a database to inspect\n"
+            "  <num-replicas>     - increase the number of replicas in each chunk to this level\n"
+            "\n"
+            "Flags and options:\n"
+            "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
+            "  --error-report     - the flag triggering detailed report on failed requests\n"
+            "  --config           - the name of the configuration file.\n"
+            "                       [ DEFAULT: replication.cfg ]\n");
+
+        ::databaseName   = parser.parameter<std::string>(1);
+        ::numReplicas    = parser.parameter<int>        (2);
+        ::progressReport = parser.flag                  ("progress-report");
+        ::errorReport    = parser.flag                  ("error-report");
+        ::configFileName = parser.option   <std::string>("config", "replication.cfg");
+
+    } catch (std::exception &ex) {
         return 1;
-    }
- 
+    }  
     ::test();
     return 0;
 }

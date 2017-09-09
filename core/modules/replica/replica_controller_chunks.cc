@@ -5,163 +5,101 @@
 #include <vector>
 #include <stdexcept>
 #include <string>
+#include <set>
 
 #include "proto/replication.pb.h"
-#include "replica_core/BlockPost.h"
+#include "replica/CmdParser.h"
+#include "replica/ReplicaFinder.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/ServiceProvider.h"
 
+namespace r  = lsst::qserv::replica;
 namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-const char* usage =
-    "Usage:\n"
-    "  <config> <database> [--error-report]\n";
-
-
 // Command line parameters
 
-std::string configFileName;
 std::string databaseName;
-
-bool  errorReport=false;
-
-/// The collection of all requests     
-typedef std::vector<rc::FindAllRequest::pointer> RequestsCollection;
-
-
-/// Print a detauled report on any requests which haven't succeeded
-void printErrorReport (const RequestsCollection &requests) {
-
-    std::cout
-       << "FAILED REQUESTS:\n"
-       << "--------------------------------------+--------+----------+-------------+----------------------+--------------------------\n"
-       << "                                   id | worker | database |       state |            ext.state |          server err.code \n"
-       << "--------------------------------------+--------+----------+-------------+----------------------+--------------------------\n";   
-    for (const auto &ptr: requests) {
-        std::cout
-            << " "   << std::setw(36) <<                           ptr->id()
-            << " | " << std::setw( 6) <<                           ptr->worker()
-            << " | " << std::setw( 8) <<                           ptr->database()
-            << " | " << std::setw(11) << rc::Request::state2string(ptr->state())
-            << " | " << std::setw(20) << rc::Request::state2string(ptr->extendedState())
-            << " | " << std::setw(24) << rc::status2string(        ptr->extendedServerStatus())
-            << "\n";
-    }
-    std::cout
-       << "--------------------------------------+--------+----------+-------------+----------------------+--------------------------\n"
-       << std::endl;
-}
-
+bool        progressReport;
+bool        errorReport;
+std::string configFileName;
 
 /// Run the test
 bool test () {
 
     try {
 
+        ///////////////////////////////////////////////////////////////////////
+        // Start the controller in its own thread before injecting any requests
+        // Note that omFinish callbak which are activated upon a completion
+        // of the requsts will be run in that Controller's thread.
+
         rc::Configuration   config  {configFileName};
         rc::ServiceProvider provider{config};
 
         rc::Controller::pointer controller = rc::Controller::create(provider);
 
-        // Start the controller in its own thread before injecting any requests
         controller->run();
 
-        
-        // Get the names of all workers  from the configuration, and ask each worker
-        // which replicas it has.
-        const auto workerNames = config.workers();
+        ////////////////////////////////////////
+        // Find all replicas accross all workers
 
-        // The collection of all requests all requests      
-        RequestsCollection requests;
+        r::ReplicaFinder finder (controller,
+                                 databaseName,
+                                 std::cout,
+                                 progressReport,
+                                 errorReport);
 
-        // The counter of requests which will be updated
-        std::atomic<size_t> numSuccess(0);
-        std::atomic<size_t> numFailure(0);
-        std::atomic<size_t> numTotal  (0);
-
-        // Launch requests against all workers
-        //
-        // ATTENTION: calbacks on the request completion callbacks of the requests will
-        //            be executed within the Contoller's thread. Watch for proper
-        //            synchronization when inspecting/updating shared variables.
+        //////////////////////////////
+        // Analyse and display results
 
         std::cout
             << "\n"
             << "WORKERS:";
-        for (const auto &worker: workerNames) {
+        for (const auto &worker: config.workers()) {
             std::cout << " " << worker;
         }
         std::cout
-            << "\n"
             << std::endl;
 
-        for (const auto &worker: workerNames) {
-            numTotal++;
-            requests.push_back (
-                controller->findAllReplicas (
-                    worker, databaseName,
-                    [&numSuccess, &numFailure] (rc::FindAllRequest::pointer request) {
-                        if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
-                            numSuccess++;
-                        else
-                            numFailure++;
-                    }
-                )
-            );
-        }
-
-        // Wait before all request are finished
-
-        rc::BlockPost blockPost (100, 200);
-        while (numSuccess + numFailure < numTotal) {
-            std::cout << "success / failure / total: "
-                << numSuccess << " / "
-                << numFailure << " / "
-                << numTotal   << std::endl;
-            blockPost.wait();
-        }
-        std::cout << "success / failure / total: "
-            << numSuccess << " / "
-            << numFailure << " / "
-            << numTotal   << std::endl;
-
-        // Analyse and display results
-
-            
-        // A collection of workers for each chunk
+        // Workers hosting a chunk
         std::map<unsigned int, std::vector<std::string>> chunk2workers;
+
+        // Chunks hosted by a worker
         std::map<std::string, std::vector<unsigned int>> worker2chunks;
 
-        for (const auto &request: requests) {
+        // Failed workers
+        std::set<std::string> failedWorkers;
 
-            if ((request->state()         == rc::Request::State::FINISHED) &&
-                (request->extendedState() == rc::Request::ExtendedState::SUCCESS)) {
+        for (const auto &ptr: finder.requests)
 
-                const auto &replicaInfoCollection = request->responseData ();
-                for (const auto &replicaInfo: replicaInfoCollection) {
-                    chunk2workers[replicaInfo.chunk()].push_back (
-                        replicaInfo.worker() + (replicaInfo.status() == rc::ReplicaInfo::Status::COMPLETE ? "" : "(!)"));
-                    worker2chunks[replicaInfo.worker()].push_back(replicaInfo.chunk());
+            if ((ptr->state()         == rc::Request::State::FINISHED) &&
+                (ptr->extendedState() == rc::Request::ExtendedState::SUCCESS))
+
+                for (const auto &replica: ptr->responseData ()) {
+                    chunk2workers[replica.chunk()].push_back (
+                        replica.worker() + (replica.status() == rc::ReplicaInfo::Status::COMPLETE ? "" : "(!)"));
+                    worker2chunks[replica.worker()].push_back(replica.chunk());
                 }
-            }
-        }
+            else
+                failedWorkers.insert(ptr->worker());
+
         std::cout
+            << "\n"
             << "CHUNK DISTRIBUTION:\n"
             << "----------+------------\n"
             << "   worker | num.chunks \n"
             << "----------+------------\n";
 
-        for (const auto &entry: worker2chunks) {
-            const auto &worker = entry.first;
-            const auto &chunks = entry.second;
+        for (const auto &worker: config.workers())
             std::cout
-                << " " << std::setw(8) << worker << " | " << std::setw(10) << chunks.size() << "\n";
-        }
+                << " " << std::setw(8) << worker << " | " << std::setw(10)
+                << (failedWorkers.count(worker) ? "*" : std::to_string(worker2chunks[worker].size())) << "\n";
+
         std::cout
             << "----------+------------\n"
             << std::endl;
@@ -169,7 +107,7 @@ bool test () {
         std::cout
             << "REPLICAS:\n"
             << "----------+--------------+---------------------------------------------\n"
-            << "    chunk | num.replicas | worker:replica_status \n"
+            << "    chunk | num.replicas | worker(s)  \n"
             << "----------+--------------+---------------------------------------------\n";
 
         for (const auto &entry: chunk2workers) {
@@ -186,11 +124,10 @@ bool test () {
             << "----------+--------------+---------------------------------------------\n"
             << std::endl;
 
-        if (errorReport && numFailure) {
-            printErrorReport(requests);
-        }
 
+        ///////////////////////////////////////////////////
         // Shutdown the controller and join with its thread
+
         controller->stop();
         controller->join();
 
@@ -207,25 +144,33 @@ int main (int argc, const char* const argv[]) {
     // compatible with the version of the headers we compiled against.
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
+    
+    // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <database> [--progress-report] [--error-report] [--config=<file>]\n"
+            "\n"
+            "Parameters:\n"
+            "  <database>         - the name of a database to inspect\n"
+            "\n"
+            "Flags and options:\n"
+            "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
+            "  --error-report     - the flag triggering detailed report on failed requests\n"
+            "  --config           - the name of the configuration file.\n"
+            "                       [ DEFAULT: replication.cfg ]\n");
 
-    if (argc < 3) {
-        std::cerr << ::usage << std::endl;
+        ::databaseName   = parser.parameter<std::string>(1);
+        ::progressReport = parser.flag                  ("progress-report");
+        ::errorReport    = parser.flag                  ("error-report");
+        ::configFileName = parser.option   <std::string>("config", "replication.cfg");
+
+    } catch (std::exception &ex) {
         return 1;
-    }
-    ::configFileName = argv[1];
-    ::databaseName   = argv[2];
-
-    if (argc >= 4) {
-        const std::string opt = argv[3];
-        if (opt == "--error-report")
-            ::errorReport = true;
-        else {
-            std::cerr << "unrecognized command option: " << opt << "\n"
-                << ::usage << std::endl;
-            return 1;
-        }
-    }
- 
+    } 
     ::test();
     return 0;
 }
