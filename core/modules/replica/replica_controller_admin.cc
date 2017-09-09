@@ -1,4 +1,3 @@
-#include <atomic>
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -6,133 +5,100 @@
 #include <string>
 
 #include "proto/replication.pb.h"
-#include "replica_core/BlockPost.h"
+#include "replica/CmdParser.h"
+#include "replica/RequestTracker.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/ServiceProvider.h"
 
+namespace r  = lsst::qserv::replica;
 namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-const char* usage =
-    "Usage:\n"
-    "  <config> { STATUS | SUSPEND | RESUME }\n";
-
-
 // Command line parameters
 
-std::string configFileName;
 std::string operation;
+bool        progressReport;
+bool        errorReport;
+std::string configFileName;
 
-/// Return 'true' if the specified value is found in the collection
-bool found_in (const std::string &val,
-               const std::vector<std::string> &col) {
-    return col.end() != std::find(col.begin(), col.end(), val);
-}
 
 /// Run the test
 bool test () {
 
     try {
 
+        ///////////////////////////////////////////////////////////////////////
+        // Start the controller in its own thread before injecting any requests
+        // Note that omFinish callbak which are activated upon a completion
+        // of the requsts will be run in that Controller's thread.
+
         rc::Configuration   config  {configFileName};
         rc::ServiceProvider provider{config};
 
         rc::Controller::pointer controller = rc::Controller::create(provider);
 
-        // Start the controller in its own thread before injecting any requests
         controller->run();
 
-        
-        // Get the names of all workers and databases from the configuration,
-        // and ask each worker which replicas it has.
-
-        const auto workerNames = config.workers();
-
-        // Registry of all requests       
-        std::vector<rc::ServiceManagementRequestBase::pointer> requests;
-
-        // The counter of requests which will be updated
-        std::atomic<size_t> numSuccess(0);
-        std::atomic<size_t> numFailure(0);
-        std::atomic<size_t> numTotal  (0);
-
+        //////////////////////////////////////
         // Launch requests against all workers
         //
         // ATTENTION: calbacks on the request completion callbacks of the requests will
         //            be executed within the Contoller's thread. Watch for proper
         //            synchronization when inspecting/updating shared variables.
 
+        r::CommonRequestTracker<rc::ServiceManagementRequestBase> tracker (std::cout,
+                                                                           progressReport,
+                                                                           errorReport);
+        for (auto const& worker: config.workers())
+
+            if (operation == "STATUS")
+                tracker.add (
+                    controller->statusOfWorkerService (
+                        worker,
+                        [&tracker] (rc::ServiceStatusRequest::pointer ptr) {
+                            tracker.onFinish(ptr);
+                        }));
+            else if (operation == "SUSPEND")
+                tracker.add (
+                    controller->suspendWorkerService (
+                        worker,
+                        [&tracker] (rc::ServiceSuspendRequest::pointer ptr) {
+                            tracker.onFinish(ptr);
+                        }));
+            else if (operation == "RESUME")
+                tracker.add (
+                    controller->resumeWorkerService (
+                        worker,
+                        [&tracker] (rc::ServiceResumeRequest::pointer ptr) {
+                            tracker.onFinish(ptr);
+                        }));
+
+        // Wait before all request are finished
+
+        tracker.track();
+
+        //////////////////////////////
+        // Analyse and display results
+
         std::cout
             << "\n"
             << "WORKERS:";
-        for (const auto &worker: workerNames) {
+        for (auto const& worker: config.workers()) {
             std::cout << " " << worker;
         }
         std::cout
             << "\n"
             << std::endl;
 
-        for (const auto &worker: workerNames) {
-            numTotal++;
-
-            if (operation == "STATUS")
-                requests.push_back (
-                    controller->statusOfWorkerService (
-                        worker,
-                        [&numSuccess, &numFailure] (rc::ServiceStatusRequest::pointer request) {
-                            if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
-                                numSuccess++;
-                            else
-                                numFailure++;
-                        }));
-            else if (operation == "SUSPEND")
-                requests.push_back (
-                    controller->suspendWorkerService (
-                        worker,
-                        [&numSuccess, &numFailure] (rc::ServiceSuspendRequest::pointer request) {
-                            if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
-                                numSuccess++;
-                            else
-                                numFailure++;
-                        }));
-            else if (operation == "RESUME")
-                requests.push_back (
-                    controller->resumeWorkerService (
-                        worker,
-                        [&numSuccess, &numFailure] (rc::ServiceResumeRequest::pointer request) {
-                            if (request->extendedState() == rc::Request::ExtendedState::SUCCESS)
-                                numSuccess++;
-                            else
-                                numFailure++;
-                        }));
-        }
-
-        // Wait before all request are finished
-
-        rc::BlockPost blockPost (100, 200);
-        while (numSuccess + numFailure < numTotal) {
-            std::cout << "success / failure / total: "
-                << numSuccess << " / "
-                << numFailure << " / "
-                << numTotal   << std::endl;
-            blockPost.wait();
-        }
-        std::cout << "success / failure / total: "
-            << numSuccess << " / "
-            << numFailure << " / "
-            << numTotal   << std::endl;
-
-        // Analyse and display results
-
         std::cout
             << "----------+-----------------------+---------------------+-------------+-------------+-------------\n"
             << "   worker | started (seconds ago) | state               |         new | in-progress |    finished \n"
             << "----------+-----------------------+---------------------+-------------+-------------+-------------\n";
 
-        for (const auto &ptr: requests) {
+        for (auto const& ptr: tracker.requests) {
 
             if ((ptr->state()         == rc::Request::State::FINISHED) &&
                 (ptr->extendedState() == rc::Request::ExtendedState::SUCCESS)) {
@@ -160,14 +126,15 @@ bool test () {
         std::cout
             << "----------+-----------------------+---------------------+-------------+-------------+-------------\n"
             << std::endl;
-            
+
+        ///////////////////////////////////////////////////
         // Shutdown the controller and join with its thread
 
         controller->stop();
         controller->join();
 
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+    } catch (std::exception const& ex) {
+        std::cerr << ex.what() << std::endl;
     }
     return true;
 }
@@ -180,17 +147,39 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    if (argc < 3) {
-        std::cerr << ::usage << std::endl;
+    // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <command> [--progress-report] [--error-report] [--config=<file>]\n"
+            "\n"
+            "Parameters:\n"
+            "  <command>   - the name of an operation. Allowed values are listed below:\n"
+            "\n"
+            "      STATUS  : request and display the status of each server \n"
+            "      SUSPEND : suspend all servers\n"
+            "      RESUME  : resume all server\n"
+            "\n"
+            "Flags and options:\n"
+            "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
+            "  --error-report     - the flag triggering detailed report on failed requests\n"
+            "  --config           - the name of the configuration file.\n"
+            "                       [ DEFAULT: replication.cfg ]\n");
+
+        ::operation = parser.parameterRestrictedBy (1, {"STATUS",
+                                                        "SUSPEND",
+                                                         "RESUME"});
+
+        ::progressReport = parser.flag                  ("progress-report");
+        ::errorReport    = parser.flag                  ("error-report");
+        ::configFileName = parser.option   <std::string>("config", "replication.cfg");
+
+    } catch (std::exception const& ex) {
         return 1;
-    }
-    ::configFileName = argv[1];
-    ::operation      = argv[2];
-    if (!::found_in(::operation, {"STATUS","SUSPEND","RESUME"})) {
-        std::cerr << "illegal operation: " << ::operation << "\n"
-            << ::usage << std::endl;
-        return 1;
-    }
+    } 
  
     ::test();
     return 0;
