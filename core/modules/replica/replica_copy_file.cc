@@ -1,83 +1,112 @@
+#include "replica/CmdParser.h"
 #include "XrdCl/XrdClFile.hh"
 
+#include <memory>       // std::unique_ptr
 #include <iostream>
+#include <stdexcept>
 #include <string>
+
+namespace r  = lsst::qserv::replica;
 
 namespace {
 
-    // Data buffer
+// Command line parameters
 
-    const uint32_t size = 1024*1024;
-    void *buffer = new char[1024*1024];
+std::string  inFileUrl;
+std::string outFileUrl;
 
-    int copyFile (const std::string &inFileUrl,
-                  const std::string &outFileUrl) {
+uint32_t recordSizeBytes;
 
-        XrdCl::XRootDStatus status;
+bool progressReport;
 
-        // Open the input file.
 
-        XrdCl::File inFile;                         
-        status = inFile.Open (
-            inFileUrl,
-            XrdCl::OpenFlags::Flags::Read |
-            XrdCl::OpenFlags::Flags::SeqIO);
-        if (!status.IsOK()) {
-            std::cerr << status.ToString() << std::endl;
-            return status.GetShellCode();
-        }
+int test () {
 
-        // Create the output file.
+    // Data buffer to be allocated for the specified record size
+    std::unique_ptr<char> recordPtr (new char[recordSizeBytes]);
 
-        XrdCl::File outFile;                         
-        status = outFile.Open (
-            outFileUrl,
-            XrdCl::OpenFlags::Flags::New |
-            XrdCl::OpenFlags::Flags::SeqIO,
-            XrdCl::Access::Mode::UR |
-            XrdCl::Access::Mode::UW);
-        if (!status.IsOK()) {
-            std::cerr << status.ToString() << std::endl;
-            return status.GetShellCode();
-        }
+    XrdCl::XRootDStatus status;
 
-        // Copy records from the input file and write them into the output
-        // one.
+    // Open the input file.
 
-        uint64_t offset=0;
-        while (true) {
-            uint32_t bytesRead = 0;
-            status = inFile.Read (offset, size, buffer, bytesRead);
-            if (!status.IsOK()) {
-                std::cerr << status.ToString() << std::endl;
-                return status.GetShellCode();
-            }
-            if (!bytesRead) break;
-            status = outFile.Write(offset, bytesRead, buffer);
-            if (!status.IsOK()) {
-                std::cerr << status.ToString() << std::endl;
-                return status.GetShellCode();
-            }
-            offset += bytesRead;
-        }
-        inFile.Close();
-        outFile.Sync();
-        outFile.Close();
-        return 0;
+    XrdCl::File inFile;                         
+    status = inFile.Open (
+        inFileUrl,
+        XrdCl::OpenFlags::Flags::Read |
+        XrdCl::OpenFlags::Flags::SeqIO);
+    if (!status.IsOK()) {
+        std::cerr << status.ToString() << std::endl;
+        return status.GetShellCode();
     }
-    
-    const char* usage = "usage: <inFileUrl> <outFileUrl>";
+
+    // Create the output file.
+
+    XrdCl::File outFile;                         
+    status = outFile.Open (
+        outFileUrl,
+        XrdCl::OpenFlags::Flags::New |
+        XrdCl::OpenFlags::Flags::SeqIO,
+        XrdCl::Access::Mode::UR |
+        XrdCl::Access::Mode::UW);
+    if (!status.IsOK()) {
+        std::cerr << status.ToString() << std::endl;
+        return status.GetShellCode();
+    }
+
+    // Copy records from the input file and write them into the output
+    // one.
+
+    uint64_t offset=0;
+    while (true) {
+        uint32_t bytesRead = 0;
+        status = inFile.Read (offset, recordSizeBytes, recordPtr.get(), bytesRead);
+        if (!status.IsOK()) {
+            std::cerr << status.ToString() << std::endl;
+            return status.GetShellCode();
+        }
+        if (!bytesRead) break;
+        status = outFile.Write(offset, bytesRead, recordPtr.get());
+        if (!status.IsOK()) {
+            std::cerr << status.ToString() << std::endl;
+            return status.GetShellCode();
+        }
+        offset += bytesRead;
+    }
+    inFile.Close();
+    outFile.Sync();
+    outFile.Close();
+
+    return 0;
 }
+} // namespace
 
 int main (int argc, const char* const argv[]) {
-    if (argc != 3) {
-        std::cerr
-            << "error: please, provide the URLs for both files.\n"
-            << usage << std::endl;
-        return 1;
-    }
-    const std::string  inFileUrl = argv[1];
-    const std::string outFileUrl = argv[2];
 
-    return ::copyFile(inFileUrl, outFileUrl);
+    // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <inFileUrl> <outFileUrl> [--record-size=<bytes>] [--progress-report]\n"
+            "\n"
+            "Parameters:\n"
+            "  <inFileUrl>        - the logical URL of an input file to be copied\n"
+            "  <inFileUrl>        - the logical URL of an output destination\n"
+            "\n"
+            "Flags and options:\n"
+            "  --record-size      - override the default record size of 1048576 bytes (1 MB)\n"
+            "  --progress-report  - turn on the progress reports while copying files\n");
+
+        ::inFileUrl       = parser.parameter<std::string> (1);
+        ::outFileUrl      = parser.parameter<std::string> (2);
+    
+        ::recordSizeBytes = parser.option<int> ("record-size", 1048576);
+        ::progressReport  = parser.flag        ("progress-report");
+
+    } catch (std::exception const& ex) {
+        return 1;
+    } 
+    return ::test ();
 }
