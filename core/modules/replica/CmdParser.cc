@@ -45,8 +45,12 @@ CmdParser::found_in (std::string const&              val,
 CmdParser::CmdParser (int                argc,
                       const char* const* argv,
                       const char*        usage)
-    :   _usage(usage)
-{
+    :   _usage(usage) {
+
+    _usage = _usage +
+    "\nSpecial options:\n"
+    "  --help  - print the help page\n";
+
     for (int i=0; i < argc; ++i) _argv.push_back(argv[i]);
     parse();
 }
@@ -56,6 +60,11 @@ CmdParser::~CmdParser () {
 
 bool
 CmdParser::flag (std::string const& name) const {
+    if (name == "help") {
+        std::cerr
+            << _usage << std::endl;
+        return true;
+    }
     return _flag.count(name);
 }
 
@@ -187,6 +196,12 @@ CmdParser::parse () {
             }
             std::string::size_type const equalPos = nameEqualValue.find("=");
             if (equalPos == std::string::npos) {
+                if (nameEqualValue == "help") {
+                    std::cerr
+                        << _usage << std::endl;
+                    throw std::invalid_argument (
+                        "CmdParser::parse: help mode intercepted");
+                }
                 _flag.insert(nameEqualValue);
             } else {
                 std::string const option = nameEqualValue.substr(0, equalPos);
@@ -195,7 +210,7 @@ CmdParser::parse () {
                     std::cerr
                         << "CmdParser::parse: no value provided for option: " << option << "\n"
                         << _usage << std::endl;
-                    throw std::invalid_argument(
+                    throw std::invalid_argument (
                         "CmdParser::parse: no value provided for option: " + option);
                 }
                 _option[option] = value;

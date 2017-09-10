@@ -80,6 +80,7 @@ StatusRequestBase::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
+    hdr.set_id             (id());
     hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
     hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 
@@ -235,6 +236,7 @@ StatusRequestBase::sendStatus () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
+    hdr.set_id             (id());
     hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
     hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 

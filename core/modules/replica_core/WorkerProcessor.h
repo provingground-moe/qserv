@@ -149,41 +149,49 @@ public:
     /**
      * Enqueue the replication request for processing
      *
+     * @param id       - an identifier of a request
      * @param request  - the protobuf object received from a client
      * @param response - the protobuf object to be initialized and ready
      *                   to be sent back to the client
      */
-    void enqueueForReplication (const proto::ReplicationRequestReplicate &request,
+    void enqueueForReplication (const std::string                        &id,
+                                const proto::ReplicationRequestReplicate &request,
                                 proto::ReplicationResponseReplicate      &response);
 
     /**
      * Enqueue the replica deletion request for processing
      *
+     * @param id       - an identifier of a request
      * @param request  - the protobuf object received from a client
      * @param response - the protobuf object to be initialized and ready
      *                   to be sent back to the client
      */
-    void enqueueForDeletion (const proto::ReplicationRequestDelete &request,
+    void enqueueForDeletion (const std::string                     &id,
+                             const proto::ReplicationRequestDelete &request,
                              proto::ReplicationResponseDelete      &response);
 
     /**
      * Enqueue the replica lookup request for processing
      *
+     * @param id       - an identifier of a request
      * @param request  - the protobuf object received from a client
      * @param response - the protobuf object to be initialized and ready
      *                   to be sent back to the client
      */
-    void enqueueForFind (const proto::ReplicationRequestFind &request,
+    void enqueueForFind (const std::string                   &id,
+                         const proto::ReplicationRequestFind &request,
                          proto::ReplicationResponseFind      &response);
 
     /**
      * Enqueue the multi-replica lookup request for processing
      *
+     * @param id       - an identifier of a request
      * @param request  - the protobuf object received from a client
      * @param response - the protobuf object to be initialized and ready
      *                   to be sent back to the client
      */
-    void enqueueForFindAll (const proto::ReplicationRequestFindAll &request,
+    void enqueueForFindAll (const std::string                      &id,
+                            const proto::ReplicationRequestFindAll &request,
                             proto::ReplicationResponseFindAll      &response);
 
     /**
@@ -195,6 +203,7 @@ public:
      */
     template <class PROTOCOL_RESPONSE_TYPE>
     static void setDefaultResponse (PROTOCOL_RESPONSE_TYPE      &response,
+                                    const std::string           &id,
                                     proto::ReplicationStatus     status,
                                     proto::ReplicationStatusExt  extendedStatus) {
     
@@ -203,6 +212,7 @@ public:
         performance.setUpdateFinish();
         response.set_allocated_performance(performance.info());
     
+        response.set_id         (id);
         response.set_status     (status);
         response.set_status_ext (extendedStatus);
     }
@@ -215,24 +225,27 @@ public:
      * to cancel processing will be made. If it has already processed this will
      * be reported.
      *
+     * @param id       - an identifier of a request
      * @param request  - the protobuf object representing the request
      * @param response - the protobuf object to be initialized and ready
      *                   to be sent back to the client
      */
     template <typename RESPONSE_MSG_TYPE>
-    void dequeueOrCancel (const proto::ReplicationRequestStop &request,
+    void dequeueOrCancel (const std::string                   &id,
+                          const proto::ReplicationRequestStop &request,
                           RESPONSE_MSG_TYPE                   &response) {
 
         // Set this response unless an exact request (same type and identifier)
         // will be found.
         setDefaultResponse (response,
+                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_ID);
 
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
 
-        if (WorkerRequest::pointer ptr = dequeueOrCancelImpl(request.id())) {
+        if (WorkerRequest::pointer ptr = dequeueOrCancelImpl(id)) {
             try {
 
                 // Set request-specific fields. Note exception handling for scenarios
@@ -240,6 +253,7 @@ public:
                 setInfo(ptr, response);
 
                 // The status field is present in all response types
+                response.set_id        (id);
                 response.set_status    (translateReplicationStatus(ptr->status()));
                 response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
 
@@ -252,24 +266,27 @@ public:
     /**
      * Return the status of an on-going replication request
      *
+     * @param id       - an identifier of a request
      * @param request  - the protobuf object representing the request
      * @param response - the protobuf object to be initialized and ready
      *                   to be sent back to the client
      */
     template <typename RESPONSE_MSG_TYPE>
-    void checkStatus (const proto::ReplicationRequestStatus &request,
+    void checkStatus (const std::string                     &id,
+                      const proto::ReplicationRequestStatus &request,
                       RESPONSE_MSG_TYPE                     &response) {
 
         // Set this response unless an exact request (same type and identifier)
         // will be found.
         setDefaultResponse (response,
+                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_ID);
 
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
 
-        if (WorkerRequest::pointer ptr = checkStatusImpl(request.id())) {
+        if (WorkerRequest::pointer ptr = checkStatusImpl(id)) {
             try {
 
                 // Set request-specific fields. Note exception handling for scenarios
@@ -277,6 +294,7 @@ public:
                 setInfo(ptr, response);
 
                 // The status field is present in all response types
+                response.set_id        (id);
                 response.set_status    (translateReplicationStatus(ptr->status()));
                 response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
 
@@ -292,11 +310,14 @@ public:
      *
      * @param response       - the protobuf object to be initialized and ready
      *                         to be sent back to the client
+     * @param id             - an identifier of an original request this response
+     *                         is being sent
      * @param status         - desired status to set
      * @param extendedReport - to return detailed info on all known
      *                         replica-related requests
      */
     void setServiceResponse (proto::ReplicationServiceResponse         &response,
+                             const std::string                         &id,
                              proto::ReplicationServiceResponse::Status  status,
                              bool                                       extendedReport = false);
 
@@ -409,8 +430,8 @@ private:
      * @param request - a reference to the request
      * @param info    - a pointer to the protobuf object to be filled
      */
-    void setServiceResponseInfo (const WorkerRequest::pointer         &request,
-                                 proto::ReplicationServiceRequestInfo *info) const;
+    void setServiceResponseInfo (const WorkerRequest::pointer          &request,
+                                 proto::ReplicationServiceResponseInfo *info) const;
 
     /**
      * Report a decision not to process a request

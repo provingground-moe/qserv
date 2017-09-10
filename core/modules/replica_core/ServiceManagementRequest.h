@@ -105,9 +105,9 @@ public:
         uint32_t numInProgressRequests;
         uint32_t numFinishedRequests;
         
-        std::vector<lsst::qserv::proto::ReplicationServiceRequestInfo> newRequests;
-        std::vector<lsst::qserv::proto::ReplicationServiceRequestInfo> inProgressRequests;
-        std::vector<lsst::qserv::proto::ReplicationServiceRequestInfo> finishedRequests;
+        std::vector<lsst::qserv::proto::ReplicationServiceResponseInfo> newRequests;
+        std::vector<lsst::qserv::proto::ReplicationServiceResponseInfo> inProgressRequests;
+        std::vector<lsst::qserv::proto::ReplicationServiceResponseInfo> finishedRequests;
         
         /// Set parameter values from a protobuf object
         void set (const lsst::qserv::proto::ReplicationServiceResponse &message);

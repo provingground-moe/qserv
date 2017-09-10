@@ -151,13 +151,13 @@ private:
                    size_t bytes_transferred);
 
     /// Process replication requests (REPLICATE, DELETE, FIND, FIND-ALL)
-    void processRequest (proto::ReplicationReplicaRequestType type);
+    void processReplicaRequest (proto::ReplicationRequestHeader hdr);
 
     /// Process requests about replication requests (STOP, STATUS)
-    void processRequest (proto::ReplicationManagementRequestType type);
+    void processManagementRequest (proto::ReplicationRequestHeader hdr);
 
     /// Process requests affecting the service
-    void processRequest (proto::ReplicationServiceRequestType type);
+    void processServiceRequest (proto::ReplicationRequestHeader hdr);
 
     /**
      * Serrialize a protobuf object and send it back to a client.
