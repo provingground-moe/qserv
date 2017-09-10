@@ -70,22 +70,23 @@ enum ReplicationServiceRequestType {
 //
 message ReplicationRequestHeader {
 
+    /// The unique identifier of a request
+    required string id = 1;
+
+    // The request type selector determines which class of the below specified
+    // optional subtypes to use
     enum RequestType {
         REPLICA = 0;
         REQUEST = 1;
         SERVICE = 2;
     }
-    
-    // The request type selector determines which class of the below specified
-    // optional subtypes to use
-
-    required RequestType type = 1;
+    required RequestType type = 2;
 
     // Subtypes of requests
 
-    optional ReplicationReplicaRequestType    replica_type    = 2;
-    optional ReplicationManagementRequestType management_type = 3;
-    optional ReplicationServiceRequestType    service_type    = 4;
+    optional ReplicationReplicaRequestType    replica_type    = 3;
+    optional ReplicationManagementRequestType management_type = 4;
+    optional ReplicationServiceRequestType    service_type    = 5;
 }
 
 //
@@ -97,21 +98,21 @@ message ReplicationRequestHeader {
 // its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestReplicate {
-    required string id       = 1;
-    required int32  priority = 2;
-    required string database = 3;
-    required uint32 chunk    = 4;
-    required string worker   = 5;
+
+    required int32  priority = 1;
+    required string database = 2;
+    required uint32 chunk    = 3;
+    required string worker   = 4;
 }
 
 // This is a replica deletion request. The message defines a scope of the request
 // and its unique identity. This message is sent once after the header.
 //
 message ReplicationRequestDelete {
-    required string id       = 1;
-    required int32  priority = 2;
-    required string database = 3;
-    required uint32 chunk    = 4;
+
+    required int32  priority = 1;
+    required string database = 2;
+    required uint32 chunk    = 3;
 }
 
 // This is a replica lookup request. The message defines a scope of the request
@@ -119,13 +120,12 @@ message ReplicationRequestDelete {
 //
 message ReplicationRequestFind {
 
-    required string id       = 1;
-    required int32  priority = 2;
-    required string database = 3;
-    required uint32 chunk    = 4;
+    required int32  priority = 1;
+    required string database = 2;
+    required uint32 chunk    = 3;
     
     /// Compute a check/control sum for each file
-    required bool compute_cs = 5;
+    required bool compute_cs = 4;
 }
 
 // This is a replica lookup request for multiple replicas. The message defines
@@ -133,12 +133,12 @@ message ReplicationRequestFind {
 // after the header.
 //
 message ReplicationRequestFindAll {
-    required string id       = 1;
-    required int32  priority = 2;
-    required string database = 3;
+
+    required int32  priority = 1;
+    required string database = 2;
     
     /// Compute a check/control sum for each file
-    required bool compute_cs = 4;
+    required bool compute_cs = 3;
 }
 
 // This request is sent to stop an on-going replication (if any is still in progress).
@@ -146,11 +146,11 @@ message ReplicationRequestFindAll {
 //
 message ReplicationRequestStop {
 
-    required string id = 1;    // an identifier of a request to be stopped
+    /// an identifier of a request to be stopped
+    required string id = 1;
 
-    // A specific type of the request will affect a choice
-    // of the status object returned in response
-
+    /// A specific type of the request will affect a choice
+    /// of the status object returned in response
     required ReplicationReplicaRequestType type = 2;
 }
 
@@ -159,11 +159,11 @@ message ReplicationRequestStop {
 //
 message ReplicationRequestStatus {
 
-    required string id = 1;    // an identifier of a request to be inspected
+    /// an identifier of a request to be inspected
+    required string id = 1;
 
-    // A specific type of the request will affect a choice
-    // of the status object returned in response
-
+    /// A specific type of the request will affect a choice
+    /// of the status object returned in response
     required ReplicationReplicaRequestType type = 2;
 }
 
@@ -233,22 +233,26 @@ message ReplicationReplicaCreateInfo {
 }
 message ReplicationResponseReplicate {
 
+    /// The unique identifier of the original request to which this
+    /// response is being sent.
+    required string id = 1;
+
     /// The completion status of the operation
-    required ReplicationStatus status = 1;
+    required ReplicationStatus status = 2;
 
     /// Extended status of this operation
-    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+    optional ReplicationStatusExt status_ext = 3 [default = NONE];
 
     /// The performance of this operation
-    required ReplicationPerformance performance = 3;
+    required ReplicationPerformance performance = 4;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica creation request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 4;
+    optional ReplicationPerformance target_performance = 5;
 
     /// Extended information on the request
-    optional ReplicationReplicaCreateInfo replication_info = 5;
+    optional ReplicationReplicaCreateInfo replication_info = 6;
 }
 
 message ReplicationReplicaDeleteInfo {
@@ -258,22 +262,26 @@ message ReplicationReplicaDeleteInfo {
 }
 message ReplicationResponseDelete {
 
+    /// The unique identifier of the original request to which this
+    /// response is being sent.
+    required string id = 1;
+
     /// The completion status of the operation
-    required ReplicationStatus status = 1;
+    required ReplicationStatus status = 2;
 
     /// Extended status of this operation
-    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+    optional ReplicationStatusExt status_ext = 3 [default = NONE];
 
     /// The performance of this operation
-    required ReplicationPerformance performance = 3;
+    required ReplicationPerformance performance = 4;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica deletion request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 4;
+    optional ReplicationPerformance target_performance = 5;
     
     /// Extended information on the request
-    optional ReplicationReplicaDeleteInfo delete_info = 5;
+    optional ReplicationReplicaDeleteInfo delete_info = 6;
 }
 
 message ReplicationFileInfo {
@@ -306,52 +314,59 @@ message ReplicationReplicaInfo {
 
 message ReplicationResponseFind {
 
+    /// The unique identifier of the original request to which this
+    /// response is being sent.
+    required string id = 1;
+
     /// The completion status of the operation
-    required ReplicationStatus status = 1;
+    required ReplicationStatus status = 2;
 
     /// Extended status of this operation
-    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+    optional ReplicationStatusExt status_ext = 3 [default = NONE];
 
     /// The performance of this operation
-    required ReplicationPerformance performance = 3;
+    required ReplicationPerformance performance = 4;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica deletion request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 4;
+    optional ReplicationPerformance target_performance = 5;
 
     /// Extended information on the request
-    optional ReplicationReplicaInfo replica_info = 5;
+    optional ReplicationReplicaInfo replica_info = 6;
 }
 
 message ReplicationResponseFindAll {
 
+    /// The unique identifier of the original request to which this
+    /// response is being sent.
+    required string id = 1;
+
     /// The completion status of the operation
-    required ReplicationStatus status = 1;
+    required ReplicationStatus status = 2;
 
     /// Extended status of this operation
-    optional ReplicationStatusExt status_ext = 2 [default = NONE];
+    optional ReplicationStatusExt status_ext = 3 [default = NONE];
 
     /// The performance of this operation
-    required ReplicationPerformance performance = 3;
+    required ReplicationPerformance performance = 4;
 
     /// The performance of the target operation. This field represents
     /// stats of the replicas lookup request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 4;
+    optional ReplicationPerformance target_performance = 5;
 
     /// Extended information on the request
-    repeated ReplicationReplicaInfo replica_info_many = 5;
+    repeated ReplicationReplicaInfo replica_info_many = 6;
 }
 
 /////////////////////////////////////////////////////////////////////////
 // The message returned in response to requests related to (or affecting)
 // the overall state of the server-side replication service.
 
-message ReplicationServiceRequestInfo {
+message ReplicationServiceResponseInfo {
 
-    // Replication related requests only
-
+    /// Replication related requests only
     required ReplicationReplicaRequestType replica_type = 1;
 
     // Common parameters of all requests
@@ -368,37 +383,40 @@ message ReplicationServiceRequestInfo {
 
 message ReplicationServiceResponse {
 
-    // Completion status of the operation
+    /// The unique identifier of the original request to which this
+    /// response is being sent.
+    required string id = 1;
 
+    /// Completion status of the operation
     enum Status {
         SUCCESS = 0;
         FAILED  = 1;
     }
-    required Status status = 1;
-    required ReplicationPerformance performance = 2;
+    required Status status = 2;
+    required ReplicationPerformance performance = 3;
 
     enum ServiceState {
         SUSPEND_IN_PROGRESS = 0;
         SUSPENDED           = 1;
         RUNNING             = 2;
     }
-    required ServiceState service_state = 3;
-    required string       technology    = 4;
+    required ServiceState service_state = 4;
+    required string       technology    = 5;
 
     /// When the service started (milliseconds since UNIX Epoch)
-    required uint64 start_time = 5;
+    required uint64 start_time = 6;
 
     // Counters for requests known to the service since its last start
 
-    required uint32 num_new_requests         = 6;
-    required uint32 num_in_progress_requests = 7;
-    required uint32 num_finished_requests    = 8;
+    required uint32 num_new_requests         = 7;
+    required uint32 num_in_progress_requests = 8;
+    required uint32 num_finished_requests    = 9;
 
     // Optional (depending on a request) collections of requests in each queue
     
-    repeated ReplicationServiceRequestInfo new_requests         = 9;
-    repeated ReplicationServiceRequestInfo in_progress_requests = 10;
-    repeated ReplicationServiceRequestInfo finished_requests    = 11;
+    repeated ReplicationServiceResponseInfo new_requests         = 10;
+    repeated ReplicationServiceResponseInfo in_progress_requests = 11;
+    repeated ReplicationServiceResponseInfo finished_requests    = 12;
 }
 
 

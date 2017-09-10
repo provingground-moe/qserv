@@ -56,29 +56,31 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.WorkerProcessor");
 namespace replica_core = ::lsst::qserv::replica_core;
 namespace proto        = ::lsst::qserv::proto;
 
-template <class PROTOCOL_RESPONSE_TYPE>
+template <class PROTOCOL_RESPONSE_TYPE,
+          class PROTOCOL_REQUEST_TYPE>
 bool ifDuplicateRequest (PROTOCOL_RESPONSE_TYPE                     &response,
                          const replica_core::WorkerRequest::pointer &p,
-                         const std::string                          &database,
-                         unsigned int                                chunk) {
+                         const std::string                          &id,
+                         const PROTOCOL_REQUEST_TYPE                &request) {
 
     bool isDuplicate = false;
 
     if (replica_core::WorkerReplicationRequest::pointer ptr =
         std::dynamic_pointer_cast<replica_core::WorkerReplicationRequest>(p))
         isDuplicate =
-            (ptr->database() == database) &&
-            (ptr->chunk   () == chunk);
+            (ptr->database() == request.database()) &&
+            (ptr->chunk   () == request.chunk   ());
 
     else if (replica_core::WorkerDeleteRequest::pointer ptr =
              std::dynamic_pointer_cast<replica_core::WorkerDeleteRequest>(p))
         isDuplicate =
-            (ptr->database() == database) &&
-            (ptr->chunk   () == chunk);
+            (ptr->database() == request.database()) &&
+            (ptr->chunk   () == request.chunk   ());
 
     if (isDuplicate)
         replica_core::WorkerProcessor::setDefaultResponse (
             response,
+            id,
             proto::ReplicationStatus::BAD,
             proto::ReplicationStatusExt::DUPLICATE);
 
@@ -186,12 +188,13 @@ WorkerProcessor::stop () {
 }
 
 void
-WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate &request,
+WorkerProcessor::enqueueForReplication (const std::string                        &id,
+                                        const proto::ReplicationRequestReplicate &request,
                                         proto::ReplicationResponseReplicate      &response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForReplication"
-        << "  id: "     << request.id()
+        << "  id: "     << id
         << "  db: "     << request.database()
         << "  chunk: "  << request.chunk()
         << "  worker: " << request.worker());    
@@ -203,14 +206,14 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
     for (auto ptr : _newRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 request.database(),
-                                 request.chunk())) return;
+                                 id,
+                                 request)) return;
 
     for (auto ptr : _inProgressRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 request.database(),
-                                 request.chunk())) return;
+                                 id,
+                                 request)) return;
     
     // The code below may catch exceptions if other parameters of the requites
     // won't pass further validation against the present configuration of the request
@@ -218,7 +221,7 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
     try {
         WorkerRequest::pointer ptr = _requestFactory.createReplicationRequest (
             _worker,
-            request.id(),
+            id,
             request.priority(),
             request.database(),
             request.chunk(),
@@ -226,6 +229,7 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
     
         _newRequests.push(ptr);
         
+        response.set_id                    (id);
         response.set_status                (proto::ReplicationStatus::QUEUED);
         response.set_status_ext            (proto::ReplicationStatusExt::NONE);
         response.set_allocated_performance (ptr->performance().info());
@@ -236,18 +240,20 @@ WorkerProcessor::enqueueForReplication (const proto::ReplicationRequestReplicate
         LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForReplication  " << ec.what());
 
         setDefaultResponse (response,
+                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_PARAM);
     }
 }
 
 void
-WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &request,
+WorkerProcessor::enqueueForDeletion (const std::string                     &id,
+                                     const proto::ReplicationRequestDelete &request,
                                      proto::ReplicationResponseDelete      &response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForDeletion"
-        << "  id: "    << request.id()
+        << "  id: "    << id
         << "  db: "    << request.database()
         << "  chunk: " << request.chunk());
 
@@ -258,14 +264,14 @@ WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &requ
     for (auto ptr : _newRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 request.database(),
-                                 request.chunk())) return;
+                                 id,
+                                 request)) return;
 
     for (auto ptr : _inProgressRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 request.database(),
-                                 request.chunk())) return;
+                                 id,
+                                 request)) return;
     
     // The code below may catch exceptions if other parameters of the requites
     // won't pass further validation against the present configuration of the request
@@ -274,13 +280,14 @@ WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &requ
         WorkerRequest::pointer ptr =
             _requestFactory.createDeleteRequest (
                 _worker,
-                request.id(),
+                id,
                 request.priority(),
                 request.database(),
                 request.chunk());
     
         _newRequests.push(ptr);
     
+        response.set_id                    (id);
         response.set_status                (proto::ReplicationStatus::QUEUED);
         response.set_status_ext            (proto::ReplicationStatusExt::NONE);
         response.set_allocated_performance (ptr->performance().info());
@@ -291,25 +298,27 @@ WorkerProcessor::enqueueForDeletion (const proto::ReplicationRequestDelete &requ
         LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForDeletion  " << ec.what());
 
         setDefaultResponse (response,
+                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_PARAM);
     }
 }
 
 void
-WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
+WorkerProcessor::enqueueForFind (const std::string                   &id,
+                                 const proto::ReplicationRequestFind &request,
                                  proto::ReplicationResponseFind      &response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFind"
-        << "  id: "    << request.id()
+        << "  id: "    << id
         << "  db: "    << request.database()
         << "  chunk: " << request.chunk());
 
     WorkerFindRequest::pointer ptr =
         _requestFactory.createFindRequest (
             _worker,
-            request.id(),
+            id,
             request.priority(),
             request.database(),
             request.chunk(),
@@ -317,6 +326,7 @@ WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
 
     _newRequests.push(ptr);
 
+    response.set_id                    (id);
     response.set_status                (proto::ReplicationStatus::QUEUED);
     response.set_status_ext            (proto::ReplicationStatusExt::NONE);
     response.set_allocated_performance (ptr->performance().info());
@@ -326,12 +336,13 @@ WorkerProcessor::enqueueForFind (const proto::ReplicationRequestFind &request,
 
 
 void
-WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &request,
+WorkerProcessor::enqueueForFindAll (const std::string                      &id,
+                                    const proto::ReplicationRequestFindAll &request,
                                     proto::ReplicationResponseFindAll      &response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFindAll"
-        << "  id: " << request.id()
+        << "  id: " << id
         << "  db: " << request.database());
 
     // TODO: run the sanity check to ensure no such request is found in any
@@ -340,13 +351,14 @@ WorkerProcessor::enqueueForFindAll (const proto::ReplicationRequestFindAll &requ
     WorkerFindAllRequest::pointer ptr =
         _requestFactory.createFindAllRequest (
             _worker,
-            request.id(),
+            id,
             request.priority(),
             request.database(),
             request.compute_cs());
 
     _newRequests.push(ptr);
 
+    response.set_id                    (id);
     response.set_status                (proto::ReplicationStatus::QUEUED);
     response.set_status_ext            (proto::ReplicationStatusExt::NONE);
     response.set_allocated_performance (ptr->performance().info());
@@ -501,12 +513,14 @@ WorkerProcessor::checkStatusImpl (const std::string &id) {
 
 void
 WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &response,
+                                     const std::string                         &id,
                                      proto::ReplicationServiceResponse::Status  status,
                                      bool                                       extendedReport) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "setServiceResponse");
 
+    response.set_id         (id);
     response.set_status     (status);
     response.set_technology (_requestFactory.technology());
     response.set_start_time (_startTime);
@@ -542,8 +556,8 @@ WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &
 }
 
 void
-WorkerProcessor::setServiceResponseInfo (const WorkerRequest::pointer         &request,
-                                         proto::ReplicationServiceRequestInfo *info) const {
+WorkerProcessor::setServiceResponseInfo (const WorkerRequest::pointer          &request,
+                                         proto::ReplicationServiceResponseInfo *info) const {
 
     if (
         WorkerReplicationRequest::pointer ptr =

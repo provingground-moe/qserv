@@ -118,17 +118,17 @@ FindRequest::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
+    hdr.set_id          (id());
     hdr.set_type        (proto::ReplicationRequestHeader::REPLICA);
     hdr.set_replica_type(proto::ReplicationReplicaRequestType::REPLICA_FIND);
 
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestFind message;
-    message.set_priority   (priority());
-    message.set_id         (id());
-    message.set_database   (database());
-    message.set_chunk      (chunk());
-    message.set_compute_cs (computeCheckSum());
+    message.set_priority  (priority());
+    message.set_database  (database());
+    message.set_chunk     (chunk());
+    message.set_compute_cs(computeCheckSum());
 
     _bufferPtr->serialize(message);
 
@@ -278,13 +278,14 @@ FindRequest::sendStatus () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
+    hdr.set_id             (id());
     hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
     hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
 
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
-    message.set_id(id());
+    message.set_id  (id());
     message.set_type(proto::ReplicationReplicaRequestType::REPLICA_FIND);
 
     _bufferPtr->serialize(message);

@@ -43,8 +43,8 @@ namespace {
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ServiceManagementRequestBase");
 
 /// Dump a collection of request descriptions onto the output stream
-void dumpRequestInfo (std::ostream                                            &os,
-                      const std::vector<proto::ReplicationServiceRequestInfo> &requests) {
+void dumpRequestInfo (std::ostream                                             &os,
+                      const std::vector<proto::ReplicationServiceResponseInfo> &requests) {
 
     for (const auto &r : requests) {
         os  << "\n"
@@ -64,8 +64,9 @@ void dumpRequestInfo (std::ostream                                            &o
             case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL:
                 break;
             default:
-                throw std::logic_error("unhandled request type " + proto::ReplicationReplicaRequestType_Name(r.replica_type()) +
-                                       " in  ServiceManagementRequestBase::dumpRequestInfo");
+                throw std::logic_error (
+                            "unhandled request type " + proto::ReplicationReplicaRequestType_Name(r.replica_type()) +
+                            " in  ServiceManagementRequestBase::dumpRequestInfo");
         }
     }
 }
@@ -189,6 +190,7 @@ ServiceManagementRequestBase::beginProtocol () {
     _bufferPtr->resize();
 
     proto::ReplicationRequestHeader hdr;
+    hdr.set_id          (id());
     hdr.set_type        (proto::ReplicationRequestHeader::SERVICE);
     hdr.set_service_type(_requestType);
 
