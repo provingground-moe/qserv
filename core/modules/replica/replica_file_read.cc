@@ -6,24 +6,23 @@
 #include <string>
 
 #include "proto/replication.pb.h"
+#include "replica/CmdParser.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/FileClient.h"
 
+namespace r  = lsst::qserv::replica;
 namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
-
-const char *usage = "usage: <config> <worker> <database> <infile> <outfile> [--verbose]";
-
 // Command line parameters
 
-std::string configFileName;
 std::string workerName;
 std::string databaseName;
 std::string inFileName;
 std::string outFileName;
+std::string configFileName;
 
 bool verbose = false;
 
@@ -87,27 +86,38 @@ int main (int argc, const char* const argv[]) {
     // compatible with the version of the headers we compiled against.
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
- 
-    if (argc < 6) {
-        std::cerr << ::usage << std::endl;
+
+    // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <worker> <database> <infile> <outfile> [--verbose] [--config=<file>]\n"
+            "\n"
+            "Parameters:\n"
+            "  <worker>   - the name of a worker\n"
+            "  <worker>   - the name of a database\n"
+            "  <infile>   - the name of an input file to be copied from the worker\n"
+            "  <outfile>  - the name of a local file to be created and populated\n"
+            "\n"
+            "Flags and options:\n"
+            "  --verbose  - the flag triggering a report on a progress of the operation\n"
+            "  --config   - the name of the configuration file.\n"
+            "               [ DEFAULT: replication.cfg ]\n");
+
+        ::workerName     = parser.parameter<std::string> (1);
+        ::databaseName   = parser.parameter<std::string> (2);
+        ::inFileName     = parser.parameter<std::string> (3);
+        ::outFileName    = parser.parameter<std::string> (4);
+
+        ::verbose        = parser.flag                ("verbose");
+        ::configFileName = parser.option<std::string> ("config", "replication.cfg");
+
+    } catch (std::exception const& ex) {
         return 1;
-    }
-    ::configFileName = argv[1];
-    ::workerName     = argv[2];
-    ::databaseName   = argv[3];
-    ::inFileName     = argv[4];
-    ::outFileName    = argv[5];
-
-    if (argc >= 7) {
-        const std::string opt(argv[6]); 
-        if (opt == "--verbose") {
-            ::verbose = true;
-        } else {
-            std::cerr << "unrecognized parameter: " << opt << "\n" << ::usage << std::endl;
-            return 1;
-        }
-    }
+    } 
     ::run ();
-
     return 0;
 }

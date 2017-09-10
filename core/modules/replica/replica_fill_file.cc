@@ -1,57 +1,89 @@
+#include "replica/CmdParser.h"
 #include "XrdCl/XrdClFile.hh"
 
+#include <memory>       // std::unique_ptr
 #include <iostream>
+#include <stdexcept>
 #include <string>
+
+namespace r  = lsst::qserv::replica;
 
 namespace {
 
-    // Test buffer
+// Command line parameters
 
-    const uint32_t size = 1024*1024;
-    const void  *buffer = new char[1024*1024];
+std::string outFileUrl;
 
-    int createAndFill (const std::string &url) {
+uint32_t recordSizeBytes;
+uint32_t numRecords;
 
-        XrdCl::XRootDStatus status;
+bool progressReport;
 
-        // Create the file.
+/// The test
+int test () {
 
-        XrdCl::File file;                         
-        status = file.Open (
-            url,
-            XrdCl::OpenFlags::Flags::New |
-            XrdCl::OpenFlags::Flags::SeqIO,
-            XrdCl::Access::Mode::UR |
-            XrdCl::Access::Mode::UW);
+    // Data buffer to be allocated for the specified record size
+    std::unique_ptr<char> recordPtr (new char[recordSizeBytes]);
+
+    XrdCl::XRootDStatus status;
+
+    // Create the file.
+
+    XrdCl::File file;                         
+    status = file.Open (
+        outFileUrl,
+        XrdCl::OpenFlags::Flags::New |
+        XrdCl::OpenFlags::Flags::SeqIO,
+        XrdCl::Access::Mode::UR |
+        XrdCl::Access::Mode::UW);
+    if (!status.IsOK()) {
+        std::cerr << status.ToString() << std::endl;
+        return status.GetShellCode();
+    }
+    uint64_t offset=0;
+    for (uint32_t i=0; i < numRecords; ++i) {
+        status = file.Write(offset, recordSizeBytes, recordPtr.get());
         if (!status.IsOK()) {
             std::cerr << status.ToString() << std::endl;
+            file.Close();
             return status.GetShellCode();
         }
-        uint64_t offset=0;
-        const int numRecords = 128;
-        for (int i=0; i < numRecords; ++i) {
-            status = file.Write(offset, size, buffer);
-            if (!status.IsOK()) {
-                std::cerr << status.ToString() << std::endl;
-                file.Close();
-                return status.GetShellCode();
-            }
-            offset += size;
-        }
-        file.Sync();
-        return file.Close().GetShellCode();
+        offset += recordSizeBytes;
+        if (progressReport)
+            std::cout << "file size: " <<  offset << "\n";
     }
-
-    const char* usage = "usage: <outFileUrl>";
+    file.Sync();
+    return file.Close().GetShellCode();
 }
+} // namespace
 
 int main (int argc, const char* const argv[]) {
-    if (argc != 2) {
-        std::cerr
-            << "error: please, provide the URL for the output file.\n"
-            << usage << std::endl;
+
+    // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <outFileUrl> [--record-size=<bytes>] [--num-records] [--progress-report]\n"
+            "\n"
+            "Parameters:\n"
+            "  <outFileUrl>       - the logical URL of an output destination\n"
+            "\n"
+            "Flags and options:\n"
+            "  --record-size      - override the default record size of 1048576 bytes (1 MB)\n"
+            "  --num-records      - override the default number of records wgich is equal to 1\n"
+            "  --progress-report  - turn on the progress reports while writing into the file\n");
+
+        ::outFileUrl      = parser.parameter<std::string> (1);
+    
+        ::recordSizeBytes = parser.option<int> ("record-size", 1048576);
+        ::numRecords      = parser.option<int> ("num-records", 1);
+        ::progressReport  = parser.flag        ("progress-report");
+
+    } catch (std::exception const& ex) {
         return 1;
-    }
-    const std::string outFileUrl = argv[1];
-    return ::createAndFill(outFileUrl);
+    } 
+    return ::test ();
 }

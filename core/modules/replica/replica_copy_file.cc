@@ -93,7 +93,7 @@ int main (int argc, const char* const argv[]) {
             "\n"
             "Parameters:\n"
             "  <inFileUrl>        - the logical URL of an input file to be copied\n"
-            "  <inFileUrl>        - the logical URL of an output destination\n"
+            "  <outFileUrl>       - the logical URL of an output destination\n"
             "\n"
             "Flags and options:\n"
             "  --record-size      - override the default record size of 1048576 bytes (1 MB)\n"
