@@ -1,13 +1,12 @@
-#include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <map>
 #include <vector>
 #include <stdexcept>
 #include <string>
 
 #include "lsst/log/Log.h"
 #include "proto/replication.pb.h"
+#include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/DeleteRequest.h"
@@ -20,6 +19,7 @@
 #include "replica_core/StatusRequest.h"
 #include "replica_core/StopRequest.h"
 
+namespace r  = lsst::qserv::replica;
 namespace rc = lsst::qserv::replica_core;
 
 namespace {
@@ -67,14 +67,18 @@ bool test () {
 
     try {
 
+        ///////////////////////////////////////////////////////////////////////
+        // Start the controller in its own thread before injecting any requests
+
         rc::Configuration   config  {configFileName};
         rc::ServiceProvider provider{config};
 
         rc::Controller::pointer controller = rc::Controller::create(provider);
 
-        // Start the controller in its own thread before injecting any requests
-
         controller->run();
+
+        /////////////////////////////////////////
+        // Launch a request of the requested type
 
         rc::Request::pointer request;
 
@@ -253,144 +257,6 @@ bool test () {
     }
     return true;
 }
-
-
-// Command line parser
-
-const char* usage =
-    "Usage:\n"
-    "  <config> <operation> [<parameters>] [<flags>]\n"
-    "\n"
-    "Supported operations:\n"
-    "  REPLICA_CREATE        <worker> <source_worker> <db> <chunk>\n"
-    "  REPLICA_CREATE,CANCEL <worker> <source_worker> <db> <chunk>\n"
-    "  REPLICA_DELETE        <worker> <db> <chunk>\n"
-    "  REPLICA_FIND          <worker> <db> <chunk>\n"
-    "  REPLICA_FIND_ALL      <worker> <db>\n"
-    "\n"
-    "  REQUEST_STATUS:REPLICA_CREATE   <worker> <id>\n"
-    "  REQUEST_STATUS:REPLICA_DELETE   <worker> <id>\n"
-    "  REQUEST_STATUS:REPLICA_FIND     <worker> <id>\n"
-    "  REQUEST_STATUS:REPLICA_FIND_ALL <worker> <id>\n"
-    "\n"
-    "  REQUEST_STOP:REPLICA_CREATE   <worker> <id>\n"
-    "  REQUEST_STOP:REPLICA_DELETE   <worker> <id>\n"
-    "  REQUEST_STOP:REPLICA_FIND     <worker> <id>\n"
-    "  REQUEST_STOP:REPLICA_FIND_ALL <worker> <id>\n"
-    "\n"
-    "  SERVICE_SUSPEND  <worker>\n"
-    "  SERVICE_RESUME   <worker>\n"
-    "  SERVICE_STATUS   <worker>\n"
-    "  SERVICE_REQUESTS <worker>\n"
-    "\n"
-    "Options:\n"
-    "\n"
-    "  --priority=<level> : assign the specific priority level (default: 0)\n"
-    "  --check-sum        : compute check/control sum of files\n"
-    "  --do-not-track     : do not keep tracking\n";
-
-
-/// (Run-time) assert for the minimum number of arguments
-void assertArguments (int argc, int minArgc) {
-    if (argc < minArgc) {
-        std::cerr << usage << std::endl;
-        std::exit(1);
-    }
-}
-
-bool parsePriority (const std::string &str) {
-    const std::string opt = "--priority=";
-    const size_t      len = opt.size();
-    if (str.substr(0,len) == opt) {
-        try {
-            priority = std::stol(str.substr(len));
-            return true;
-        } catch (const std::invalid_argument &ex) {
-            std::cerr << "failed to parse <level> of option " << opt << std::endl;
-            std::exit(1);
-        }
-    }
-    return false;
-}
-
-void parseOptions (int argc, int nextArgIdx, const char* const argv[]) {
-    for (int idx=nextArgIdx; idx < argc; ++idx) {
-        const std::string opt = argv[idx];
-        if      (parsePriority(opt))      ;
-        else if (opt == "--check-sum")    computeCheckSum = true;
-        else if (opt == "--do-not-track") keepTracking    = false;
-        else {
-            std::cerr << "unknown option: " << opt << "\n" << ::usage << std::endl;
-            std::exit(1);
-        }
-    }
-}
-
-/// Return 'true' if the specified value is found in the collection
-bool found_in (const std::string &val,
-               const std::vector<std::string> &col) {
-    return col.end() != std::find(col.begin(), col.end(), val);
-}
-
-void parseCommandLine (int argc, const char* const argv[]) {
-
-    ::assertArguments (argc, 4);
-
-    configFileName = argv[1];
-    operation      = argv[2];
-    worker         = argv[3];
-    
-
-    if (found_in(operation, {"REPLICA_CREATE",
-                             "REPLICA_CREATE,CANCEL"})) {
-        ::assertArguments (argc, 7);
-        ::parseOptions    (argc, 7, argv);
-
-        sourceWorker =            argv[4];
-        db           =            argv[5];
-        chunk        = std::stoul(argv[6]);
-
-    } else if (found_in(operation, {"REPLICA_DELETE",
-                                    "REPLICA_FIND"})) {
-        ::assertArguments (argc, 6);
-        ::parseOptions    (argc, 6, argv);
-
-        db    =            argv[4];
-        chunk = std::stoul(argv[5]);
-
-    } else if (found_in(operation, {"REPLICA_FIND_ALL"})) {
-
-        ::assertArguments (argc, 5);
-        ::parseOptions    (argc, 5, argv);
-
-        db = argv[4];
-
-    } else if (found_in(operation, {"REPLICA_FIND_ALL",
-                                    "REQUEST_STATUS:REPLICA_CREATE",
-                                    "REQUEST_STATUS:REPLICA_DELETE",
-                                    "REQUEST_STATUS:REPLICA_FIND",
-                                    "REQUEST_STATUS:REPLICA_FIND_ALL",
-                                    "REQUEST_STOP:REPLICA_CREATE",
-                                    "REQUEST_STOP:REPLICA_DELETE",
-                                    "REQUEST_STOP:REPLICA_FIND",
-                                    "REQUEST_STOP:REPLICA_FIND_ALL"})) {
-        ::assertArguments (argc, 5);
-        ::parseOptions    (argc, 5, argv);
-
-        id = argv[4];
-
-    } else if (found_in(operation, {"SERVICE_SUSPEND",
-                                    "SERVICE_RESUME",
-                                    "SERVICE_STATUS",
-                                    "SERVICE_REQUESTS"})) {
-        ::parseOptions (argc, 4, argv);
-
-    } else {
-        std::cerr << ::usage << std::endl;
-        std::exit(1);
-    }
-}
-
 } /// namespace
 
 int main (int argc, const char* const argv[]) {
@@ -400,8 +266,107 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    ::parseCommandLine (argc, argv);
-    ::test();
+    // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <operation> [<parameter> [<parameter> [...]]]\n"
+            "              [--check-sum] [--do-not-track]\n"
+            "              [--priority=<level>] [--config=<file>]\n"
+            "\n"
+            "Supported operations and mandatory parameters:\n"
+            "    REPLICA_CREATE                  <worker> <source_worker> <db> <chunk>\n"
+            "    REPLICA_CREATE,CANCEL           <worker> <source_worker> <db> <chunk>\n"
+            "    REPLICA_DELETE                  <worker> <db> <chunk>\n"
+            "    REPLICA_FIND                    <worker> <db> <chunk>\n"
+            "    REPLICA_FIND_ALL                <worker> <db>\n"
+            "\n"
+            "    REQUEST_STATUS:REPLICA_CREATE   <worker> <id>\n"
+            "    REQUEST_STATUS:REPLICA_DELETE   <worker> <id>\n"
+            "    REQUEST_STATUS:REPLICA_FIND     <worker> <id>\n"
+            "    REQUEST_STATUS:REPLICA_FIND_ALL <worker> <id>\n"
+            "\n"
+            "    REQUEST_STOP:REPLICA_CREATE     <worker> <id>\n"
+            "    REQUEST_STOP:REPLICA_DELETE     <worker> <id>\n"
+            "    REQUEST_STOP:REPLICA_FIND       <worker> <id>\n"
+            "    REQUEST_STOP:REPLICA_FIND_ALL   <worker> <id>\n"
+            "\n"
+            "    SERVICE_SUSPEND                 <worker>\n"
+            "    SERVICE_RESUME                  <worker>\n"
+            "    SERVICE_STATUS                  <worker>\n"
+            "    SERVICE_REQUESTS                <worker>\n"
+            "\n"
+            "Flags and options:\n"
+            "  --priority=<level>  - assign the specific priority level (default: 0)\n"
+            "  --check-sum         - compute check/control sum of files\n"
+            "  --do-not-track      - do not keep tracking\n"
+            "  --config            - the name of the configuration file.\n"
+            "                       [ DEFAULT: replication.cfg ]\n");
 
+        ::operation = parser.parameterRestrictedBy (1, {
+
+            "REPLICA_CREATE",
+            "REPLICA_CREATE,CANCEL",
+            "REPLICA_DELETE",
+            "REPLICA_FIND",
+            "REPLICA_FIND_ALL",
+            "REQUEST_STATUS:REPLICA_CREATE",
+            "REQUEST_STATUS:REPLICA_DELETE",
+            "REQUEST_STATUS:REPLICA_FIND",
+            "REQUEST_STATUS:REPLICA_FIND_ALL",
+            "REQUEST_STOP:REPLICA_CREATE",
+            "REQUEST_STOP:REPLICA_DELETE",
+            "REQUEST_STOP:REPLICA_FIND",
+            "REQUEST_STOP:REPLICA_FIND_ALL",
+            "SERVICE_SUSPEND",
+            "SERVICE_RESUME",
+            "SERVICE_STATUS",
+            "SERVICE_REQUESTS"});
+
+        ::worker = parser.parameter<std::string>(1);
+
+        if (parser.found_in(::operation, {
+
+            "REPLICA_CREATE",
+            "REPLICA_CREATE,CANCEL"})) {
+            
+            ::sourceWorker = parser.parameter<std::string>(2);
+            ::db           = parser.parameter<std::string>(3);
+            ::chunk        = parser.parameter<int>        (4);
+
+        } else if (parser.found_in(::operation, {
+
+            "REPLICA_DELETE",
+            "REPLICA_FIND",
+            "REPLICA_FIND_ALL"})) {
+
+            ::db    = parser.parameter<std::string>(2);
+            ::chunk = parser.parameter<int>        (3);
+
+        } else if (parser.found_in(::operation, {
+
+            "REQUEST_STATUS:REPLICA_CREATE",
+            "REQUEST_STATUS:REPLICA_DELETE",
+            "REQUEST_STATUS:REPLICA_FIND",
+            "REQUEST_STATUS:REPLICA_FIND_ALL",
+            "REQUEST_STOP:REPLICA_CREATE",
+            "REQUEST_STOP:REPLICA_DELETE",
+            "REQUEST_STOP:REPLICA_FIND",
+            "REQUEST_STOP:REPLICA_FIND_ALL"})) {
+
+            ::id  =   parser.parameter<std::string>(2);
+        }
+        ::computeCheckSum =   parser.flag ("progress-report");
+        ::keepTracking    = ! parser.flag ("do-not-track");
+        ::priority        =   parser.option<int>         ("priority", 1);
+        ::configFileName  =   parser.option<std::string> ("config",   "replication.cfg");
+
+    } catch (std::exception const& ex) {
+        return 1;
+    }
+    ::test();
     return 0;
 }

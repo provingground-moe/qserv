@@ -75,6 +75,13 @@ bool test () {
                         [&tracker] (rc::ServiceResumeRequest::pointer ptr) {
                             tracker.onFinish(ptr);
                         }));
+            else if (operation == "REQUESTS")
+                tracker.add (
+                    controller->resumeWorkerService (
+                        worker,
+                        [&tracker] (rc::ServiceResumeRequest::pointer ptr) {
+                            tracker.onFinish(ptr);
+                        }));
 
         // Wait before all request are finished
 
@@ -159,9 +166,10 @@ int main (int argc, const char* const argv[]) {
             "Parameters:\n"
             "  <command>   - the name of an operation. Allowed values are listed below:\n"
             "\n"
-            "      STATUS  : request and display the status of each server \n"
-            "      SUSPEND : suspend all servers\n"
-            "      RESUME  : resume all server\n"
+            "      STATUS   : request and display the status of each server \n"
+            "      SUSPEND  : suspend all servers\n"
+            "      RESUME   : resume all server\n"
+            "      REQUESTS : pull and display info on requests known to all server\n"
             "\n"
             "Flags and options:\n"
             "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
@@ -171,7 +179,8 @@ int main (int argc, const char* const argv[]) {
 
         ::operation = parser.parameterRestrictedBy (1, {"STATUS",
                                                         "SUSPEND",
-                                                         "RESUME"});
+                                                         "RESUME",
+                                                         "REQUESTS"});
 
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");

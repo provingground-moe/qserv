@@ -4,6 +4,7 @@
 
 #include "lsst/log/Log.h"
 #include "proto/replication.pb.h"
+#include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/FileServer.h"
@@ -12,18 +13,24 @@
 #include "replica_core/WorkerRequestFactory.h"
 #include "replica_core/WorkerServer.h"
 
+namespace r  = lsst::qserv::replica;
 namespace rc = lsst::qserv::replica_core;
 
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_worker");
 
+// Command line parameters
+
+std::string workerName;
+std::string configFileName;
+
+
 /**
  * Instantiate and launch the service in its own thread. Then block
  * the current thread in a series of repeated timeouts.
  */
-void service (const std::string &configFileName,
-              const std::string &workerName) {
+void service () {
     
     try {
         rc::Configuration        config        {configFileName};
@@ -71,14 +78,28 @@ int main (int argc, const char* const argv[]) {
 
     GOOGLE_PROTOBUF_VERIFY_VERSION;
  
-    if (argc != 3) {
-        std::cerr << "usage: <config> <worker>" << std::endl;
+     // Parse command line parameters
+    try {
+        r::CmdParser parser (
+            argc,
+            argv,
+            "\n"
+            "Usage:\n"
+            "  <worker> [--config=<file>]\n"
+            "\n"
+            "Parameters:\n"
+            "  <worker>   - the name of a worker\n"
+            "\n"
+            "Flags and options:\n"
+            "  --config   - the name of the configuration file.\n"
+            "               [ DEFAULT: replication.cfg ]\n");
+
+        ::workerName     = parser.parameter<std::string> (1);
+        ::configFileName = parser.option   <std::string> ("config", "replication.cfg");
+
+    } catch (std::exception const& ex) {
         return 1;
     }
-    const std::string configFileName (argv[1]);
-    const std::string workerName     (argv[2]);
-
-    ::service(configFileName, workerName);
-
+    ::service();
     return 0;
 }
