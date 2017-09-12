@@ -37,7 +37,6 @@
 #include "replica_core/ServiceProvider.h"
 
 // This macro to appear witin each block which requires thread safety
-
 #define LOCK_DATA_FOLDER \
 std::lock_guard<std::mutex> lock(_mtxDataFolderOperations)
 

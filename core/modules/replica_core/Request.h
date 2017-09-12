@@ -40,6 +40,7 @@
 
 #include "replica_core/Common.h"
 #include "replica_core/Performance.h"
+#include "replica_core/ProtocolBuffer.h"
 
 // Forward declarations
 
@@ -51,7 +52,6 @@ namespace replica_core {
 
 // Forward declarations
 
-class ProtocolBuffer;
 class ServiceProvider;
 class WorkerInfo;
 
@@ -332,6 +332,66 @@ protected:
     void setState (State         state,
                    ExtendedState extendedStat);
 
+    
+    /**
+     * Synchroniously read a protocol frame which carries the length
+     * of a subsequent message and return that length along with the completion
+     * status of the operation.
+     *
+     * @param bytes - the length in bytes extracted from the frame
+     *
+     * @return the completion code of the operation
+     */
+    boost::system::error_code syncReadFrame (size_t &bytes);
+
+    /**
+     * Synchriniously read a message of a known size. Then parse it
+     * given the template parameter of the method. Return the completion status
+     * of the operation.
+     *
+     * @param bytes   - a expected length of the message (obtained from a preceeding frame)
+     *                  to be received into the network buffer from the network.
+     * @param message - a specific message object to be initialize after reading data from
+     *                  the network buffer.
+     *
+     * @return the completion code of the operation
+     */
+    template <class MESSAGE_TYPE>
+    boost::system::error_code syncReadMessage (const size_t bytes,
+                                               MESSAGE_TYPE &message) {
+
+        boost::system::error_code ec = syncReadMessageImpl (bytes);
+        if (!ec) _bufferPtr->parse(message, bytes);
+        return ec;
+    }
+
+    /**
+     * Synchriniously read a message of a known size into the network buffer. Return
+     * the completion status of the operation. Afyer the successfull completion
+     * of the operation the content of the network buffer can be parsed.
+     *
+     * @param bytes - a expected length of the message (obtained from a preceeding frame)
+     *                to be received into the network buffer from the network.
+     *
+     * @return the completion code of the operation
+     */
+    boost::system::error_code syncReadMessageImpl (const size_t bytes);
+
+   /**
+     * Synchriniously read a response header of a known size. Then parse it
+     * and analyze it to ensure its content matches expecations. Return
+     * the completion status of the operation.
+     *
+     * The method will throw exception std::logic_error if the header's
+     * content won't match expectations.
+     *
+     * @param bytes   - a expected length of the message (obtained from a preceeding frame)
+     *                  to be received into the network buffer from the network.
+     *
+     * @return the completion code of the operation
+     */
+    boost::system::error_code syncReadVerifyHeader (const size_t bytes);
+    
 protected:
 
     // Parameters of the object

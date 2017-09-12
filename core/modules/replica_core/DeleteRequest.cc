@@ -159,11 +159,10 @@ DeleteRequest::receiveResponse () {
     //
     // The message itself will be read from the handler using
     // the synchronous read method. This is based on an assumption
-    // that the worker server sends the whol emessage (its frame and
+    // that the worker server sends the whole message (its frame and
     // the message itsef) at once.
 
     const size_t bytes = sizeof(uint32_t);
-
     _bufferPtr->resize(bytes);
 
     boost::asio::async_read (
@@ -195,34 +194,18 @@ DeleteRequest::responseReceived (const boost::system::error_code &ec,
         return;
     }
 
-    // Get the length of the message and try reading the message itself
-    // from the socket.
-        
-    const uint32_t bytes = _bufferPtr->parseLength();
+    // All operations hereafter are synchronious because the worker
+    // is supposed to send a complete multi-message response w/o
+    // making any explicit handshake with the Controller.
 
-    _bufferPtr->resize(bytes);      // make sure the buffer has enough space to accomodate
-                                    // the data of the message.
-
-    boost::system::error_code error_code;
-    boost::asio::read (
-        _socket,
-        boost::asio::buffer (
-            _bufferPtr->data(),
-            bytes
-        ),
-        boost::asio::transfer_at_least(bytes),
-        error_code
-    );
-    if (error_code) restart();
-    else {
+    if (syncReadVerifyHeader (_bufferPtr->parseLength())) restart();
     
-        // Parse the response to see what should be done next.
-    
-        proto::ReplicationResponseDelete message;
-        _bufferPtr->parse(message, bytes);
-    
-        analyze(message);
-    }
+    size_t bytes;
+    if (syncReadFrame (bytes)) restart ();
+           
+    proto::ReplicationResponseDelete message;
+    if (syncReadMessage (bytes, message)) restart();
+    else                                  analyze(message);
 }
 
 void
@@ -321,7 +304,6 @@ DeleteRequest::receiveStatus () {
     // the message itsef) at once.
 
     const size_t bytes = sizeof(uint32_t);
-
     _bufferPtr->resize(bytes);
 
     boost::asio::async_read (
@@ -353,34 +335,18 @@ DeleteRequest::statusReceived (const boost::system::error_code &ec,
         return;
     }
 
-    // Get the length of the message and try reading the message itself
-    // from the socket.
+    // All operations hereafter are synchronious because the worker
+    // is supposed to send a complete multi-message response w/o
+    // making any explicit handshake with the Controller.
 
-    const uint32_t bytes = _bufferPtr->parseLength();
+    if (syncReadVerifyHeader (_bufferPtr->parseLength())) restart();        
+    
+    size_t bytes;
+    if (syncReadFrame (bytes)) restart();
 
-    _bufferPtr->resize(bytes);      // make sure the buffer has enough space to accomodate
-                                    // the data of the message.
-
-    boost::system::error_code error_code;
-    boost::asio::read (
-        _socket,
-        boost::asio::buffer (
-            _bufferPtr->data(),
-            bytes
-        ),
-        boost::asio::transfer_at_least(bytes),
-        error_code
-    );
-    if (error_code) restart();
-    else {
-    
-        // Parse the response to see what should be done next.
-    
-        proto::ReplicationResponseDelete message;
-        _bufferPtr->parse(message, bytes);
-    
-        analyze(message);
-    }
+    proto::ReplicationResponseDelete message;
+    if (syncReadMessage (bytes, message)) restart();
+    else                                  analyze(message);
 }
 
 void

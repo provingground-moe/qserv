@@ -356,4 +356,58 @@ Request::setState (State         state,
     _extendedState = extendedState;
 }
 
+boost::system::error_code
+Request::syncReadFrame (size_t &bytes) {
+
+    const size_t frameLength = sizeof(uint32_t);
+    _bufferPtr->resize(frameLength);
+
+    boost::system::error_code ec;
+    boost::asio::read (
+        _socket,
+        boost::asio::buffer (
+            _bufferPtr->data(),
+            frameLength
+        ),
+        boost::asio::transfer_at_least(frameLength),
+        ec
+    );
+    if (!ec)
+        bytes = _bufferPtr->parseLength();
+
+    return ec;
+}
+
+boost::system::error_code
+Request::syncReadMessageImpl (const size_t bytes) {
+
+    _bufferPtr->resize(bytes);
+
+    boost::system::error_code ec;
+    boost::asio::read (
+        _socket,
+        boost::asio::buffer (
+            _bufferPtr->data(),
+            bytes
+        ),
+        boost::asio::transfer_at_least(bytes),
+        ec
+    );
+    return ec;
+}
+    
+boost::system::error_code
+Request::syncReadVerifyHeader (const size_t bytes) {
+
+    proto::ReplicationResponseHeader hdr;
+    boost::system::error_code ec = syncReadMessage (bytes, hdr);
+    if (!ec)
+        if (id() != hdr.id())
+            throw std::logic_error (
+                    "Request::syncReadVerifyHeader()  got unexpected id: " + hdr.id() +
+                    " instead of: " + id());
+    return ec;
+}
+    
+    
 }}} // namespace lsst::qserv::replica_core

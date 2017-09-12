@@ -60,7 +60,6 @@ template <class PROTOCOL_RESPONSE_TYPE,
           class PROTOCOL_REQUEST_TYPE>
 bool ifDuplicateRequest (PROTOCOL_RESPONSE_TYPE                     &response,
                          const replica_core::WorkerRequest::pointer &p,
-                         const std::string                          &id,
                          const PROTOCOL_REQUEST_TYPE                &request) {
 
     bool isDuplicate = false;
@@ -80,7 +79,6 @@ bool ifDuplicateRequest (PROTOCOL_RESPONSE_TYPE                     &response,
     if (isDuplicate)
         replica_core::WorkerProcessor::setDefaultResponse (
             response,
-            id,
             proto::ReplicationStatus::BAD,
             proto::ReplicationStatusExt::DUPLICATE);
 
@@ -206,13 +204,11 @@ WorkerProcessor::enqueueForReplication (const std::string                       
     for (auto ptr : _newRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 id,
                                  request)) return;
 
     for (auto ptr : _inProgressRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 id,
                                  request)) return;
     
     // The code below may catch exceptions if other parameters of the requites
@@ -229,7 +225,6 @@ WorkerProcessor::enqueueForReplication (const std::string                       
     
         _newRequests.push(ptr);
         
-        response.set_id                    (id);
         response.set_status                (proto::ReplicationStatus::QUEUED);
         response.set_status_ext            (proto::ReplicationStatusExt::NONE);
         response.set_allocated_performance (ptr->performance().info());
@@ -240,7 +235,6 @@ WorkerProcessor::enqueueForReplication (const std::string                       
         LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForReplication  " << ec.what());
 
         setDefaultResponse (response,
-                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_PARAM);
     }
@@ -264,13 +258,11 @@ WorkerProcessor::enqueueForDeletion (const std::string                     &id,
     for (auto ptr : _newRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 id,
                                  request)) return;
 
     for (auto ptr : _inProgressRequests)
         if (::ifDuplicateRequest(response,
                                  ptr,
-                                 id,
                                  request)) return;
     
     // The code below may catch exceptions if other parameters of the requites
@@ -287,7 +279,6 @@ WorkerProcessor::enqueueForDeletion (const std::string                     &id,
     
         _newRequests.push(ptr);
     
-        response.set_id                    (id);
         response.set_status                (proto::ReplicationStatus::QUEUED);
         response.set_status_ext            (proto::ReplicationStatusExt::NONE);
         response.set_allocated_performance (ptr->performance().info());
@@ -298,7 +289,6 @@ WorkerProcessor::enqueueForDeletion (const std::string                     &id,
         LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForDeletion  " << ec.what());
 
         setDefaultResponse (response,
-                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_PARAM);
     }
@@ -326,7 +316,6 @@ WorkerProcessor::enqueueForFind (const std::string                   &id,
 
     _newRequests.push(ptr);
 
-    response.set_id                    (id);
     response.set_status                (proto::ReplicationStatus::QUEUED);
     response.set_status_ext            (proto::ReplicationStatusExt::NONE);
     response.set_allocated_performance (ptr->performance().info());
@@ -358,7 +347,6 @@ WorkerProcessor::enqueueForFindAll (const std::string                      &id,
 
     _newRequests.push(ptr);
 
-    response.set_id                    (id);
     response.set_status                (proto::ReplicationStatus::QUEUED);
     response.set_status_ext            (proto::ReplicationStatusExt::NONE);
     response.set_allocated_performance (ptr->performance().info());
@@ -520,7 +508,6 @@ WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "setServiceResponse");
 
-    response.set_id         (id);
     response.set_status     (status);
     response.set_technology (_requestFactory.technology());
     response.set_start_time (_startTime);

@@ -232,7 +232,7 @@ WorkerServerConnection::processReplicaRequest (proto::ReplicationRequestHeader h
 
             proto::ReplicationResponseReplicate response;
             _processor.enqueueForReplication (hdr.id(), request, response);
-            reply(response);
+            reply(hdr.id(), response);
 
             break;
         }
@@ -244,7 +244,7 @@ WorkerServerConnection::processReplicaRequest (proto::ReplicationRequestHeader h
 
             proto::ReplicationResponseDelete response;
             _processor.enqueueForDeletion (hdr.id(), request, response);
-            reply(response);
+            reply(hdr.id(), response);
 
             break;
         }
@@ -256,7 +256,7 @@ WorkerServerConnection::processReplicaRequest (proto::ReplicationRequestHeader h
 
             proto::ReplicationResponseFind response;
             _processor.enqueueForFind (hdr.id(), request, response);
-            reply(response);
+            reply(hdr.id(), response);
 
             break;
         }
@@ -268,7 +268,7 @@ WorkerServerConnection::processReplicaRequest (proto::ReplicationRequestHeader h
 
             proto::ReplicationResponseFindAll response;
             _processor.enqueueForFindAll (hdr.id(), request, response);
-            reply(response);
+            reply(hdr.id(), response);
 
             break;
         }
@@ -299,26 +299,26 @@ WorkerServerConnection::processManagementRequest (proto::ReplicationRequestHeade
                 case proto::ReplicationReplicaRequestType::REPLICA_CREATE: {
                     proto::ReplicationResponseReplicate response;
                     _processor.dequeueOrCancel (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
 
                 case proto::ReplicationReplicaRequestType::REPLICA_DELETE: {
                     proto::ReplicationResponseDelete response;
                     _processor.dequeueOrCancel (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
                 case proto::ReplicationReplicaRequestType::REPLICA_FIND: {
                     proto::ReplicationResponseFind response;
                     _processor.dequeueOrCancel (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
                 case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL: {
                     proto::ReplicationResponseFindAll response;
                     _processor.dequeueOrCancel (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
             }
@@ -335,25 +335,25 @@ WorkerServerConnection::processManagementRequest (proto::ReplicationRequestHeade
                 case proto::ReplicationReplicaRequestType::REPLICA_CREATE: {
                     proto::ReplicationResponseReplicate response;
                     _processor.checkStatus (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
                 case proto::ReplicationReplicaRequestType::REPLICA_DELETE: {
                     proto::ReplicationResponseDelete response;
                     _processor.checkStatus (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
                 case proto::ReplicationReplicaRequestType::REPLICA_FIND: {
                     proto::ReplicationResponseFind response;
                     _processor.checkStatus (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
                 case proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL: {
                     proto::ReplicationResponseFindAll response;
                     _processor.checkStatus (hdr.id(), request, response);
-                    reply(response);
+                    reply(hdr.id(), response);
                     break;
                 }
             }
@@ -394,7 +394,7 @@ WorkerServerConnection::processServiceRequest (proto::ReplicationRequestHeader h
                       proto::ReplicationServiceResponse::FAILED :
                       proto::ReplicationServiceResponse::SUCCESS);
 
-            reply(response);
+            reply(hdr.id(), response);
             break;
         }
         case proto::ReplicationServiceRequestType::SERVICE_RESUME: {
@@ -410,7 +410,7 @@ WorkerServerConnection::processServiceRequest (proto::ReplicationRequestHeader h
                       proto::ReplicationServiceResponse::SUCCESS :
                       proto::ReplicationServiceResponse::FAILED);
 
-            reply(response);
+            reply(hdr.id(), response);
             break;
         }
         case proto::ReplicationServiceRequestType::SERVICE_STATUS: {
@@ -420,7 +420,7 @@ WorkerServerConnection::processServiceRequest (proto::ReplicationRequestHeader h
                   hdr.id(),
                   proto::ReplicationServiceResponse::SUCCESS);
 
-            reply(response);
+            reply(hdr.id(), response);
             break;
         }
         case proto::ReplicationServiceRequestType::SERVICE_REQUESTS: {
@@ -433,7 +433,7 @@ WorkerServerConnection::processServiceRequest (proto::ReplicationRequestHeader h
                   proto::ReplicationServiceResponse::SUCCESS,
                   extendedReport);
 
-            reply(response);
+            reply(hdr.id(), response);
             break;
         }
         default:
