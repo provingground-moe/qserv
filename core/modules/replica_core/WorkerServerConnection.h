@@ -160,12 +160,25 @@ private:
     void processServiceRequest (proto::ReplicationRequestHeader hdr);
 
     /**
-     * Serrialize a protobuf object and send it back to a client.
+     * Serialize an identifier of a request into response header
+     * followed by the protobuf response body protobuf object and
+     * send it all back to a client.
+     *
+     * @param id   - a unique identifier of a request to which th ereply is sent
+     * @param body - a body of the response
      */
     template <class T>
-    void reply (T &&response) {
+    void reply (const std::string  &id,
+                T                 &&body) {
+
         _bufferPtr->resize();
-        _bufferPtr->serialize(response);
+
+        proto::ReplicationResponseHeader hdr;
+        hdr.set_id(id);
+
+        _bufferPtr->serialize(hdr);
+        _bufferPtr->serialize(body);
+
         send();
     }
 

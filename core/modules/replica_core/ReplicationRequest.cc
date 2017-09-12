@@ -202,34 +202,18 @@ ReplicationRequest::responseReceived (const boost::system::error_code &ec,
         return;
     }
 
-    // Get the length of the message and try reading the message itself
-    // from the socket.
-        
-    const uint32_t bytes = _bufferPtr->parseLength();
+    // All operations hereafter are synchronious because the worker
+    // is supposed to send a complete multi-message response w/o
+    // making any explicit handshake with the Controller.
 
-    _bufferPtr->resize(bytes);      // make sure the buffer has enough space to accomodate
-                                    // the data of the message.
-
-    boost::system::error_code error_code;
-    boost::asio::read (
-        _socket,
-        boost::asio::buffer (
-            _bufferPtr->data(),
-            bytes
-        ),
-        boost::asio::transfer_at_least(bytes),
-        error_code
-    );
-    if (error_code) restart();
-    else {
+    if (syncReadVerifyHeader (_bufferPtr->parseLength())) restart();
     
-        // Parse the response to see what should be done next.
-    
-        proto::ReplicationResponseReplicate message;
-        _bufferPtr->parse(message, bytes);
-    
-        analyze(message);
-    }
+    size_t bytes;
+    if (syncReadFrame (bytes)) restart ();
+           
+    proto::ReplicationResponseReplicate message;
+    if (syncReadMessage (bytes, message)) restart();
+    else                                  analyze(message);
 }
 
 void
@@ -360,34 +344,18 @@ ReplicationRequest::statusReceived (const boost::system::error_code &ec,
         return;
     }
 
-    // Get the length of the message and try reading the message itself
-    // from the socket.
+    // All operations hereafter are synchronious because the worker
+    // is supposed to send a complete multi-message response w/o
+    // making any explicit handshake with the Controller.
 
-    const uint32_t bytes = _bufferPtr->parseLength();
-
-    _bufferPtr->resize(bytes);      // make sure the buffer has enough space to accomodate
-                                    // the data of the message.
-
-    boost::system::error_code error_code;
-    boost::asio::read (
-        _socket,
-        boost::asio::buffer (
-            _bufferPtr->data(),
-            bytes
-        ),
-        boost::asio::transfer_at_least(bytes),
-        error_code
-    );
-    if (error_code) restart();
-    else {
+    if (syncReadVerifyHeader (_bufferPtr->parseLength())) restart();
     
-        // Parse the response to see what should be done next.
-    
-        proto::ReplicationResponseReplicate message;
-        _bufferPtr->parse(message, bytes);
-    
-        analyze(message);
-    }
+    size_t bytes;
+    if (syncReadFrame (bytes)) restart ();
+           
+    proto::ReplicationResponseReplicate message;
+    if (syncReadMessage (bytes, message)) restart();
+    else                                  analyze(message);
 }
 
 void

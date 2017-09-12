@@ -203,7 +203,6 @@ public:
      */
     template <class PROTOCOL_RESPONSE_TYPE>
     static void setDefaultResponse (PROTOCOL_RESPONSE_TYPE      &response,
-                                    const std::string           &id,
                                     proto::ReplicationStatus     status,
                                     proto::ReplicationStatusExt  extendedStatus) {
     
@@ -212,7 +211,6 @@ public:
         performance.setUpdateFinish();
         response.set_allocated_performance(performance.info());
     
-        response.set_id         (id);
         response.set_status     (status);
         response.set_status_ext (extendedStatus);
     }
@@ -238,7 +236,6 @@ public:
         // Set this response unless an exact request (same type and identifier)
         // will be found.
         setDefaultResponse (response,
-                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_ID);
 
@@ -253,7 +250,6 @@ public:
                 setInfo(ptr, response);
 
                 // The status field is present in all response types
-                response.set_id        (id);
                 response.set_status    (translateReplicationStatus(ptr->status()));
                 response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
 
@@ -279,7 +275,6 @@ public:
         // Set this response unless an exact request (same type and identifier)
         // will be found.
         setDefaultResponse (response,
-                            id,
                             proto::ReplicationStatus::BAD,
                             proto::ReplicationStatusExt::INVALID_ID);
 
@@ -294,7 +289,6 @@ public:
                 setInfo(ptr, response);
 
                 // The status field is present in all response types
-                response.set_id        (id);
                 response.set_status    (translateReplicationStatus(ptr->status()));
                 response.set_status_ext(replica_core::translate   (ptr->extendedStatus()));
 
