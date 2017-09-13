@@ -39,7 +39,7 @@
 #include "replica_core/ReplicaCreateInfo.h"
 #include "replica_core/ReplicaDeleteInfo.h"
 #include "replica_core/ReplicaInfo.h"
-#include "replica_core/Request.h"
+#include "replica_core/RequestConnection.h"
 #include "replica_core/ProtocolBuffer.h"
 
 // This header declarations
@@ -52,7 +52,7 @@ namespace replica_core {
   * Class StopRequestBase represents requests for stopping on-going replications.
   */
 class StopRequestBase
-    :   public Request  {
+    :   public RequestConnection  {
 
 public:
 
@@ -250,7 +250,7 @@ private:
      * This method implements the corresponing virtual method defined
      * by the base class.
      */
-    void endProtocol () final {
+    void notify () final {
         if (_onFinish != nullptr) {
             StopRequest<POLICY>::pointer self = shared_from_base<StopRequest<POLICY>>();
             _onFinish(self);

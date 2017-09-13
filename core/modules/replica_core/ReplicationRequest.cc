@@ -81,12 +81,12 @@ ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider
                                         callback_type            onFinish,
                                         int                      priority,
                                         bool                     keepTracking)
-    :   Request(serviceProvider,
-                io_service,
-                "REPLICA_CREATE",
-                worker,
-                priority,
-                keepTracking),
+    :   RequestConnection (serviceProvider,
+                           io_service,
+                           "REPLICA_CREATE",
+                           worker,
+                           priority,
+                           keepTracking),
  
         _database     (database),
         _chunk        (chunk),
@@ -416,9 +416,9 @@ ReplicationRequest::analyze (const proto::ReplicationResponseReplicate &message)
 }
 
 void
-ReplicationRequest::endProtocol () {
+ReplicationRequest::notify () {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "endProtocol");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "notify");
 
     if (_onFinish != nullptr) {
         _onFinish(shared_from_base<ReplicationRequest>());

@@ -107,13 +107,11 @@ Request::Request (ServiceProvider         &serviceProvider,
         _extendedServerStatus (ExtendedCompletionStatus::EXT_STATUS_NONE),
         _performance          (),
 
-        _bufferPtr     (new ProtocolBuffer(serviceProvider.config().requestBufferSizeBytes())),
-        _workerInfo    (serviceProvider.config().workerInfo(worker)),
-        _timerIvalSec  (serviceProvider.config().retryTimeoutSec()),
+        _bufferPtr  (new ProtocolBuffer(serviceProvider.config().requestBufferSizeBytes())),
+        _workerInfo (serviceProvider.config().workerInfo(worker)),
 
-        _resolver (io_service),
-        _socket   (io_service),
-        _timer    (io_service),
+        _timerIvalSec (serviceProvider.config().retryTimeoutSec()),
+        _timer        (io_service),
 
         _requestExpirationIvalSec (serviceProvider.config().controllerRequestTimeoutSec()),
         _requestExpirationTimer   (io_service) {
@@ -144,7 +142,9 @@ Request::start () {
             )
         );
     }
-    resolve();
+
+    // Let a subclass to proceed with its own sequence of actions
+    startImpl();
 }
 
 void
@@ -156,6 +156,7 @@ Request::expired (const boost::system::error_code &ec) {
     // Also ignore this event if the request is over
     if (_state == State::FINISHED) return;
 
+    // Pringt this only after those rejections made above
     LOGS(_log, LOG_LVL_DEBUG, context() << "expired");
 
     finish(EXPIRED);
@@ -174,160 +175,27 @@ Request::finish (ExtendedState extendedState) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "finish");
 
-    // Check if it's not too late for tis operation
-
+    // Check if it's not too late for this operation
     if (_state == FINISHED) return;
 
-    // Set new state to make sure all event handlers will recognize tis scenario
-    // and avoid making any modifications to the request's state.
-
-    State previouState = _state;    // remember this in case if extra actions will
-                                    // need to be taken later.
-
+    // Set new state to make sure all event handlers will recognize
+    // this scenario and avoid making any modifications to the request's state.
     setState(FINISHED, extendedState);
 
-    // Close all sockets if needed
+    // Close all operations on BOOST ASIO if needed
+    _requestExpirationTimer.cancel();
 
-    if (previouState == IN_PROGRESS) {
-        _resolver.cancel();
-        _socket.cancel();
-        _socket.close();
-        _timer.cancel();
-        _requestExpirationTimer.cancel();
-    }
+    // Let a subclass to run its own finalization if needed
+    finishImpl();
 
-    // This will invoke user-defined notifiers (if any)
-    //
-    // NOTE: We have to updat the timestamp before invoking a user
-    //       handler on teh completion of the operation.
-
+    // We have to update the timestamp before invoking a user provided
+    // callback on the completion of the operation.
     _performance.setUpdateFinish();
 
-    endProtocol();
+    // This will invoke user-defined notifiers (if any)
+    notify();
 }
 
-void
-Request::restart () {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "restart");
-
-    // Cancel any asynchronous operation(s) if not in the initial state
-
-    switch (_state) {
-
-        case CREATED:
-            break;
-
-        case IN_PROGRESS:
-            _resolver.cancel();
-            _socket.cancel();
-            _socket.close();
-            _timer.cancel();
-            _requestExpirationTimer.cancel();
-            break;
-
-        default:
-            break;
-    }
-
-    // Reset the state so that we could begin all over again
-
-    setState(CREATED, NONE);
-    
-    resolve();
-}
-
-void
-Request::resolve () {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "resolve");
-
-    boost::asio::ip::tcp::resolver::query query (
-        _workerInfo.svcHost,
-        std::to_string(_workerInfo.svcPort)
-    );
-    _resolver.async_resolve (
-        query,
-        boost::bind (
-            &Request::resolved,
-            shared_from_this(),
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::iterator
-        )
-    );
-    setState(IN_PROGRESS, NONE);
-}
-
-void
-Request::resolved (const boost::system::error_code          &ec,
-                   boost::asio::ip::tcp::resolver::iterator  iter) {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "resolved");
-
-    if (isAborted(ec)) return;
-
-    if (ec) waitBeforeRestart();
-    else    connect(iter);
-}
-
-void
-Request::connect (boost::asio::ip::tcp::resolver::iterator iter) {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "connect");
-
-    boost::asio::async_connect (
-        _socket,
-        iter,
-        boost::bind (
-            &Request::connected,
-            shared_from_this(),
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::iterator
-        )
-    );
-}
-
-void
-Request::connected (const boost::system::error_code          &ec,
-                    boost::asio::ip::tcp::resolver::iterator  iter) {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "connected");
-
-    if (isAborted(ec)) return;
-
-    if (ec) waitBeforeRestart();
-    else    beginProtocol();
-}
-
-void
-Request::waitBeforeRestart () {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "waitBeforeRestart");
-
-    // Allways need to set the interval before launching the timer.
-    
-    _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
-    _timer.async_wait (
-        boost::bind (
-            &Request::awakenForRestart,
-            shared_from_this(),
-            boost::asio::placeholders::error
-        )
-    );
-}
-
-void
-Request::awakenForRestart (const boost::system::error_code &ec) {
-
-    LOGS(_log, LOG_LVL_DEBUG, context() << "awakenForRestart");
-
-    if (isAborted(ec)) return;
-
-    // Also ignore this event if the request expired
-    if (_state== State::FINISHED) return;
-
-    restart();
-}
 
 bool
 Request::isAborted (const boost::system::error_code &ec) const {
@@ -355,59 +223,5 @@ Request::setState (State         state,
     _state         = state;
     _extendedState = extendedState;
 }
-
-boost::system::error_code
-Request::syncReadFrame (size_t &bytes) {
-
-    const size_t frameLength = sizeof(uint32_t);
-    _bufferPtr->resize(frameLength);
-
-    boost::system::error_code ec;
-    boost::asio::read (
-        _socket,
-        boost::asio::buffer (
-            _bufferPtr->data(),
-            frameLength
-        ),
-        boost::asio::transfer_at_least(frameLength),
-        ec
-    );
-    if (!ec)
-        bytes = _bufferPtr->parseLength();
-
-    return ec;
-}
-
-boost::system::error_code
-Request::syncReadMessageImpl (const size_t bytes) {
-
-    _bufferPtr->resize(bytes);
-
-    boost::system::error_code ec;
-    boost::asio::read (
-        _socket,
-        boost::asio::buffer (
-            _bufferPtr->data(),
-            bytes
-        ),
-        boost::asio::transfer_at_least(bytes),
-        ec
-    );
-    return ec;
-}
-    
-boost::system::error_code
-Request::syncReadVerifyHeader (const size_t bytes) {
-
-    proto::ReplicationResponseHeader hdr;
-    boost::system::error_code ec = syncReadMessage (bytes, hdr);
-    if (!ec)
-        if (id() != hdr.id())
-            throw std::logic_error (
-                    "Request::syncReadVerifyHeader()  got unexpected id: " + hdr.id() +
-                    " instead of: " + id());
-    return ec;
-}
-    
     
 }}} // namespace lsst::qserv::replica_core

@@ -168,10 +168,11 @@ ServiceManagementRequestBase::ServiceManagementRequestBase (
         const char                           *requestTypeName,
         const std::string                    &worker,
         proto::ReplicationServiceRequestType  requestType)
-    :   Request (serviceProvider,
-                 io_service,
-                 requestTypeName,
-                 worker),
+
+    :   RequestConnection (serviceProvider,
+                           io_service,
+                           requestTypeName,
+                           worker),
         _requestType (requestType) {
 }
 
