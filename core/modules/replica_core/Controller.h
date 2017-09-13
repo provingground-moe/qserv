@@ -106,6 +106,9 @@ public:
     /// Return the Service Provider used by the server
     ServiceProvider& serviceProvider () { return _serviceProvider; }
 
+    /// Return a reference to the I/O service
+    boost::asio::io_service& io_service () { return _io_service; }
+
     /**
      * Run the server in a dedicated thread unless it's already running.
      * It's safe to call this method multiple times from any thread.
