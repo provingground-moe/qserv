@@ -56,12 +56,13 @@ StopRequestBase::StopRequestBase (ServiceProvider                               
                                   const std::string                                 &targetRequestId,
                                   lsst::qserv::proto::ReplicationReplicaRequestType  requestType,
                                   bool                                               keepTracking)
-    :   Request(serviceProvider,
-                io_service,
-                requestTypeName,
-                worker,
-                0,
-                keepTracking),
+    :   RequestConnection (serviceProvider,
+                           io_service,
+                           requestTypeName,
+                           worker,
+                           0,
+                           keepTracking),
+
         _targetRequestId (targetRequestId),
         _requestType     (requestType) {
 }

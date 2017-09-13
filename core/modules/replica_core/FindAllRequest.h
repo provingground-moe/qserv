@@ -37,7 +37,7 @@
 
 #include "proto/replication.pb.h"
 #include "replica_core/ReplicaInfo.h"
-#include "replica_core/Request.h"
+#include "replica_core/RequestConnection.h"
 
 // This header declarations
 
@@ -50,7 +50,7 @@ namespace replica_core {
   * the master controller.
   */
 class FindAllRequest
-    :   public Request  {
+    :   public RequestConnection  {
 
 public:
 
@@ -172,7 +172,7 @@ private:
      * This method implements the corresponing virtual method defined
      * bu the base class.
      */
-    void endProtocol () final;
+    void notify () final;
 
 private:
 

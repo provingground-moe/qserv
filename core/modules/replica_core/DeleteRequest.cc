@@ -78,12 +78,12 @@ DeleteRequest::DeleteRequest (ServiceProvider         &serviceProvider,
                               callback_type            onFinish,
                               int                      priority,
                               bool                     keepTracking)
-    :   Request(serviceProvider,
-                io_service,
-                "REPLICA_DELETE",
-                worker,
-                priority,
-                keepTracking),
+    :   RequestConnection (serviceProvider,
+                           io_service,
+                           "REPLICA_DELETE",
+                           worker,
+                           priority,
+                           keepTracking),
  
         _database     (database),
         _chunk        (chunk),
@@ -413,9 +413,9 @@ DeleteRequest::analyze (const proto::ReplicationResponseDelete &message) {
 }
 
 void
-DeleteRequest::endProtocol () {
+DeleteRequest::notify () {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "endProtocol");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "notify");
 
     if (_onFinish != nullptr) {
         _onFinish(shared_from_base<DeleteRequest>());

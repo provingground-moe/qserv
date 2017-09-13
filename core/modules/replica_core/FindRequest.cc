@@ -82,12 +82,12 @@ FindRequest::FindRequest (ServiceProvider         &serviceProvider,
                           int                      priority,
                           bool                     computeCheckSum,
                           bool                     keepTracking)
-    :   Request(serviceProvider,
-                io_service,
-                "REPLICA_FIND",
-                worker,
-                priority,
-                keepTracking),
+    :   RequestConnection (serviceProvider,
+                           io_service,
+                           "REPLICA_FIND",
+                           worker,
+                           priority,
+                           keepTracking),
  
         _database        (database),
         _chunk           (chunk),
@@ -427,9 +427,9 @@ FindRequest::analyze (const proto::ReplicationResponseFind &message) {
 }
 
 void
-FindRequest::endProtocol () {
+FindRequest::notify () {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "endProtocol");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "notify");
 
     if (_onFinish != nullptr) {
         _onFinish(shared_from_base<FindRequest>());

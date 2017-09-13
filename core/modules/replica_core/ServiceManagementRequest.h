@@ -43,7 +43,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
-#include "replica_core/Request.h"
+#include "replica_core/RequestConnection.h"
 
 // This header declarations
 
@@ -61,7 +61,7 @@ namespace replica_core {
   * provided via a generic subclass.
   */
 class ServiceManagementRequestBase
-    :   public Request {
+    :   public RequestConnection {
 
 public:
 
@@ -259,7 +259,7 @@ private:
      * This method implements the corresponing virtual method defined
      * bu the base class.
      */
-    void endProtocol () final {
+    void notify () final {
         if (_onFinish != nullptr) {
             ServiceManagementRequest<POLICY>::pointer self = shared_from_base<ServiceManagementRequest<POLICY>>();
             _onFinish(self);

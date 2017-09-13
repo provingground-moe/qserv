@@ -45,7 +45,7 @@
 #include "replica_core/ReplicaCreateInfo.h"
 #include "replica_core/ReplicaDeleteInfo.h"
 #include "replica_core/ReplicaInfo.h"
-#include "replica_core/Request.h"
+#include "replica_core/RequestConnection.h"
 #include "replica_core/ProtocolBuffer.h"
 
 // This header declarations
@@ -59,7 +59,7 @@ namespace replica_core {
   * pulling a status of on-going operationd.
   */
 class StatusRequestBase
-    :   public Request {
+    :   public RequestConnection {
 
 public:
 
@@ -257,7 +257,7 @@ private:
      * This method implements the corresponing virtual method defined
      * by the base class.
      */
-    void endProtocol () final {
+    void notify () final {
         if (_onFinish != nullptr) {
             StatusRequest<POLICY>::pointer self = shared_from_base<StatusRequest<POLICY>>();
             _onFinish(self);

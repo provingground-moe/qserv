@@ -29,9 +29,7 @@
 
 // System headers
 
-#include <chrono>
 #include <memory>       // shared_ptr, enable_shared_from_this
-#include <ostream>
 #include <string>
 
 #include <boost/asio.hpp>
@@ -230,6 +228,11 @@ protected:
              const std::string       &worker,
              int                      priority=0,
              bool                     keepTracking=true);
+    /**
+      * This method is supposed to be provided by subclasses for additional
+      * subclass-specific actions to begin processing the request.
+      */
+    virtual void startImpl ()=0;
 
     /**
      * Request expiration timer's handler. The expiration interval (if any)
@@ -237,41 +240,6 @@ protected:
      * it finishes with completion status FINISHED::EXPIRED.
      */
     void expired (const boost::system::error_code &ec);
-
-    /**
-     * Restart the whole operation from scratch.
-     *
-     * Cancel any asynchronous operation(s) if not in the initial state
-     * w/o notifying a subscriber.
-     * 
-     * NOTE: This method is called internally when there is a doubt that
-     * it's possible to do a clean recovery from a failure.
-     */
-    void restart ();
-
-    /// Start resolving the destination worker host & port
-    void resolve ();
-
-    /// Callback handler for the asynchronious operation
-    void resolved (const boost::system::error_code &ec,
-                   boost::asio::ip::tcp::resolver::iterator iter);
-
-    /// Start resolving the destination worker host & port
-    void connect (boost::asio::ip::tcp::resolver::iterator iter);
-
-    /**
-     * Callback handler for the asynchronious operation upon its
-     * successfull completion will trigger a request-specific
-     * protocol sequence.
-     */
-    void connected (const boost::system::error_code &ec,
-                    boost::asio::ip::tcp::resolver::iterator iter);
-
-    /// Start a timeout before attempting to restart the connection
-    void waitBeforeRestart ();
-
-    /// Callback handler fired for restarting the connection
-    void awakenForRestart (const boost::system::error_code &ec);
 
     /**
      * Finalize request processing (as reported by subclasses)
@@ -282,17 +250,17 @@ protected:
     void finish (ExtendedState extendedState);
 
     /**
-      * This method is supposed to be provided by subclasses to begin
-      * an actual protocol as required by the subclass.
+      * This method is supposed to be provided by subclasses
+      * to finalize request processing as required by the subclass.
       */
-    virtual void beginProtocol ()=0;
+    virtual void finishImpl ()=0;
 
     /**
      * This method is supposed to be provided by subclasses to handle
      * request completion steps, such as notifying a party which initiated
      * the request, etc.
      */
-    virtual void endProtocol ()=0;
+    virtual void notify ()=0;
 
     /**
      * Return 'true' if the operation was aborted.
@@ -331,66 +299,6 @@ protected:
      */
     void setState (State         state,
                    ExtendedState extendedStat);
-
-    
-    /**
-     * Synchroniously read a protocol frame which carries the length
-     * of a subsequent message and return that length along with the completion
-     * status of the operation.
-     *
-     * @param bytes - the length in bytes extracted from the frame
-     *
-     * @return the completion code of the operation
-     */
-    boost::system::error_code syncReadFrame (size_t &bytes);
-
-    /**
-     * Synchriniously read a message of a known size. Then parse it
-     * given the template parameter of the method. Return the completion status
-     * of the operation.
-     *
-     * @param bytes   - a expected length of the message (obtained from a preceeding frame)
-     *                  to be received into the network buffer from the network.
-     * @param message - a specific message object to be initialize after reading data from
-     *                  the network buffer.
-     *
-     * @return the completion code of the operation
-     */
-    template <class MESSAGE_TYPE>
-    boost::system::error_code syncReadMessage (const size_t bytes,
-                                               MESSAGE_TYPE &message) {
-
-        boost::system::error_code ec = syncReadMessageImpl (bytes);
-        if (!ec) _bufferPtr->parse(message, bytes);
-        return ec;
-    }
-
-    /**
-     * Synchriniously read a message of a known size into the network buffer. Return
-     * the completion status of the operation. Afyer the successfull completion
-     * of the operation the content of the network buffer can be parsed.
-     *
-     * @param bytes - a expected length of the message (obtained from a preceeding frame)
-     *                to be received into the network buffer from the network.
-     *
-     * @return the completion code of the operation
-     */
-    boost::system::error_code syncReadMessageImpl (const size_t bytes);
-
-   /**
-     * Synchriniously read a response header of a known size. Then parse it
-     * and analyze it to ensure its content matches expecations. Return
-     * the completion status of the operation.
-     *
-     * The method will throw exception std::logic_error if the header's
-     * content won't match expectations.
-     *
-     * @param bytes   - a expected length of the message (obtained from a preceeding frame)
-     *                  to be received into the network buffer from the network.
-     *
-     * @return the completion code of the operation
-     */
-    boost::system::error_code syncReadVerifyHeader (const size_t bytes);
     
 protected:
 
@@ -415,29 +323,32 @@ protected:
     /// Performance counters
     Performance _performance;
 
-    /// Buffers for data moved over the network
+    /// Buffer for data moved over the network
     std::auto_ptr<ProtocolBuffer> _bufferPtr;
 
-    // To be initialized from a configuration via the ServiceProvider
-    // then cached for the lifespan of the object.
-
+    // Parameters of a worker obtained from a configuration
     const WorkerInfo &_workerInfo;
 
-    unsigned int _timerIvalSec;
+    /// This time is used to in the communication protocol for requests
+    /// which may require multiple retries or any time spacing between network
+    /// operation.
+    ///
+    /// The current class doesn't manager this time. It's here just because
+    /// it's required by virtually all implementations of requests. And it's
+    /// up to subclasses to manage this timer.
+    ///
+    /// The only role of this class (apart from providing the objects)
+    /// is to set up the default timer interval from a condifuration.
+    unsigned int                _timerIvalSec;
+    boost::asio::deadline_timer _timer;
 
-    // Mutable state for network communication
-
-    boost::asio::ip::tcp::resolver _resolver;
-    boost::asio::ip::tcp::socket   _socket;
-    boost::asio::deadline_timer    _timer;
-
-    // This timer is used (if configured) to limit the total run time
-    // of a request. The timer (re-)starts each time method send() is called.
-    // Upon a suvcessfull expiration of the timer the request would finish
-    // with status: FINISHED::EXPIRED.
-    
-    unsigned int  _requestExpirationIvalSec;        // initialized from a configuration
-
+    /// This timer is used (if configured) to limit the total run time
+    /// of a request. The timer starts when the request is started. And it's
+    /// explicitly finished when a request finishes (successfully or not).
+    ///
+    /// If the time has a chance to expire then the request would finish
+    /// with status: FINISHED::EXPIRED.    
+    unsigned int                _requestExpirationIvalSec;
     boost::asio::deadline_timer _requestExpirationTimer;
 };
 
