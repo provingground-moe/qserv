@@ -105,8 +105,9 @@ public:
     void send (std::string  const& worker,
                std::string  const& id,
                std::shared_ptr<replica_core::ProtocolBuffer> const& requestBufferPtr,
-               std::function<void(MessengerConnector::CompletionStatus,
-                                  RESPONSE_TYPE const&)>& onFinish) {
+               std::function<void(std::string const&,
+                                  MessengerConnector::CompletionStatus,
+                                  RESPONSE_TYPE const&)> onFinish) {
 
         // Forward the request to the corresponidng worker
         connector(worker)->send<RESPONSE_TYPE> (id,
