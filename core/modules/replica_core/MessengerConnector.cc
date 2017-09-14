@@ -52,16 +52,6 @@ namespace qserv {
 namespace replica_core {
 
 std::string
-MessengerConnector::status2string (MessengerConnector::CompletionStatus status) {
-    switch (status) {
-        case SUCCEEDED: return "SUCCEEDED";
-        case FAILED:    return "FAILED";
-    }
-    throw std::logic_error (
-            "incomplete implementation of method MessengerConnector::status2string()");
-}
-
-std::string
 MessengerConnector::state2string (MessengerConnector::State state) {
     switch (state) {
         case STATE_INITIAL:       return "STATE_INITIAL";
@@ -71,8 +61,6 @@ MessengerConnector::state2string (MessengerConnector::State state) {
     throw std::logic_error (
             "incomplete implementation of method MessengerConnector::state2string()");
 }
-
-
 
 MessengerConnector::pointer
 MessengerConnector::create (ServiceProvider&         serviceProvider,
@@ -131,6 +119,16 @@ MessengerConnector::cancel (std::string const& id) {
         }
     );
     _id2request.erase(id);
+}
+
+bool
+MessengerConnector::exists (std::string const& id) const {
+
+    LOCK_GUARD;
+
+    LOGS(_log, LOG_LVL_DEBUG, "exists");
+    
+    return _id2request.count(id);
 }
 
 void
@@ -499,8 +497,8 @@ MessengerConnector::responseReceived (boost::system::error_code const& ec,
                             // remove this request from all data structures and initiate a new request.
                 
                             request2notify = _currentRequest;
-                            request2notify->status = CompletionStatus::SUCCEEDED;
-                
+                            request2notify->success = true;
+
                             _id2request.erase(_currentRequest->id);
                             _currentRequest = nullptr;
                 

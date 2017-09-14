@@ -79,13 +79,13 @@ bool test () {
                 id,
                 requestBufferPtr,
                 [&numFinished] (std::string const&                       id,
-                                rc::MessengerConnector::CompletionStatus status,
+                                bool                                     success,
                                 proto::ReplicationServiceResponse const& response) {
                     numFinished++;
                     std::cout
                         << std::setw(32) << id
                         << "  ** finished **  "
-                        << rc::MessengerConnector::status2string(status) << std::endl;
+                        << (success ? "SUCCEEDED" : "FAILED") << std::endl;
                 }
             );
         }

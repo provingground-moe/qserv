@@ -324,7 +324,7 @@ protected:
     Performance _performance;
 
     /// Buffer for data moved over the network
-    std::auto_ptr<ProtocolBuffer> _bufferPtr;
+    std::shared_ptr<ProtocolBuffer> _bufferPtr;
 
     // Parameters of a worker obtained from a configuration
     const WorkerInfo &_workerInfo;
