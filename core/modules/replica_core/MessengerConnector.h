@@ -80,15 +80,6 @@ public:
     /// The pointer type for instances of the class
     typedef std::shared_ptr<MessengerConnector> pointer;
 
-    /// The type for returning results from 
-    enum CompletionStatus {
-        SUCCEEDED,  // in case of success (in that case the RESPONSE_TYPE should be valid)
-        FAILED      // there was a comunication or protocol failure
-    };
-    
-    /// Return the string representation of the status
-    static std::string status2string (CompletionStatus status);
-
     /// The base class for request wrappers
     class WrapperBase {
 
@@ -112,7 +103,7 @@ public:
     protected:
 
         /**
-         * Construct the object in the default FAILED state. Hence, there is no
+         * Construct the object in the default failed (membver 'success') state. Hence, there is no
          * need ro set this state explicitly unless a transcation turnes to be
          * a success.
          *
@@ -124,7 +115,7 @@ public:
                      std::shared_ptr<replica_core::ProtocolBuffer> const& requestBufferPtr_,
                      size_t                                               responseBufferCapacityBytes)
 
-            :   status           (CompletionStatus::FAILED),
+            :   success          (false),
                 id               (id_),
                 requestBufferPtr (requestBufferPtr_),
                 responseBuffer   (responseBufferCapacityBytes) {
@@ -133,7 +124,7 @@ public:
     public:
 
         /// The completion status to be returned to a subscriber
-        CompletionStatus status;
+        bool success;
 
         /// A unique identifier of the request
         std::string id;
@@ -152,7 +143,7 @@ public:
     public:
 
         typedef std::function<void(std::string const&,
-                                   CompletionStatus,
+                                   bool,
                                    RESPONSE_TYPE const&)> callback_type;
 
         // Default construction and copy semantics are prohibited
@@ -190,10 +181,10 @@ public:
          */
         void parseAndNotify () override {
             RESPONSE_TYPE response;
-            if (status == CompletionStatus::SUCCEEDED) {
+            if (success) {
                 responseBuffer.parse(response, responseBuffer.size());
             }
-            _onFinish(id, status, response);
+            _onFinish(id, success, response);
         }
 
     private:
@@ -272,6 +263,13 @@ public:
      * @param id  - a unique identifier of a request
      */
     void cancel (std::string const& id);
+
+    /**
+     * Return 'true' if the specified requst is known to the Messenger
+     *
+     * @param id - a unique identifier of a request
+     */
+    bool exists (std::string const& id) const;
 
 private:
 
@@ -444,7 +442,7 @@ private:
     /// This mutex is meant to avoid race conditions to the internal data
     /// structure between a thread which runs the Ntework I/O service
     /// and threads submitting requests.
-    std::mutex _mtx;
+    mutable std::mutex _mtx;
 
     /// The queue of requests
     std::list<WrapperBase_pointer> _requests;

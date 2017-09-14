@@ -106,7 +106,7 @@ public:
                std::string  const& id,
                std::shared_ptr<replica_core::ProtocolBuffer> const& requestBufferPtr,
                std::function<void(std::string const&,
-                                  MessengerConnector::CompletionStatus,
+                                  bool,
                                   RESPONSE_TYPE const&)> onFinish) {
 
         // Forward the request to the corresponidng worker
@@ -132,6 +132,15 @@ public:
      */
     void cancel (std::string const& worker,
                  std::string const& id);
+
+    /**
+     * Return 'true' if the specified requst is known to the Messenger
+     *
+     * @param worker - the name of a worker
+     * @param id     - a unique identifier of a request
+     */
+    bool exists (std::string const& worker,
+                 std::string const& id) const;
 
 private:
 

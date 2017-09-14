@@ -91,13 +91,13 @@ protected:
                        boost::asio::io_service &io_service,
                        const std::string       &type,
                        const std::string       &worker,
-                       int                      priority=0,
-                       bool                     keepTracking=true);
+                       int                      priority,
+                       bool                     keepTracking);
 
     /**
      * Implement a method defined in the base class.
      */
-   void startImpl () override;
+    void startImpl () override;
 
     /**
      * Restart the whole operation from scratch.

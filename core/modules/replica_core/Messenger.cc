@@ -73,6 +73,14 @@ Messenger::cancel (std::string const& worker,
     connector(worker)->cancel(id);
 }
 
+bool
+Messenger::exists (std::string const& worker,
+                   std::string const& id) const {
+
+    // Forward the request to the corresponidng worker
+    return connector(worker)->exists(id);
+}
+    
 MessengerConnector::pointer const&
 Messenger::connector (std::string const& worker)  const {
     if (!_connector.count(worker))

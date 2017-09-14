@@ -33,6 +33,7 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Messenger.h"
 #include "replica_core/Performance.h"
 #include "replica_core/ProtocolBuffer.h"
 
@@ -43,8 +44,8 @@ namespace {
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ServiceManagementRequestBase");
 
 /// Dump a collection of request descriptions onto the output stream
-void dumpRequestInfo (std::ostream                                             &os,
-                      const std::vector<proto::ReplicationServiceResponseInfo> &requests) {
+void dumpRequestInfo (std::ostream&                                             os,
+                      std::vector<proto::ReplicationServiceResponseInfo> const& requests) {
 
     for (const auto &r : requests) {
         os  << "\n"
@@ -79,23 +80,26 @@ namespace qserv {
 namespace replica_core {
 
 
+///////////////////////////////////
+//         ServiceState          //
+///////////////////////////////////
+
 void
-ServiceManagementRequestBase::ServiceState::set (
-        const proto::ReplicationServiceResponse &message) {
+ServiceState::set (proto::ReplicationServiceResponse const& message) {
 
     switch (message.service_state()) {
         case proto::ReplicationServiceResponse::SUSPEND_IN_PROGRESS:
-            state = ServiceManagementRequestBase::ServiceState::State::SUSPEND_IN_PROGRESS;
+            state = ServiceState::State::SUSPEND_IN_PROGRESS;
             break;
         case proto::ReplicationServiceResponse::SUSPENDED:
-            state = ServiceManagementRequestBase::ServiceState::State::SUSPENDED;
+            state = ServiceState::State::SUSPENDED;
             break;
         case proto::ReplicationServiceResponse::RUNNING:
-            state = ServiceManagementRequestBase::ServiceState::State::RUNNING;
+            state = ServiceState::State::RUNNING;
             break;
         default:
             throw std::runtime_error(
-                "ServiceManagementRequestBase::ServiceState::set() service state found in protocol is unknown");
+                "ServiceState::set() service state found in protocol is unknown");
     }
     technology = message.technology();
     startTime  = message.start_time();
@@ -115,11 +119,11 @@ ServiceManagementRequestBase::ServiceState::set (
 }
 
 std::ostream&
-operator<< (std::ostream &os, const ServiceManagementRequestBase::ServiceState &ss) {
+operator<< (std::ostream& os, ServiceState const& ss) {
 
     const unsigned int secondsAgo = (PerformanceUtils::now() - ss.startTime ) / 1000.0f;
 
-    os  << "ServiceManagementRequestBase::ServiceState:\n"
+    os  << "ServiceState:\n"
         << "\n  Summary:\n\n"
         << "    service state:              " << ss.state2string() << "\n"
         << "    technology:                 " << ss.technology << "\n"
@@ -141,7 +145,11 @@ operator<< (std::ostream &os, const ServiceManagementRequestBase::ServiceState &
 }
 
 
-const ServiceManagementRequestBase::ServiceState&
+///////////////////////////////////////////////////
+//         ServiceManagementRequestBase          //
+///////////////////////////////////////////////////
+
+const ServiceState&
 ServiceManagementRequestBase::getServiceState () const {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "getServiceState");
@@ -163,16 +171,21 @@ ServiceManagementRequestBase::getServiceState () const {
 
     
 ServiceManagementRequestBase::ServiceManagementRequestBase (
-        ServiceProvider                      &serviceProvider,
-        boost::asio::io_service              &io_service,
-        const char                           *requestTypeName,
-        const std::string                    &worker,
-        proto::ReplicationServiceRequestType  requestType)
+
+        ServiceProvider&                     serviceProvider,
+        boost::asio::io_service&             io_service,
+        char const*                          requestTypeName,
+        std::string const&                   worker,
+        proto::ReplicationServiceRequestType requestType)
 
     :   RequestConnection (serviceProvider,
                            io_service,
                            requestTypeName,
-                           worker),
+                           worker,
+                           0,       /* priority */
+                           false    /* keepTracking */
+                           ),
+
         _requestType (requestType) {
 }
 
@@ -215,7 +228,7 @@ ServiceManagementRequestBase::beginProtocol () {
 }
 
 void
-ServiceManagementRequestBase::requestSent (const boost::system::error_code &ec,
+ServiceManagementRequestBase::requestSent (boost::system::error_code const& ec,
                                            size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
@@ -260,7 +273,7 @@ ServiceManagementRequestBase::receiveResponse () {
 }
 
 void
-ServiceManagementRequestBase::responseReceived (const boost::system::error_code &ec,
+ServiceManagementRequestBase::responseReceived (boost::system::error_code const& ec,
                                                 size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
@@ -287,7 +300,7 @@ ServiceManagementRequestBase::responseReceived (const boost::system::error_code 
 }
 
 void
-ServiceManagementRequestBase::analyze (const proto::ReplicationServiceResponse &message) {
+ServiceManagementRequestBase::analyze ( proto::ReplicationServiceResponse const& message) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 
@@ -310,9 +323,125 @@ ServiceManagementRequestBase::analyze (const proto::ReplicationServiceResponse &
         default:
             finish (SERVER_ERROR);
             break;
-    }
-    
-    // Extract service status and store it locally
+    }    
 }
+
+
+////////////////////////////////////////////////////
+//         ServiceManagementRequestBaseM          //
+////////////////////////////////////////////////////
+
+
+const ServiceState&
+ServiceManagementRequestBaseM::getServiceState () const {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "getServiceState");
+
+    switch (Request::state()) {
+        case Request::State::FINISHED:
+            switch (Request::extendedState()) {
+                case Request::ExtendedState::SUCCESS:
+                case Request::ExtendedState::SERVER_ERROR:
+                    return _serviceState;
+                default:
+                    break;
+            }
+        default:
+            break;
+    }
+    throw std::logic_error("this informationis not available in the current state of the request");
+}
+
+    
+ServiceManagementRequestBaseM::ServiceManagementRequestBaseM (
+
+        ServiceProvider&                     serviceProvider,
+        boost::asio::io_service&             io_service,
+        char const*                          requestTypeName,
+        std::string const&                   worker,
+        proto::ReplicationServiceRequestType requestType,
+        Messenger&                           messenger)
+
+    :   RequestMessenger (serviceProvider,
+                          io_service,
+                          requestTypeName,
+                          worker,
+                          0,        /* priority */
+                          false,    /* keepTracking */
+                          messenger),
+
+        _requestType (requestType) {
+}
+
+ServiceManagementRequestBaseM::~ServiceManagementRequestBaseM () {
+}
+
+
+void
+ServiceManagementRequestBaseM::startImpl () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "startImpl");
+
+    // Serialize the Request message header and the request itself into
+    // the network buffer.
+
+    _bufferPtr->resize();
+
+    proto::ReplicationRequestHeader hdr;
+    hdr.set_id          (id());
+    hdr.set_type        (proto::ReplicationRequestHeader::SERVICE);
+    hdr.set_service_type(_requestType);
+
+    _bufferPtr->serialize(hdr);
+
+    // Send the message
+
+    ServiceManagementRequestBaseM::pointer self =
+        shared_from_base<ServiceManagementRequestBaseM>();
+
+    _messenger.send<proto::ReplicationServiceResponse> (
+        worker(),
+        id(),
+        _bufferPtr,
+        [self] (std::string const&                       id,
+                bool                                     success,
+                proto::ReplicationServiceResponse const& response) {
+            self->analyze (success, response);
+        }
+    );
+}
+
+void
+ServiceManagementRequestBaseM::analyze (bool                                     success,
+                                        proto::ReplicationServiceResponse const& message) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
+
+    if (success) {
+        _performance.update(message.performance());
+    
+        // Capture the general status of the operation
+    
+        switch (message.status()) {
+     
+            case proto::ReplicationServiceResponse::SUCCESS:
+    
+                // Transfer the state of the remote service into a local data member
+                // before initiating state transition of the request object.
+        
+                _serviceState.set(message);
+    
+                finish (SUCCESS);
+                break;
+    
+            default:
+                finish (SERVER_ERROR);
+                break;
+        }
+    } else {
+        finish (CLIENT_ERROR);
+    }
+}
+
 
 }}} // namespace lsst::qserv::replica_core
