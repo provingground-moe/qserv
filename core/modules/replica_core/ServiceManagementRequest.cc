@@ -41,7 +41,7 @@ namespace proto = lsst::qserv::proto;
 
 namespace {
 
-LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ServiceManagementRequestBase");
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ServiceManagementRequest");
 
 /// Dump a collection of request descriptions onto the output stream
 void dumpRequestInfo (std::ostream&                                             os,
@@ -67,7 +67,7 @@ void dumpRequestInfo (std::ostream&                                             
             default:
                 throw std::logic_error (
                             "unhandled request type " + proto::ReplicationReplicaRequestType_Name(r.replica_type()) +
-                            " in  ServiceManagementRequestBase::dumpRequestInfo");
+                            " in  ServiceManagementRequest::dumpRequestInfo");
         }
     }
 }
@@ -145,12 +145,12 @@ operator<< (std::ostream& os, ServiceState const& ss) {
 }
 
 
-///////////////////////////////////////////////////
-//         ServiceManagementRequestBase          //
-///////////////////////////////////////////////////
+////////////////////////////////////////////////////
+//         ServiceManagementRequestBaseC          //
+////////////////////////////////////////////////////
 
 const ServiceState&
-ServiceManagementRequestBase::getServiceState () const {
+ServiceManagementRequestBaseC::getServiceState () const {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "getServiceState");
 
@@ -170,7 +170,7 @@ ServiceManagementRequestBase::getServiceState () const {
 }
 
     
-ServiceManagementRequestBase::ServiceManagementRequestBase (
+ServiceManagementRequestBaseC::ServiceManagementRequestBaseC (
 
         ServiceProvider&                     serviceProvider,
         boost::asio::io_service&             io_service,
@@ -189,12 +189,12 @@ ServiceManagementRequestBase::ServiceManagementRequestBase (
         _requestType (requestType) {
 }
 
-ServiceManagementRequestBase::~ServiceManagementRequestBase () {
+ServiceManagementRequestBaseC::~ServiceManagementRequestBaseC () {
 }
 
 
 void
-ServiceManagementRequestBase::beginProtocol () {
+ServiceManagementRequestBaseC::beginProtocol () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
 
@@ -219,8 +219,8 @@ ServiceManagementRequestBase::beginProtocol () {
             _bufferPtr->size()
         ),
         boost::bind (
-            &ServiceManagementRequestBase::requestSent,
-            shared_from_base<ServiceManagementRequestBase>(),
+            &ServiceManagementRequestBaseC::requestSent,
+            shared_from_base<ServiceManagementRequestBaseC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -228,8 +228,8 @@ ServiceManagementRequestBase::beginProtocol () {
 }
 
 void
-ServiceManagementRequestBase::requestSent (boost::system::error_code const& ec,
-                                           size_t                           bytes_transferred) {
+ServiceManagementRequestBaseC::requestSent (boost::system::error_code const& ec,
+                                            size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
@@ -240,7 +240,7 @@ ServiceManagementRequestBase::requestSent (boost::system::error_code const& ec,
 }
 
 void
-ServiceManagementRequestBase::receiveResponse () {
+ServiceManagementRequestBaseC::receiveResponse () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
@@ -264,8 +264,8 @@ ServiceManagementRequestBase::receiveResponse () {
         ),
         boost::asio::transfer_at_least(bytes),
         boost::bind (
-            &ServiceManagementRequestBase::responseReceived,
-            shared_from_base<ServiceManagementRequestBase>(),
+            &ServiceManagementRequestBaseC::responseReceived,
+            shared_from_base<ServiceManagementRequestBaseC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -273,8 +273,8 @@ ServiceManagementRequestBase::receiveResponse () {
 }
 
 void
-ServiceManagementRequestBase::responseReceived (boost::system::error_code const& ec,
-                                                size_t                           bytes_transferred) {
+ServiceManagementRequestBaseC::responseReceived (boost::system::error_code const& ec,
+                                                 size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
@@ -300,7 +300,7 @@ ServiceManagementRequestBase::responseReceived (boost::system::error_code const&
 }
 
 void
-ServiceManagementRequestBase::analyze ( proto::ReplicationServiceResponse const& message) {
+ServiceManagementRequestBaseC::analyze ( proto::ReplicationServiceResponse const& message) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 
@@ -360,7 +360,7 @@ ServiceManagementRequestBaseM::ServiceManagementRequestBaseM (
         char const*                          requestTypeName,
         std::string const&                   worker,
         proto::ReplicationServiceRequestType requestType,
-        Messenger&                           messenger)
+        std::shared_ptr<Messenger> const&    messenger)
 
     :   RequestMessenger (serviceProvider,
                           io_service,
@@ -399,7 +399,7 @@ ServiceManagementRequestBaseM::startImpl () {
     ServiceManagementRequestBaseM::pointer self =
         shared_from_base<ServiceManagementRequestBaseM>();
 
-    _messenger.send<proto::ReplicationServiceResponse> (
+    _messenger->send<proto::ReplicationServiceResponse> (
         worker(),
         id(),
         _bufferPtr,

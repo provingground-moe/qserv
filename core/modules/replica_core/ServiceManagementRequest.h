@@ -60,6 +60,7 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
+#include "replica_core/Common.h"
 #include "replica_core/RequestConnection.h"
 #include "replica_core/RequestMessenger.h"
 
@@ -173,22 +174,22 @@ struct ServiceRequestsRequestPolicy {
   * of the protocol. All final customizations and type-specific operations are
   * provided via a generic subclass.
   */
-class ServiceManagementRequestBase
+class ServiceManagementRequestBaseC
     :   public RequestConnection {
 
 public:
 
     /// The pointer type for instances of the class
-    typedef std::shared_ptr<ServiceManagementRequestBase> pointer;
+    typedef std::shared_ptr<ServiceManagementRequestBaseC> pointer;
 
     // Default construction and copy semantics are proxibited
 
-    ServiceManagementRequestBase () = delete;
-    ServiceManagementRequestBase (ServiceManagementRequestBase const&) = delete;
-    ServiceManagementRequestBase & operator= (ServiceManagementRequestBase const&) = delete;
+    ServiceManagementRequestBaseC () = delete;
+    ServiceManagementRequestBaseC (ServiceManagementRequestBaseC const&) = delete;
+    ServiceManagementRequestBaseC& operator= (ServiceManagementRequestBaseC const&) = delete;
 
     /// Destructor
-    virtual ~ServiceManagementRequestBase ();
+    virtual ~ServiceManagementRequestBaseC ();
 
     /**
      * Get the state of the worker-side service
@@ -203,11 +204,11 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      */
-    ServiceManagementRequestBase (ServiceProvider                                   &serviceProvider,
-                                  boost::asio::io_service                           &io_service,
-                                  const char                                        *requestTypeName,
-                                  const std::string                                 &worker,
-                                  lsst::qserv::proto::ReplicationServiceRequestType  requestType);
+    ServiceManagementRequestBaseC (ServiceProvider&                                 serviceProvider,
+                                  boost::asio::io_service&                          io_service,
+                                  char const*                                       requestTypeName,
+                                  std::string const&                                worker,
+                                  lsst::qserv::proto::ReplicationServiceRequestType requestType);
 private:
 
     /**
@@ -220,14 +221,14 @@ private:
     void beginProtocol () final;
     
     /// Callback handler for the asynchronious operation
-    void requestSent (const boost::system::error_code &ec,
+    void requestSent (boost::system::error_code const& ec,
                       size_t                           bytes_transferred);
 
     /// Start receiving the response from the destination worker
     void receiveResponse ();
 
     /// Callback handler for the asynchronious operation
-    void responseReceived (const boost::system::error_code &ec,
+    void responseReceived (boost::system::error_code const& ec,
                            size_t                           bytes_transferred);
 
     /// Process the worker response to the requested operation
@@ -249,25 +250,25 @@ private:
   * to allow further policy-based customization of specific requests.
   */
 template <typename POLICY>
-class ServiceManagementRequest
-    :   public ServiceManagementRequestBase {
+class ServiceManagementRequestC
+    :   public ServiceManagementRequestBaseC {
 
 public:
 
     /// The pointer type for instances of the class
-    typedef std::shared_ptr<ServiceManagementRequest<POLICY>> pointer;
+    typedef std::shared_ptr<ServiceManagementRequestC<POLICY>> pointer;
 
     /// The function type for notifications on the completon of the request
     typedef std::function<void(pointer)> callback_type;
 
     // Default construction and copy semantics are proxibited
 
-    ServiceManagementRequest () = delete;
-    ServiceManagementRequest (ServiceManagementRequest const&) = delete;
-    ServiceManagementRequest & operator= (ServiceManagementRequest const&) = delete;
+    ServiceManagementRequestC () = delete;
+    ServiceManagementRequestC (ServiceManagementRequestC const&) = delete;
+    ServiceManagementRequestC& operator= (ServiceManagementRequestC const&) = delete;
 
     /// Destructor
-    ~ServiceManagementRequest () final {
+    ~ServiceManagementRequestC () final {
     }
 
     /**
@@ -283,13 +284,13 @@ public:
      * @param onFinish         - an optional callback function to be called upon a completion of
      *                           the request.
      */
-    static pointer create (ServiceProvider                 &serviceProvider,
-                           boost::asio::io_service         &io_service,
-                           const std::string               &worker,
-                           callback_type                    onFinish) {
+    static pointer create (ServiceProvider&         serviceProvider,
+                           boost::asio::io_service& io_service,
+                           std::string const&       worker,
+                           callback_type            onFinish) {
 
-        return ServiceManagementRequest<POLICY>::pointer (
-            new ServiceManagementRequest<POLICY> (
+        return ServiceManagementRequestC<POLICY>::pointer (
+            new ServiceManagementRequestC<POLICY> (
                 serviceProvider,
                 io_service,
                 POLICY::requestTypeName(),
@@ -303,18 +304,18 @@ private:
     /**
      * Construct the request
      */
-    ServiceManagementRequest (ServiceProvider                                   &serviceProvider,
-                              boost::asio::io_service                           &io_service,
-                              const char                                        *requestTypeName,
-                              const std::string                                 &worker,
-                              lsst::qserv::proto::ReplicationServiceRequestType  requestType,
-                              callback_type                                      onFinish)
+    ServiceManagementRequestC (ServiceProvider&                                  serviceProvider,
+                               boost::asio::io_service&                          io_service,
+                               char const*                                       requestTypeName,
+                               std::string const&                                worker,
+                               lsst::qserv::proto::ReplicationServiceRequestType requestType,
+                               callback_type                                     onFinish)
 
-        :   ServiceManagementRequestBase (serviceProvider,
-                                          io_service,
-                                          requestTypeName,
-                                          worker,
-                                          requestType),
+        :   ServiceManagementRequestBaseC (serviceProvider,
+                                           io_service,
+                                           requestTypeName,
+                                           worker,
+                                           requestType),
             _onFinish (onFinish)
     {}
 
@@ -326,7 +327,7 @@ private:
      */
     void notify () final {
         if (_onFinish != nullptr) {
-            ServiceManagementRequest<POLICY>::pointer self = shared_from_base<ServiceManagementRequest<POLICY>>();
+            ServiceManagementRequestC<POLICY>::pointer self = shared_from_base<ServiceManagementRequestC<POLICY>>();
             _onFinish(self);
         }
     }
@@ -336,11 +337,6 @@ private:
     /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
 };
-
-typedef ServiceManagementRequest<ServiceSuspendRequestPolicy>  ServiceSuspendRequest;
-typedef ServiceManagementRequest<ServiceResumeRequestPolicy>   ServiceResumeRequest;
-typedef ServiceManagementRequest<ServiceStatusRequestPolicy>   ServiceStatusRequest;
-typedef ServiceManagementRequest<ServiceRequestsRequestPolicy> ServiceRequestsRequest;
 
 
 // ===============================================
@@ -391,7 +387,7 @@ protected:
                                    char const*                                       requestTypeName,
                                    std::string const&                                worker,
                                    lsst::qserv::proto::ReplicationServiceRequestType requestType,
-                                   Messenger&                                        messenger);
+                                   std::shared_ptr<Messenger> const&                 messenger);
 private:
 
     /**
@@ -461,11 +457,11 @@ public:
      *                           the request.
      * @param messenger       - an interface for communicating with workers
      */
-    static pointer create (ServiceProvider&         serviceProvider,
-                           boost::asio::io_service& io_service,
-                           std::string const&       worker,
-                           callback_type            onFinish,
-                           Messenger&               messenger) {
+    static pointer create (ServiceProvider&                  serviceProvider,
+                           boost::asio::io_service&          io_service,
+                           std::string const&                worker,
+                           callback_type                     onFinish,
+                           std::shared_ptr<Messenger> const& messenger) {
 
         return ServiceManagementRequestM<POLICY>::pointer (
             new ServiceManagementRequestM<POLICY> (
@@ -489,7 +485,7 @@ private:
                                std::string const&                                worker,
                                lsst::qserv::proto::ReplicationServiceRequestType requestType,
                                callback_type                                     onFinish,
-                               Messenger&                                        messenger)
+                               std::shared_ptr<Messenger> const&                 messenger)
 
         :   ServiceManagementRequestBaseM (serviceProvider,
                                            io_service,
@@ -519,11 +515,30 @@ private:
     callback_type _onFinish;
 };
 
-typedef ServiceManagementRequestM<ServiceSuspendRequestPolicy>  ServiceSuspendRequestM;
-typedef ServiceManagementRequestM<ServiceResumeRequestPolicy>   ServiceResumeRequestM;
-typedef ServiceManagementRequestM<ServiceStatusRequestPolicy>   ServiceStatusRequestM;
-typedef ServiceManagementRequestM<ServiceRequestsRequestPolicy> ServiceRequestsRequestM;
 
+// =================================================================
+//   Type switch as per the macro defined in replica_core/Common.h
+// =================================================================
+
+#ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+typedef ServiceManagementRequestBaseC ServiceManagementRequestBase;
+
+typedef ServiceManagementRequestC<ServiceSuspendRequestPolicy>  ServiceSuspendRequest;
+typedef ServiceManagementRequestC<ServiceResumeRequestPolicy>   ServiceResumeRequest;
+typedef ServiceManagementRequestC<ServiceStatusRequestPolicy>   ServiceStatusRequest;
+typedef ServiceManagementRequestC<ServiceRequestsRequestPolicy> ServiceRequestsRequest;
+
+#else  // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+typedef ServiceManagementRequestBaseM ServiceManagementRequestBase;
+
+typedef ServiceManagementRequestM<ServiceSuspendRequestPolicy>  ServiceSuspendRequest;
+typedef ServiceManagementRequestM<ServiceResumeRequestPolicy>   ServiceResumeRequest;
+typedef ServiceManagementRequestM<ServiceStatusRequestPolicy>   ServiceStatusRequest;
+typedef ServiceManagementRequestM<ServiceRequestsRequestPolicy> ServiceRequestsRequest;
+
+#endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
 }}} // namespace lsst::qserv::replica_core
 

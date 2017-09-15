@@ -34,6 +34,7 @@
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FindAllRequest.h"
+#include "replica_core/Messenger.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/ServiceProvider.h"
@@ -203,7 +204,11 @@ public:
     typename REQUEST_TYPE::pointer serviceManagementOperation (
             Controller::pointer                   controller, 
             const std::string                    &workerName,
-            typename REQUEST_TYPE::callback_type  onFinish) {
+            typename REQUEST_TYPE::callback_type  onFinish
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+            ,typename Messenger::pointer         &messenger
+#endif
+            ) {
 
         controller->assertIsRunning();
 
@@ -215,6 +220,9 @@ public:
                 [controller] (typename REQUEST_TYPE::pointer request) {
                     controller->finish(request->id());
                 }
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+                ,messenger
+#endif
             );
     
         // Register the request (along with its callback) by its unique
@@ -288,6 +296,10 @@ Controller::Controller (ServiceProvider &serviceProvider)
         _work     (nullptr),
         _thread   (nullptr),
         _registry () {
+
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+    _messenger = Messenger::create (_serviceProvider, _io_service);
+#endif
 }
 
 Controller::~Controller () {
@@ -684,7 +696,11 @@ Controller::suspendWorkerService (const std::string                    &workerNa
     return ControllerImpl::serviceManagementOperation<ServiceSuspendRequest> (
         shared_from_this(),
         workerName,
-        onFinish);
+        onFinish
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 ServiceResumeRequest::pointer
@@ -697,7 +713,11 @@ Controller::resumeWorkerService (const std::string                   &workerName
     return ControllerImpl::serviceManagementOperation<ServiceResumeRequest> (
         shared_from_this(),
         workerName,
-        onFinish);
+        onFinish
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 ServiceStatusRequest::pointer
@@ -710,7 +730,11 @@ Controller::statusOfWorkerService (const std::string                   &workerNa
     return ControllerImpl::serviceManagementOperation<ServiceStatusRequest> (
         shared_from_this(),
         workerName,
-        onFinish);
+        onFinish
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 ServiceRequestsRequest::pointer
@@ -723,7 +747,11 @@ Controller::requestsOfWorkerService (const std::string                     &work
     return ControllerImpl::serviceManagementOperation<ServiceRequestsRequest> (
         shared_from_this(),
         workerName,
-        onFinish);
+        onFinish
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 

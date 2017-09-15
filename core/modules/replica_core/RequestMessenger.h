@@ -89,13 +89,13 @@ protected:
      *                          depends on a specific request.
      * @param messenger       - an interface for communicating with workers
      */
-    RequestMessenger (ServiceProvider&          serviceProvider,
-                      boost::asio::io_service& io_service,
-                      std::string       const& type,
-                      std::string       const& worker,
-                      int                      priority,
-                      bool                     keepTracking,
-                      Messenger&               messenger);
+    RequestMessenger (ServiceProvider&                  serviceProvider,
+                      boost::asio::io_service&          io_service,
+                      std::string const&                type,
+                      std::string const&                worker,
+                      int                               priority,
+                      bool                              keepTracking,
+                      std::shared_ptr<Messenger> const& messenger);
 
     /**
      * Implement a method defined in the base class.
@@ -104,9 +104,8 @@ protected:
     
 protected:
 
-    // Mutable state for network communication
-
-    Messenger& _messenger;
+    /// Worker messenging service
+    std::shared_ptr<Messenger> _messenger;
 };
 
 }}} // namespace lsst::qserv::replica_core
