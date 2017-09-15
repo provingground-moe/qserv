@@ -29,7 +29,6 @@
 
 // System headers
 
-#include <memory>       // shared_ptr, enable_shared_from_this
 #include <string>
 #include <vector>
 
@@ -56,14 +55,14 @@ public:
 
     ServiceProvider () = delete;
     ServiceProvider (ServiceProvider const&) = delete;
-    ServiceProvider & operator= (ServiceProvider const&) = delete;
+    ServiceProvider& operator= (ServiceProvider const&) = delete;
 
     /**
      * Construct the object.
      *
      * @param configuration - the configuration service
      */
-    explicit ServiceProvider (Configuration &configuration);
+    explicit ServiceProvider (Configuration& configuration);
 
     /**
      * Return a reference to the configuration service
@@ -76,14 +75,14 @@ public:
      * 
      * @param name - the name of a worker
      */
-    void assertWorkerIsValid (const std::string &name);
+    void assertWorkerIsValid (std::string const& name);
 
     /**
      * Make sure workers are now known in the configuration and they're different.
      * Throws exception std::invalid_argument otherwise.
      */
-    void assertWorkersAreDifferent (const std::string &workerOneName,
-                                    const std::string &workerTwoName);
+    void assertWorkersAreDifferent (std::string const& workerOneName,
+                                    std::string const& workerTwoName);
 
     /**
      * Make sure this database is known in the configuration. Throws exception
@@ -91,10 +90,11 @@ public:
      *
      * @param name - the name of a database
      */
-    void assertDatabaseIsValid (const std::string &name);
+    void assertDatabaseIsValid (std::string const& name);
 
 private:
 
+    /// Configuration manager
     Configuration& _configuration;
 };
 

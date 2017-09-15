@@ -41,13 +41,13 @@ namespace qserv {
 namespace replica_core {
 
 
-RequestMessenger::RequestMessenger (ServiceProvider&         serviceProvider,
-                                    boost::asio::io_service& io_service,
-                                    const std::string&       type,
-                                    const std::string&       worker,
-                                    int                      priority,
-                                    bool                     keepTracking,
-                                    Messenger&               messenger)
+RequestMessenger::RequestMessenger (ServiceProvider&                  serviceProvider,
+                                    boost::asio::io_service&          io_service,
+                                    const std::string&                type,
+                                    const std::string&                worker,
+                                    int                               priority,
+                                    bool                              keepTracking,
+                                    std::shared_ptr<Messenger> const& messenger)
 
     :   Request (serviceProvider,
                  io_service,
@@ -68,8 +68,8 @@ RequestMessenger::finishImpl () {
     LOGS(_log, LOG_LVL_DEBUG, context() << "finishImpl");
 
     // Make sure the request (if any) has been eliminated from the messenger
-    if (_messenger.exists(worker(), id()))
-        _messenger.cancel(worker(), id());
+    if (_messenger->exists(worker(), id()))
+        _messenger->cancel(worker(), id());
 }
 
     

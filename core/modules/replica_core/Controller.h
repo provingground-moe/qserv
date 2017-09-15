@@ -54,6 +54,9 @@ namespace replica_core {
 // Forward declarations
 
 class ControllerImpl;
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+class Messenger;
+#endif
 class ServiceProvider;
 class RequestWrapper;
 
@@ -486,6 +489,11 @@ private:
 
     /// The registry of the on-going requests.
     std::map<std::string,std::shared_ptr<RequestWrapper>> _registry;
+    
+    /// Worker messenger service
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+    std::shared_ptr<Messenger> _messenger;
+#endif
 };
 
 }}} // namespace lsst::qserv::replica_core

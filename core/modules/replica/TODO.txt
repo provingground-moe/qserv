@@ -1,0 +1,76 @@
+___________________________
+Migration plan to Messenger
+
+Then investigate three design options:
+
+1. Replace the old hierarchy with the new one
+
+Rewrite the hierarchy of request (and the Controller) to use Messanger.
+The pros and cons of tis are:
+    - it may be a lengthy and disruptive process
+    - it will be more difficult to debug and test by cross-checking against
+    the old design
+    + reduced amount of code in the project
+    + transparent to client applications & tests
+
+2. Design a separate hierarchy
+
+A new class Controller2 and a separate hierarchy of the requests based on a new base
+class Request2. This approach has the following proc and cons:
+    - will require rewriting all test applications to work with new data types
+    + won't touch an existing hierarchy
+    + will allow testing the new hierarchy vs the old one
+    + getting rid of the older hierarchy will be easy once a testing is over
+
+3. Mixed design (simple approach)
+
+Refactor class Request into two layers:
+    * Request: a communication independent class with data & services needed
+    by both hierarchies, such as 'id', 'worker', serviceProvider, configuration,
+    timers, etc.
+    * RequestConnection: the communication context for the current implementation
+    which is moved from the current version of class Request. The old
+    classes will be moved to inherit from RequestSimple.
+
+Then create subclass RequestMessenger of the new version of Request. New versions
+of the final classes will derive from it.
+
+Pros and cons:
+    - some (though, not a lot) extra work for refactoring Request and its derived
+    classes
+    - more code in the project
+    - still requires changes for clients because 
+    + requests of both types may coexist witin controller's collections of requests
+    + both implementations may coexist for debugging and better testing
+    + opens a possibility for multiple other implementations
+
+4. Mixed design (advanced approach)
+
+Redesign existing hierarchy by introducing impllementation-independent classes:
+
+  RequestI
+    ReplicationRequest
+    DeleteRequest     
+    ..
+    
+The interfaces must be clean from any communication-specific data or handlers.
+
+Then introduce a new base class with communication context:
+
+   RequestSimple
+
+And derive from both hierarchy by:
+
+   RequstSimple
+   ReplicationRequest
+     ReplicationRequestSimple
+
+Pros and cons:
+    - the code will be too complex, and the overall design may look too confusing
+    from the support poinbt of veiw
+    - the refactoring and implementation effort may be substantial
+    - it would be difficult to clean the code if a decision to get rid of the old
+    hierarchy will be made
+    + fully transparent for clients
+    + a choice which final class to instantiate can be based on configuration
+

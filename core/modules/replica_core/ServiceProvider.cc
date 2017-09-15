@@ -38,20 +38,20 @@ namespace qserv {
 namespace replica_core {
 
 
-ServiceProvider::ServiceProvider (Configuration &configuration)
+ServiceProvider::ServiceProvider (Configuration& configuration)
     :   _configuration(configuration) {
 }
 
 void
-ServiceProvider::assertWorkerIsValid (const std::string &name) {
+ServiceProvider::assertWorkerIsValid (std::string const& name) {
     if (!_configuration.isKnownWorker(name))
         throw std::invalid_argument (
             "Request::assertWorkerIsValid: worker name is not valid: " + name);
 }
 
 void
-ServiceProvider::assertWorkersAreDifferent (const std::string &firstName,
-                                            const std::string &secondName) {
+ServiceProvider::assertWorkersAreDifferent (std::string const& firstName,
+                                            std::string const& secondName) {
     assertWorkerIsValid(firstName);
     assertWorkerIsValid(secondName);
 
@@ -61,7 +61,7 @@ ServiceProvider::assertWorkersAreDifferent (const std::string &firstName,
 }
 
 void
-ServiceProvider::assertDatabaseIsValid (const std::string &name) {
+ServiceProvider::assertDatabaseIsValid (std::string const& name) {
     if (!_configuration.isKnownDatabase(name))
         throw std::invalid_argument (
             "Request::assertDatabaseIsValid: database name is not valid: " + name);
