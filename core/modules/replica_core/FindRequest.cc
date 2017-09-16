@@ -38,6 +38,9 @@
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/ServiceProvider.h"
 
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
+
 namespace proto = lsst::qserv::proto;
 
 namespace {
@@ -159,6 +162,8 @@ void
 FindRequestC::requestSent (boost::system::error_code const& ec,
                            size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
@@ -204,6 +209,8 @@ void
 FindRequestC::responseReceived (boost::system::error_code const& ec,
                                 size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     if (isAborted(ec)) return;
@@ -246,6 +253,8 @@ FindRequestC::wait () {
 
 void
 FindRequestC::awaken (boost::system::error_code const& ec) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
@@ -301,6 +310,8 @@ void
 FindRequestC::statusSent (boost::system::error_code const& ec,
                           size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
 
     if (isAborted(ec)) return;
@@ -345,6 +356,8 @@ FindRequestC::receiveStatus () {
 void
 FindRequestC::statusReceived (boost::system::error_code const& ec,
                               size_t                           bytes_transferred) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -559,6 +572,8 @@ FindRequestM::wait () {
 void
 FindRequestM::awaken (boost::system::error_code const& ec) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
     if (isAborted(ec)) return;
@@ -607,6 +622,11 @@ FindRequestM::send () {
 void
 FindRequestM::analyze (bool                                  success,
                        proto::ReplicationResponseFind const& message) {
+
+    // This guard is made on behalf of an asynchronious callback fired
+    // upon a completion of the request within method send() - the only
+    // client of analyze() 
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 

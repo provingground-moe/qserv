@@ -37,6 +37,9 @@
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
+
 namespace proto = lsst::qserv::proto;
 
 namespace {
@@ -148,6 +151,8 @@ void
 DeleteRequestC::requestSent (const boost::system::error_code &ec,
                             size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
@@ -192,6 +197,8 @@ void
 DeleteRequestC::responseReceived (boost::system::error_code const& ec,
                                   size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     if (isAborted(ec)) return;
@@ -234,6 +241,8 @@ DeleteRequestC::wait () {
 
 void
 DeleteRequestC::awaken (boost::system::error_code const& ec) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
@@ -289,6 +298,8 @@ void
 DeleteRequestC::statusSent (boost::system::error_code const& ec,
                             size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
 
     if (isAborted(ec)) return;
@@ -332,6 +343,8 @@ DeleteRequestC::receiveStatus () {
 void
 DeleteRequestC::statusReceived (boost::system::error_code const& ec,
                                 size_t                           bytes_transferred) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -535,6 +548,8 @@ DeleteRequestM::wait () {
 void
 DeleteRequestM::awaken (boost::system::error_code const& ec) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
     if (isAborted(ec)) return;
@@ -583,6 +598,11 @@ DeleteRequestM::send () {
 void
 DeleteRequestM::analyze (bool                                                 success,
                          lsst::qserv::proto::ReplicationResponseDelete const& message) {
+
+    // This guard is made on behalf of an asynchronious callback fired
+    // upon a completion of the request within method send() - the only
+    // client of analyze() 
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 

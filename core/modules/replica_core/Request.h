@@ -30,6 +30,7 @@
 // System headers
 
 #include <memory>       // shared_ptr, enable_shared_from_this
+#include <mutex>
 #include <string>
 
 #include <boost/asio.hpp>
@@ -350,7 +351,9 @@ protected:
     /// with status: FINISHED::EXPIRED.    
     unsigned int                _requestExpirationIvalSec;
     boost::asio::deadline_timer _requestExpirationTimer;
-};
+
+    /// Mutex guarding internal state
+    mutable std::mutex _mtx;};
 
 }}} // namespace lsst::qserv::replica_core
 
