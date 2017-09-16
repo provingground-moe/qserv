@@ -28,15 +28,20 @@
 ///
 ///   class ServiceState
 ///   class ServiceSuspendRequestPolicy
-///
-/// Request implementations based on individual connectors provided by
-/// base class RequestConnection:
-///
 ///   class ServiceManagementRequestBase
 ///   class ServiceManagementRequest
 ///   class ServiceSuspendRequest
 ///   class ServiceResumeRequest
 ///   class ServiceStatusRequest
+///
+/// Request implementations based on individual connectors provided by
+/// base class RequestConnection:
+///
+///   class ServiceManagementRequestBaseC
+///   class ServiceManagementRequestC
+///   class ServiceSuspendRequestC
+///   class ServiceResumeRequestC
+///   class ServiceStatusRequestC
 ///
 /// Request implementations based on multiplexed connectors provided by
 /// base class RequestMessenger:
@@ -46,7 +51,7 @@
 ///   class ServiceSuspendRequestM
 ///   class ServiceResumeRequestM
 ///   class ServiceStatusRequestM
-//
+///
 /// (see individual class documentation for more information)
 
 // System headers

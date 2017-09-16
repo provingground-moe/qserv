@@ -24,7 +24,20 @@
 
 /// FindAllRequest.h declares:
 ///
-/// class FindAllRequest
+/// Common classes shared by both implementations:
+///
+///   class FindAllRequest
+///
+/// Request implementations based on individual connectors provided by
+/// base class RequestConnection:
+///
+///   class FindAllRequestC
+///
+/// Request implementations based on multiplexed connectors provided by
+/// base class RequestMessenger:
+///
+///   class FindAllRequestM
+///
 /// (see individual class documentation for more information)
 
 // System headers
@@ -36,8 +49,10 @@
 // Qserv headers
 
 #include "proto/replication.pb.h"
+#include "replica_core/Common.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/RequestConnection.h"
+#include "replica_core/RequestMessenger.h"
 
 // This header declarations
 
@@ -45,42 +60,51 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+// Forward declarations
+
+class Messenger;
+
+
+// =============================================
+//   Classes based on the dedicated connectors
+// =============================================
+
 /**
-  * Class FindAllRequest represents known replicas lookup requests within
+  * Class FindAllRequestC represents known replicas lookup requests within
   * the master controller.
   */
-class FindAllRequest
+class FindAllRequestC
     :   public RequestConnection  {
 
 public:
 
     /// The pointer type for instances of the class
-    typedef std::shared_ptr<FindAllRequest> pointer;
+    typedef std::shared_ptr<FindAllRequestC> pointer;
 
     /// The function type for notifications on the completon of the request
     typedef std::function<void(pointer)> callback_type;
 
     // Default construction and copy semantics are proxibited
 
-    FindAllRequest () = delete;
-    FindAllRequest (FindAllRequest const&) = delete;
-    FindAllRequest & operator= (FindAllRequest const&) = delete;
+    FindAllRequestC () = delete;
+    FindAllRequestC (FindAllRequestC const&) = delete;
+    FindAllRequestC& operator= (FindAllRequestC const&) = delete;
 
     /// Destructor
-    ~FindAllRequest () final;
+    ~FindAllRequestC () final;
 
     // Trivial acccessors
  
-    const std::string& database        () const { return _database; }
+    std::string const& database        () const { return _database; }
     bool               computeCheckSum () const { return _computeCheckSum; }
 
-   /**
+    /**
      * Return a refernce to a result of the completed request.
      *
      * Note that this operation will return a sensible result only if the operation
      * finishes with status FINISHED::SUCCESS
      */
-    const ReplicaInfoCollection& responseData () const;
+    ReplicaInfoCollection const& responseData () const;
 
     /**
      * Create a new request with specified parameters.
@@ -98,28 +122,28 @@ public:
      * @param computeCheckSum  - tell a worker server to compute check/control sum on each file
      * @param keepTracking     - keep tracking the request before it finishes or fails
      */
-    static pointer create (ServiceProvider         &serviceProvider,
-                           boost::asio::io_service &io_service,
-                           const std::string       &worker,
-                           const std::string       &database,
+    static pointer create (ServiceProvider&         serviceProvider,
+                           boost::asio::io_service& io_service,
+                           std::string const&       worker,
+                           std::string const&       database,
                            callback_type            onFinish,
-                           int                      priority=0,
-                           bool                     computeCheckSum=false,
-                           bool                     keepTracking=true);
+                           int                      priority,
+                           bool                     computeCheckSum,
+                           bool                     keepTracking);
 
 private:
 
     /**
      * Construct the request with the pointer to the services provider.
      */
-    FindAllRequest (ServiceProvider         &serviceProvider,
-                    boost::asio::io_service &io_service,
-                    const std::string       &worker,
-                    const std::string       &database,
-                    callback_type            onFinish,
-                    int                      priority=0,
-                    bool                     computeCheckSum=false,
-                    bool                     keepTracking=true);
+    FindAllRequestC (ServiceProvider&         serviceProvider,
+                     boost::asio::io_service& io_service,
+                     std::string const&       worker,
+                     std::string const&       database,
+                     callback_type            onFinish,
+                     int                      priority,
+                     bool                     computeCheckSum,
+                     bool                     keepTracking);
 
     /**
       * This method is called when a connection is established and
@@ -132,14 +156,14 @@ private:
     void beginProtocol () final;
     
     /// Callback handler for the asynchronious operation
-    void requestSent (const boost::system::error_code &ec,
+    void requestSent (boost::system::error_code const& ec,
                       size_t                           bytes_transferred);
 
     /// Start receiving the response from the destination worker
     void receiveResponse ();
 
     /// Callback handler for the asynchronious operation
-    void responseReceived (const boost::system::error_code &ec,
+    void responseReceived (boost::system::error_code const& ec,
                            size_t                           bytes_transferred);
 
     /// Start the timer before attempting the previously failed
@@ -147,24 +171,24 @@ private:
     void wait ();
 
     /// Callback handler for the asynchronious operation
-    void awaken (const boost::system::error_code &ec);
+    void awaken (boost::system::error_code const& ec);
 
     /// Start sending the status request to the destination worker
     void sendStatus ();
 
     /// Callback handler for the asynchronious operation
-    void statusSent (const boost::system::error_code &ec,
+    void statusSent (boost::system::error_code const& ec,
                      size_t                           bytes_transferred);
 
     /// Start receiving the status response from the destination worker
     void receiveStatus ();
 
     /// Callback handler for the asynchronious operation
-    void statusReceived (const boost::system::error_code &ec,
+    void statusReceived (boost::system::error_code const& ec,
                          size_t                           bytes_transferred);
 
     /// Process the completion of the requested operation
-    void analyze (const lsst::qserv::proto::ReplicationResponseFindAll &message);
+    void analyze (lsst::qserv::proto::ReplicationResponseFindAll const& message);
 
     /**
      * Notifying a party which initiated the request.
@@ -188,6 +212,147 @@ private:
     /// Result of the operation
     ReplicaInfoCollection _replicaInfoCollection;
 };
+
+
+// ===============================================
+//   Classes based on the multiplexed connectors
+// ===============================================
+
+/**
+  * Class FindAllRequestM represents known replicas lookup requests within
+  * the master controller.
+  */
+class FindAllRequestM
+    :   public RequestMessenger  {
+
+public:
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<FindAllRequestM> pointer;
+
+    /// The function type for notifications on the completon of the request
+    typedef std::function<void(pointer)> callback_type;
+
+    // Default construction and copy semantics are proxibited
+
+    FindAllRequestM () = delete;
+    FindAllRequestM (FindAllRequestM const&) = delete;
+    FindAllRequestM& operator= (FindAllRequestM const&) = delete;
+
+    /// Destructor
+    ~FindAllRequestM () final;
+
+    // Trivial acccessors
+ 
+    std::string const& database        () const { return _database; }
+    bool               computeCheckSum () const { return _computeCheckSum; }
+
+    /**
+     * Return a refernce to a result of the completed request.
+     *
+     * Note that this operation will return a sensible result only if the operation
+     * finishes with status FINISHED::SUCCESS
+     */
+    ReplicaInfoCollection const& responseData () const;
+
+    /**
+     * Create a new request with specified parameters.
+     * 
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     *
+     * @param serviceProvider  - a host of services for various communications
+     * @param worker           - the identifier of a worker node (the one where the chunks
+     *                           expected to be located)
+     * @param database         - the name of a database
+     * @param onFinish         - an optional callback function to be called upon a completion of the request.
+     * @param priority         - a priority level of the request
+     * @param computeCheckSum  - tell a worker server to compute check/control sum on each file
+     * @param keepTracking     - keep tracking the request before it finishes or fails
+     * @param messenger        - an interface for communicating with workers
+     */
+    static pointer create (ServiceProvider&                  serviceProvider,
+                           boost::asio::io_service&          io_service,
+                           std::string const&                worker,
+                           std::string const&                database,
+                           callback_type                     onFinish,
+                           int                               priority,
+                           bool                              computeCheckSum,
+                           bool                              keepTracking,
+                           std::shared_ptr<Messenger> const& messenger);
+
+private:
+
+    /**
+     * Construct the request with the pointer to the services provider.
+     */
+    FindAllRequestM (ServiceProvider&                  serviceProvider,
+                     boost::asio::io_service&          io_service,
+                     std::string const&                worker,
+                     std::string const&                database,
+                     callback_type                     onFinish,
+                     int                               priority,
+                     bool                              computeCheckSum,
+                     bool                              keepTracking,
+                     std::shared_ptr<Messenger> const& messenger);
+
+
+
+    /**
+      * Implement the method declared in the base class
+      *
+      * @see Request::startImpl()
+      */
+    void startImpl () final;
+
+    /// Start the timer before attempting the previously failed
+    /// or successfull (if a status check is needed) step.
+    void wait ();
+
+    /// Callback handler for the asynchronious operation
+    void awaken (boost::system::error_code const& ec);
+
+    /// Send the serialized content of the buffer to a worker
+    void send ();
+
+    /// Process the completion of the requested operation
+    void analyze (bool                                                  success,
+                  lsst::qserv::proto::ReplicationResponseFindAll const& message);
+
+    /**
+     * Notifying a party which initiated the request.
+     *
+     * This method implements the corresponing virtual method defined
+     * bu the base class.
+     */
+    void notify () final;
+
+private:
+
+    // Parameters of the object
+
+    std::string _database;
+    bool        _computeCheckSum;
+
+    // Registered callback to be called when the operation finishes
+
+    callback_type _onFinish;
+
+    /// Result of the operation
+    ReplicaInfoCollection _replicaInfoCollection;
+};
+
+
+// =================================================================
+//   Type switch as per the macro defined in replica_core/Common.h
+// =================================================================
+
+#ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+typedef FindAllRequestC FindAllRequest;
+#else
+typedef FindAllRequestM FindAllRequest;
+#endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
 }}} // namespace lsst::qserv::replica_core
 

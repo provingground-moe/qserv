@@ -33,6 +33,7 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Messenger.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -48,19 +49,24 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-ReplicationRequest::pointer
-ReplicationRequest::create (ServiceProvider         &serviceProvider,
-                            boost::asio::io_service &io_service,
-                            const std::string       &worker,
-                            const std::string       &sourceWorker,
-                            const std::string       &database,
-                            unsigned int             chunk,
-                            callback_type            onFinish,
-                            int                      priority,
-                            bool                     keepTracking) {
 
-    return ReplicationRequest::pointer (
-        new ReplicationRequest (
+//////////////////////////////////////////
+//         ReplicationRequestC          //
+//////////////////////////////////////////
+
+ReplicationRequestC::pointer
+ReplicationRequestC::create (ServiceProvider&         serviceProvider,
+                             boost::asio::io_service& io_service,
+                             std::string const&       worker,
+                             std::string const&       sourceWorker,
+                             std::string const&       database,
+                             unsigned int             chunk,
+                             callback_type            onFinish,
+                             int                      priority,
+                             bool                     keepTracking) {
+
+    return ReplicationRequestC::pointer (
+        new ReplicationRequestC (
             serviceProvider,
             io_service,
             worker,
@@ -72,15 +78,16 @@ ReplicationRequest::create (ServiceProvider         &serviceProvider,
             keepTracking));
 }
 
-ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider,
-                                        boost::asio::io_service &io_service,
-                                        const std::string       &worker,
-                                        const std::string       &sourceWorker,
-                                        const std::string       &database,
-                                        unsigned int             chunk,
-                                        callback_type            onFinish,
-                                        int                      priority,
-                                        bool                     keepTracking)
+ReplicationRequestC::ReplicationRequestC (ServiceProvider&         serviceProvider,
+                                          boost::asio::io_service& io_service,
+                                          std::string const&       worker,
+                                          std::string const&       sourceWorker,
+                                          std::string const&       database,
+                                          unsigned int             chunk,
+                                          callback_type            onFinish,
+                                          int                      priority,
+                                          bool                     keepTracking)
+
     :   RequestConnection (serviceProvider,
                            io_service,
                            "REPLICA_CREATE",
@@ -99,11 +106,11 @@ ReplicationRequest::ReplicationRequest (ServiceProvider         &serviceProvider
     _serviceProvider.assertDatabaseIsValid     (database);
 }
 
-ReplicationRequest::~ReplicationRequest () {
+ReplicationRequestC::~ReplicationRequestC () {
 }
 
 void
-ReplicationRequest::beginProtocol () {
+ReplicationRequestC::beginProtocol () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
 
@@ -136,8 +143,8 @@ ReplicationRequest::beginProtocol () {
             _bufferPtr->size()
         ),
         boost::bind (
-            &ReplicationRequest::requestSent,
-            shared_from_base<ReplicationRequest>(),
+            &ReplicationRequestC::requestSent,
+            shared_from_base<ReplicationRequestC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -145,8 +152,8 @@ ReplicationRequest::beginProtocol () {
 }
 
 void
-ReplicationRequest::requestSent (const boost::system::error_code &ec,
-                                 size_t                           bytes_transferred) {
+ReplicationRequestC::requestSent (boost::system::error_code const& ec,
+                                  size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
@@ -157,7 +164,7 @@ ReplicationRequest::requestSent (const boost::system::error_code &ec,
 }
 
 void
-ReplicationRequest::receiveResponse () {
+ReplicationRequestC::receiveResponse () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
@@ -169,7 +176,7 @@ ReplicationRequest::receiveResponse () {
     // that the worker server sends the whol emessage (its frame and
     // the message itsef) at once.
 
-    const size_t bytes = sizeof(uint32_t);
+    size_t const bytes = sizeof(uint32_t);
 
     _bufferPtr->resize(bytes);
 
@@ -181,8 +188,8 @@ ReplicationRequest::receiveResponse () {
         ),
         boost::asio::transfer_at_least(bytes),
         boost::bind (
-            &ReplicationRequest::responseReceived,
-            shared_from_base<ReplicationRequest>(),
+            &ReplicationRequestC::responseReceived,
+            shared_from_base<ReplicationRequestC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -190,8 +197,8 @@ ReplicationRequest::receiveResponse () {
 }
 
 void
-ReplicationRequest::responseReceived (const boost::system::error_code &ec,
-                                      size_t                           bytes_transferred) {
+ReplicationRequestC::responseReceived (boost::system::error_code const& ec,
+                                       size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
@@ -217,7 +224,7 @@ ReplicationRequest::responseReceived (const boost::system::error_code &ec,
 }
 
 void
-ReplicationRequest::wait () {
+ReplicationRequestC::wait () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "wait");
 
@@ -226,15 +233,15 @@ ReplicationRequest::wait () {
     _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
     _timer.async_wait (
         boost::bind (
-            &ReplicationRequest::awaken,
-            shared_from_base<ReplicationRequest>(),
+            &ReplicationRequestC::awaken,
+            shared_from_base<ReplicationRequestC>(),
             boost::asio::placeholders::error
         )
     );
 }
 
 void
-ReplicationRequest::awaken (const boost::system::error_code &ec) {
+ReplicationRequestC::awaken (boost::system::error_code const& ec) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
@@ -247,7 +254,7 @@ ReplicationRequest::awaken (const boost::system::error_code &ec) {
 }
 
 void
-ReplicationRequest::sendStatus () {
+ReplicationRequestC::sendStatus () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "sendStatus");
 
@@ -278,8 +285,8 @@ ReplicationRequest::sendStatus () {
             _bufferPtr->size()
         ),
         boost::bind (
-            &ReplicationRequest::statusSent,
-            shared_from_base<ReplicationRequest>(),
+            &ReplicationRequestC::statusSent,
+            shared_from_base<ReplicationRequestC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -287,8 +294,8 @@ ReplicationRequest::sendStatus () {
 }
 
 void
-ReplicationRequest::statusSent (const boost::system::error_code &ec,
-                                size_t                           bytes_transferred) {
+ReplicationRequestC::statusSent (boost::system::error_code const& ec,
+                                 size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
 
@@ -299,7 +306,7 @@ ReplicationRequest::statusSent (const boost::system::error_code &ec,
 }
 
 void
-ReplicationRequest::receiveStatus () {
+ReplicationRequestC::receiveStatus () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "receiveStatus");
 
@@ -311,7 +318,7 @@ ReplicationRequest::receiveStatus () {
     // that the worker server sends the whol emessage (its frame and
     // the message itsef) at once.
 
-    const size_t bytes = sizeof(uint32_t);
+    size_t const bytes = sizeof(uint32_t);
 
     _bufferPtr->resize(bytes);
 
@@ -323,8 +330,8 @@ ReplicationRequest::receiveStatus () {
         ),
         boost::asio::transfer_at_least(bytes),
         boost::bind (
-            &ReplicationRequest::statusReceived,
-            shared_from_base<ReplicationRequest>(),
+            &ReplicationRequestC::statusReceived,
+            shared_from_base<ReplicationRequestC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -332,8 +339,8 @@ ReplicationRequest::receiveStatus () {
 }
 
 void
-ReplicationRequest::statusReceived (const boost::system::error_code &ec,
-                                    size_t                           bytes_transferred) {
+ReplicationRequestC::statusReceived (boost::system::error_code const& ec,
+                                     size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -359,7 +366,7 @@ ReplicationRequest::statusReceived (const boost::system::error_code &ec,
 }
 
 void
-ReplicationRequest::analyze (const proto::ReplicationResponseReplicate &message) {
+ReplicationRequestC::analyze (proto::ReplicationResponseReplicate const& message) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(message.status()));
 
@@ -409,19 +416,250 @@ ReplicationRequest::analyze (const proto::ReplicationResponseReplicate &message)
             break;
 
         default:
-            throw std::logic_error("ReplicationRequest::analyze() unknown status '" + proto::ReplicationStatus_Name(message.status()) +
-                                   "' received from server");
-
+            throw std::logic_error (
+                    "ReplicationRequestC::analyze() unknown status '" + proto::ReplicationStatus_Name(message.status()) +
+                   "' received from server");
     }
 }
 
 void
-ReplicationRequest::notify () {
+ReplicationRequestC::notify () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "notify");
 
     if (_onFinish != nullptr) {
-        _onFinish(shared_from_base<ReplicationRequest>());
+        _onFinish(shared_from_base<ReplicationRequestC>());
+    }
+}
+
+
+//////////////////////////////////////////
+//         ReplicationRequestM          //
+//////////////////////////////////////////
+
+ReplicationRequestM::pointer
+ReplicationRequestM::create (ServiceProvider&                  serviceProvider,
+                             boost::asio::io_service&          io_service,
+                             std::string const&                worker,
+                             std::string const&                sourceWorker,
+                             std::string const&                database,
+                             unsigned int                      chunk,
+                             callback_type                     onFinish,
+                             int                               priority,
+                             bool                              keepTracking,
+                             std::shared_ptr<Messenger> const& messenger) {
+
+    return ReplicationRequestM::pointer (
+        new ReplicationRequestM (
+            serviceProvider,
+            io_service,
+            worker,
+            sourceWorker,
+            database,
+            chunk,
+            onFinish,
+            priority,
+            keepTracking,
+            messenger));
+}
+
+ReplicationRequestM::ReplicationRequestM (ServiceProvider&                  serviceProvider,
+                                          boost::asio::io_service&          io_service,
+                                          std::string const&                worker,
+                                          std::string const&                sourceWorker,
+                                          std::string const&                database,
+                                          unsigned int                      chunk,
+                                          callback_type                     onFinish,
+                                          int                               priority,
+                                          bool                              keepTracking,
+                                          std::shared_ptr<Messenger> const& messenger)
+
+    :   RequestMessenger (serviceProvider,
+                          io_service,
+                          "REPLICA_CREATE",
+                          worker,
+                          priority,
+                          keepTracking,
+                          messenger),
+ 
+        _database     (database),
+        _chunk        (chunk),
+        _sourceWorker (sourceWorker),
+        _onFinish     (onFinish),
+        _responseData () {
+
+    _serviceProvider.assertWorkerIsValid       (sourceWorker);
+    _serviceProvider.assertWorkersAreDifferent (sourceWorker, worker);
+    _serviceProvider.assertDatabaseIsValid     (database);
+}
+
+ReplicationRequestM::~ReplicationRequestM () {
+}
+
+void
+ReplicationRequestM::startImpl () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "startImpl");
+
+    // Serialize the Request message header and the request itself into
+    // the network buffer.
+
+    _bufferPtr->resize();
+
+    proto::ReplicationRequestHeader hdr;
+    hdr.set_id          (id());
+    hdr.set_type        (proto::ReplicationRequestHeader::REPLICA);
+    hdr.set_replica_type(proto::ReplicationReplicaRequestType::REPLICA_CREATE);
+
+    _bufferPtr->serialize(hdr);
+
+    proto::ReplicationRequestReplicate message;
+    message.set_priority(priority    ());
+    message.set_database(database    ());
+    message.set_chunk   (chunk       ());
+    message.set_worker  (sourceWorker());
+
+    _bufferPtr->serialize(message);
+
+    send();
+}
+
+void
+ReplicationRequestM::wait () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "wait");
+
+    // Allways need to set the interval before launching the timer.
+    
+    _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
+    _timer.async_wait (
+        boost::bind (
+            &ReplicationRequestM::awaken,
+            shared_from_base<ReplicationRequestM>(),
+            boost::asio::placeholders::error
+        )
+    );
+}
+
+void
+ReplicationRequestM::awaken (boost::system::error_code const& ec) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
+
+    if (isAborted(ec)) return;
+
+    // Also ignore this event if the request expired
+    if (_state== State::FINISHED) return;
+
+    // Serialize the Status message header and the request itself into
+    // the network buffer.
+
+    _bufferPtr->resize();
+
+    proto::ReplicationRequestHeader hdr;
+    hdr.set_id             (id());
+    hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
+    hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
+
+    _bufferPtr->serialize(hdr);
+
+    proto::ReplicationRequestStatus message;
+    message.set_id  (id());
+    message.set_type(proto::ReplicationReplicaRequestType::REPLICA_CREATE);
+
+    _bufferPtr->serialize(message);
+
+    send();
+}
+
+void
+ReplicationRequestM::send () {
+
+    auto self = shared_from_base<ReplicationRequestM>();
+
+    _messenger->send<proto::ReplicationResponseReplicate> (
+        worker(),
+        id(),
+        _bufferPtr,
+        [self] (std::string const&                         id,
+                bool                                       success,
+                proto::ReplicationResponseReplicate const& response) {
+            self->analyze (success, response);
+        }
+    );
+}
+
+void
+ReplicationRequestM::analyze (bool                                       success,
+                              proto::ReplicationResponseReplicate const& message) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
+
+    if (success) {
+
+        // Allways get the latest status reported by the remote server
+        _extendedServerStatus = replica_core::translate(message.status_ext());
+    
+        // Performance counters are updated from either of two sources,
+        // depending on the availability of the 'target' performance counters
+        // filled in by the 'STATUS' queries. If the later is not available
+        // then fallback to the one of the current request.
+    
+        if (message.has_target_performance())
+            _performance.update(message.target_performance());
+        else
+            _performance.update(message.performance());
+    
+        // Always extract extended data regardless of the completion status
+        // reported by the worker service.
+    
+        _responseData = ReplicaCreateInfo(&(message.replication_info()));
+    
+        switch (message.status()) {
+     
+            case proto::ReplicationStatus::SUCCESS:
+                finish (SUCCESS);
+                break;
+    
+            case proto::ReplicationStatus::QUEUED:
+            case proto::ReplicationStatus::IN_PROGRESS:
+            case proto::ReplicationStatus::IS_CANCELLING:
+    
+                // Go wait until a definitive response from the worker is received.
+    
+                wait();
+                return;
+    
+            case proto::ReplicationStatus::BAD:
+                finish (SERVER_BAD);
+                break;
+    
+            case proto::ReplicationStatus::FAILED:
+                finish (SERVER_ERROR);
+                break;
+    
+            case proto::ReplicationStatus::CANCELLED:
+                finish (SERVER_CANCELLED);
+                break;
+    
+            default:
+                throw std::logic_error (
+                        "ReplicationRequestM::analyze() unknown status '" + proto::ReplicationStatus_Name(message.status()) +
+                       "' received from server");
+        }
+
+    } else {
+        finish (CLIENT_ERROR);
+    }
+}
+
+void
+ReplicationRequestM::notify () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "notify");
+
+    if (_onFinish != nullptr) {
+        _onFinish(shared_from_base<ReplicationRequestM>());
     }
 }
 

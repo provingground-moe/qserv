@@ -162,7 +162,11 @@ public:
             const std::string                    &workerName,
             const std::string                    &targetRequestId,
             typename REQUEST_TYPE::callback_type  onFinish,
-            bool                                  keepTracking) {
+            bool                                  keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+            ,typename Messenger::pointer         &messenger
+#endif
+            ) {
 
         controller->assertIsRunning();
 
@@ -176,6 +180,9 @@ public:
                     controller->finish(request->id());
                 },
                 keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+                ,messenger
+#endif
             );
     
         // Register the request (along with its callback) by its unique
@@ -409,6 +416,9 @@ Controller::replicate (const std::string                 &workerName,
             },
             priority,
             keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+            ,_messenger
+#endif
         );
 
     // Register the request (along with its callback) by its unique
@@ -450,6 +460,9 @@ Controller::deleteReplica (const std::string            &workerName,
             },
             priority,
             keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+            ,_messenger
+#endif
         );
 
     // Register the request (along with its callback) by its unique
@@ -493,6 +506,9 @@ Controller::findReplica (const std::string          &workerName,
             priority,
             computeCheckSum,
             keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+            ,_messenger
+#endif
         );
 
     // Register the request (along with its callback) by its unique
@@ -534,6 +550,9 @@ Controller::findAllReplicas (const std::string             &workerName,
             priority,
             computeCheckSum,
             keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+            ,_messenger
+#endif
         );
 
     // Register the request (along with its callback) by its unique
@@ -564,7 +583,11 @@ Controller::stopReplication (const std::string                     &workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 StopDeleteRequest::pointer
@@ -581,7 +604,11 @@ Controller::stopReplicaDelete (const std::string                &workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 StopFindRequest::pointer
@@ -598,7 +625,11 @@ Controller::stopReplicaFind (const std::string              &workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 StopFindAllRequest::pointer
@@ -615,7 +646,11 @@ Controller::stopReplicaFindAll (const std::string                 &workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 StatusReplicationRequest::pointer
@@ -632,7 +667,11 @@ Controller::statusOfReplication (const std::string                       &worker
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 StatusDeleteRequest::pointer
@@ -649,7 +688,11 @@ Controller::statusOfDelete (const std::string                  &workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 StatusFindRequest::pointer
@@ -666,7 +709,11 @@ Controller::statusOfFind (const std::string                &workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 StatusFindAllRequest::pointer
@@ -683,7 +730,11 @@ Controller::statusOfFindAll (const std::string                   &workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking);
+        keepTracking
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
 }
 
 ServiceSuspendRequest::pointer
