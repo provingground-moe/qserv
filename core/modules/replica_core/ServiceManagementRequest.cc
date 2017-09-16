@@ -37,6 +37,9 @@
 #include "replica_core/Performance.h"
 #include "replica_core/ProtocolBuffer.h"
 
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
+
 namespace proto = lsst::qserv::proto;
 
 namespace {
@@ -231,6 +234,8 @@ void
 ServiceManagementRequestBaseC::requestSent (boost::system::error_code const& ec,
                                             size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
@@ -275,6 +280,8 @@ ServiceManagementRequestBaseC::receiveResponse () {
 void
 ServiceManagementRequestBaseC::responseReceived (boost::system::error_code const& ec,
                                                  size_t                           bytes_transferred) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
@@ -413,6 +420,11 @@ ServiceManagementRequestBaseM::startImpl () {
 void
 ServiceManagementRequestBaseM::analyze (bool                                     success,
                                         proto::ReplicationServiceResponse const& message) {
+
+    // This guard is made on behalf of an asynchronious callback fired
+    // upon a completion of the request within method send() - the only
+    // client of analyze() 
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 

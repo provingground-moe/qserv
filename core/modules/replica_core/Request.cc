@@ -41,6 +41,12 @@
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
+// This macro to appear witin each block which requires thread safety
+
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
+
+
 namespace {
 
 LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.Request");
@@ -125,6 +131,8 @@ Request::~Request () {
 void
 Request::start () {
 
+    LOCK_GUARD;
+
     assertState(CREATED);
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "start  _requestExpirationIvalSec: " << _requestExpirationIvalSec);
@@ -150,6 +158,8 @@ Request::start () {
 void
 Request::expired (const boost::system::error_code &ec) {
 
+    LOCK_GUARD;
+
     // Ignore this event if the timer was aborted
     if (ec == boost::asio::error::operation_aborted) return;
 
@@ -164,6 +174,8 @@ Request::expired (const boost::system::error_code &ec) {
 
 void
 Request::cancel () {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "cancel");
 

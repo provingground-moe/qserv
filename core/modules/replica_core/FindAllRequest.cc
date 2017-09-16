@@ -37,6 +37,9 @@
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
+
 namespace proto = lsst::qserv::proto;
 
 namespace {
@@ -152,6 +155,8 @@ void
 FindAllRequestC::requestSent (boost::system::error_code const& ec,
                               size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
@@ -197,6 +202,8 @@ void
 FindAllRequestC::responseReceived (boost::system::error_code const& ec,
                                    size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     if (isAborted(ec)) return;
@@ -239,6 +246,8 @@ FindAllRequestC::wait () {
 
 void
 FindAllRequestC::awaken (boost::system::error_code const& ec) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
@@ -294,6 +303,8 @@ void
 FindAllRequestC::statusSent (boost::system::error_code const& ec,
                              size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
 
     if (isAborted(ec)) return;
@@ -338,6 +349,8 @@ FindAllRequestC::receiveStatus () {
 void
 FindAllRequestC::statusReceived (boost::system::error_code const& ec,
                                  size_t                           bytes_transferred) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -547,6 +560,8 @@ FindAllRequestM::wait () {
 void
 FindAllRequestM::awaken (boost::system::error_code const& ec) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
     if (isAborted(ec)) return;
@@ -597,6 +612,11 @@ FindAllRequestM::send () {
 void
 FindAllRequestM::analyze (bool                                     success,
                           proto::ReplicationResponseFindAll const& message) {
+
+    // This guard is made on behalf of an asynchronious callback fired
+    // upon a completion of the request within method send() - the only
+    // client of analyze() 
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 

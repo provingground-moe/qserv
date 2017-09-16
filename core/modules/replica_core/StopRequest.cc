@@ -36,6 +36,8 @@
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
 
 namespace proto = lsst::qserv::proto;
 
@@ -121,6 +123,8 @@ void
 StopRequestBaseC::requestSent (boost::system::error_code const& ec,
                                size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     if (isAborted(ec)) return;
@@ -166,6 +170,8 @@ void
 StopRequestBaseC::responseReceived (boost::system::error_code const& ec,
                                     size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     if (isAborted(ec)) return;
@@ -207,6 +213,8 @@ StopRequestBaseC::wait () {
 
 void
 StopRequestBaseC::awaken (boost::system::error_code const& ec) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
@@ -262,6 +270,8 @@ void
 StopRequestBaseC::statusSent (boost::system::error_code const& ec,
                               size_t                           bytes_transferred) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
 
     if (isAborted(ec)) return;
@@ -306,6 +316,8 @@ StopRequestBaseC::receiveStatus () {
 void
 StopRequestBaseC::statusReceived (boost::system::error_code const& ec,
                                   size_t                           bytes_transferred) {
+
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -449,6 +461,8 @@ StopRequestBaseM::wait () {
 void
 StopRequestBaseM::awaken (boost::system::error_code const& ec) {
 
+    LOCK_GUARD;
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
     if (isAborted(ec)) return;
@@ -480,6 +494,11 @@ StopRequestBaseM::awaken (boost::system::error_code const& ec) {
 void
 StopRequestBaseM::analyze (bool                     success,
                            proto::ReplicationStatus status) {
+
+    // This guard is made on behalf of an asynchronious callback fired
+    // upon a completion of the request within method send() - the only
+    // client of analyze() 
+    LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
 
