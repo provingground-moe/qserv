@@ -13,7 +13,6 @@
 #include "replica_core/Messenger.h"
 #include "replica_core/MessengerConnector.h"
 #include "replica_core/ProtocolBuffer.h"
-#include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/ServiceProvider.h"
 
 namespace proto = lsst::qserv::proto;
@@ -100,30 +99,7 @@ bool test () {
  
         rc::BlockPost blockPost (1000, 2000);
         while (numFinished < numIterations)
-            std::cout << "HEARTBEAT:1  " << blockPost.wait() << " millisec" << std::endl;
-
-            
-        ///////////////////////////////////////////////
-        // Test the service management requests as well
-
-        rc::ServiceStatusRequest::pointer statusRequest =
-            rc::ServiceStatusRequest::create (
-                provider,
-                controller->io_service(),
-                workerName,
-                [] (rc::ServiceStatusRequest::pointer ptr) {
-                    std::cout << ptr->context() << std::endl;
-                }
-// Type switch as per the macro defiition in 'replica_core/Common.h'
-#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-                ,messenger
-#endif
-            );
-
-        statusRequest->start();
-
-        while (statusRequest->state () != rc::Request::FINISHED)
-            std::cout << "HEARTBEAT:2  " << blockPost.wait() << " millisec" << std::endl;
+            std::cout << "HEARTBEAT  " << blockPost.wait() << " millisec" << std::endl;
 
         ///////////////////////////////////////////////////
         // Shutdown the controller and join with its thread

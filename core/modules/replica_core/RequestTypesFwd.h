@@ -26,7 +26,10 @@
 /// RequestTypesFwd.h declares:
 ///
 /// Forward declarations for smart pointers and calback functions
-/// corresponding to specific requests.
+/// corresponding to specific requests. An implementtion branch
+/// of the request classes is selected at a compile time using
+/// mactor LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C defined
+/// in file 'replica_core/Common.h'.
 
 // System headers
 
@@ -45,144 +48,181 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-// Forward declarations
-
-
-////////////////////////////////////////////
-// Replica creation and deletion requests //
-////////////////////////////////////////////
-
-class                                                           ReplicationRequest;
-typedef std::shared_ptr   <ReplicationRequest>                  ReplicationRequest_pointer;
-typedef std::function<void(ReplicationRequest_pointer)>         ReplicationRequest_callback_type;
-
-class                                                           DeleteRequest;
-typedef std::shared_ptr   <DeleteRequest>                       DeleteRequest_pointer;
-typedef std::function<void(DeleteRequest_pointer)>              DeleteRequest_callback_type;
-
-
-/////////////////////////////
-// Replica lookup requests //
-/////////////////////////////
-
-class                                                           FindRequest;
-typedef std::shared_ptr   <FindRequest>                         FindRequest_pointer;
-typedef std::function<void(FindRequest_pointer)>                FindRequest_callback_type;
-
-class                                                           FindAllRequest;
-typedef std::shared_ptr   <FindAllRequest>                      FindAllRequest_pointer;
-typedef std::function<void(FindAllRequest_pointer)>             FindAllRequest_callback_type;
-
-
-////////////////////////////////////
-// Replication request managememt //
-////////////////////////////////////
-
-template <typename POLICY>
-class StopRequest;
-
-class                      StopReplicationRequestPolicy;
-using                      StopReplicationRequest = StopRequest<StopReplicationRequestPolicy>;
-typedef std::shared_ptr   <StopReplicationRequest>              StopReplicationRequest_pointer;
-typedef std::function<void(StopReplicationRequest_pointer)>     StopReplicationRequest_callback_type;
-
-class                      StopDeleteRequestPolicy;
-using                      StopDeleteRequest      = StopRequest<StopDeleteRequestPolicy>;
-typedef std::shared_ptr   <StopDeleteRequest>                   StopDeleteRequest_pointer;
-typedef std::function<void(StopDeleteRequest_pointer)>          StopDeleteRequest_callback_type;
-
-class                      StopFindRequestPolicy;
-using                      StopFindRequest        = StopRequest<StopFindRequestPolicy>;
-typedef std::shared_ptr   <StopFindRequest>                     StopFindRequest_pointer;
-typedef std::function<void(StopFindRequest_pointer)>            StopFindRequest_callback_type;
-
-class                      StopFindAllRequestPolicy;
-using                      StopFindAllRequest     = StopRequest<StopFindAllRequestPolicy>;
-typedef std::shared_ptr   <StopFindAllRequest>                  StopFindAllRequest_pointer;
-typedef std::function<void(StopFindAllRequest_pointer)>         StopFindAllRequest_callback_type;
-
-
-template <typename POLICY>
-class StatusRequest;
-
-class                      StatusReplicationRequestPolicy;
-using                      StatusReplicationRequest = StatusRequest<StatusReplicationRequestPolicy>;
-typedef std::shared_ptr   <StatusReplicationRequest>                StatusReplicationRequest_pointer;
-typedef std::function<void(StatusReplicationRequest_pointer)>       StatusReplicationRequest_callback_type;
-
-class                      StatusDeleteRequestPolicy;
-using                      StatusDeleteRequest      = StatusRequest<StatusDeleteRequestPolicy>;
-typedef std::shared_ptr   <StatusDeleteRequest>                     StatusDeleteRequest_pointer;
-typedef std::function<void(StatusDeleteRequest_pointer)>            StatusDeleteRequest_callback_type;
-
-class                      StatusFindRequestPolicy;
-using                      StatusFindRequest        = StatusRequest<StatusFindRequestPolicy>;
-typedef std::shared_ptr   <StatusFindRequest>                       StatusFindRequest_pointer;
-typedef std::function<void(StatusFindRequest_pointer)>              StatusFindRequest_callback_type;
-
-class                      StatusFindAllRequestPolicy;
-using                      StatusFindAllRequest     = StatusRequest<StatusFindAllRequestPolicy>;
-typedef std::shared_ptr   <StatusFindAllRequest>                    StatusFindAllRequest_pointer;
-typedef std::function<void(StatusFindAllRequest_pointer)>           StatusFindAllRequest_callback_type;
-
-
-////////////////////////////////////////
-// Worker service management requests //
-////////////////////////////////////////
-
-// Type switch as per the macro defiition in 'replica_core/Common.h'
+    ////////////////////////////////////////////
+    // Replica creation and deletion requests //
+    ////////////////////////////////////////////
 
 #ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
-template <typename POLICY>
-class ServiceManagementRequestC;
+    class ReplicationRequestC;
+    class DeleteRequestC;
+    
+    using ReplicationRequest = ReplicationRequestC;
+    using DeleteRequest      = DeleteRequestC;
 
-class                      ServiceSuspendRequestPolicy;
-using                      ServiceSuspendRequest = ServiceManagementRequestC<ServiceSuspendRequestPolicy>;
-typedef std::shared_ptr   <ServiceSuspendRequest>                            ServiceSuspendRequest_pointer;
-typedef std::function<void(ServiceSuspendRequest_pointer)>                   ServiceSuspendRequest_callback_type;
+#else // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
-class                      ServiceResumeRequestPolicy;
-using                      ServiceResumeRequest  = ServiceManagementRequestC<ServiceResumeRequestPolicy>;
-typedef std::shared_ptr   <ServiceResumeRequest>                             ServiceResumeRequest_pointer;
-typedef std::function<void(ServiceResumeRequest_pointer)>                    ServiceResumeRequest_callback_type;
+    class ReplicationRequestM;
+    class DeleteRequestM;
 
-class                      ServiceStatusRequestPolicy;
-using                      ServiceStatusRequest  = ServiceManagementRequestC<ServiceStatusRequestPolicy>;
-typedef std::shared_ptr   <ServiceStatusRequest>                             ServiceStatusRequest_pointer;
-typedef std::function<void(ServiceStatusRequest_pointer)>                    ServiceStatusRequest_callback_type;
-
-class                      ServiceRequestsRequestPolicy;
-using                      ServiceRequestsRequest = ServiceManagementRequestC<ServiceRequestsRequestPolicy>;
-typedef std::shared_ptr   <ServiceRequestsRequest>                            ServiceRequestsRequest_pointer;
-typedef std::function<void(ServiceRequestsRequest_pointer)>                   ServiceRequestsRequest_callback_type;
-
-#else  // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-
-template <typename POLICY>
-class ServiceManagementRequestM;
-
-class                      ServiceSuspendRequestPolicy;
-using                      ServiceSuspendRequest = ServiceManagementRequestM<ServiceSuspendRequestPolicy>;
-typedef std::shared_ptr   <ServiceSuspendRequest>                            ServiceSuspendRequest_pointer;
-typedef std::function<void(ServiceSuspendRequest_pointer)>                   ServiceSuspendRequest_callback_type;
-
-class                      ServiceResumeRequestPolicy;
-using                      ServiceResumeRequest  = ServiceManagementRequestM<ServiceResumeRequestPolicy>;
-typedef std::shared_ptr   <ServiceResumeRequest>                             ServiceResumeRequest_pointer;
-typedef std::function<void(ServiceResumeRequest_pointer)>                    ServiceResumeRequest_callback_type;
-
-class                      ServiceStatusRequestPolicy;
-using                      ServiceStatusRequest  = ServiceManagementRequestM<ServiceStatusRequestPolicy>;
-typedef std::shared_ptr   <ServiceStatusRequest>                             ServiceStatusRequest_pointer;
-typedef std::function<void(ServiceStatusRequest_pointer)>                    ServiceStatusRequest_callback_type;
-
-class                      ServiceRequestsRequestPolicy;
-using                      ServiceRequestsRequest = ServiceManagementRequestM<ServiceRequestsRequestPolicy>;
-typedef std::shared_ptr   <ServiceRequestsRequest>                            ServiceRequestsRequest_pointer;
-typedef std::function<void(ServiceRequestsRequest_pointer)>                   ServiceRequestsRequest_callback_type;
+    using ReplicationRequest = ReplicationRequestM;
+    using DeleteRequest      = DeleteRequestM;
 
 #endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    typedef std::shared_ptr<ReplicationRequest> ReplicationRequest_pointer;
+    typedef std::shared_ptr<DeleteRequest>      DeleteRequest_pointer;
+    
+    typedef std::function<void(ReplicationRequest_pointer)> ReplicationRequest_callback_type;
+    typedef std::function<void(DeleteRequest_pointer)>      DeleteRequest_callback_type;
+
+
+    /////////////////////////////
+    // Replica lookup requests //
+    /////////////////////////////
+
+#ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    class FindRequestC;
+    class FindAllRequestC;
+    
+    using FindRequest    = FindRequestC;
+    using FindAllRequest = FindAllRequestC;
+
+#else // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    class FindRequestM;
+    class FindAllRequestM;
+    
+    using FindRequest    = FindRequestM;
+    using FindAllRequest = FindAllRequestM;
+
+#endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    typedef std::shared_ptr<FindRequest>    FindRequest_pointer;
+    typedef std::shared_ptr<FindAllRequest> FindAllRequest_pointer;
+    
+    typedef std::function<void(FindRequest_pointer)>    FindRequest_callback_type;
+    typedef std::function<void(FindAllRequest_pointer)> FindAllRequest_callback_type;
+
+
+    ////////////////////////////////////
+    // Replication request managememt //
+    ////////////////////////////////////
+
+    class StopReplicationRequestPolicy;
+    class StopDeleteRequestPolicy;
+    class StopFindRequestPolicy;
+    class StopFindAllRequestPolicy;
+
+#ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    template <typename POLICY> class StopRequestC;
+    
+    using StopReplicationRequest = StopRequestC<StopReplicationRequestPolicy>;
+    using StopDeleteRequest      = StopRequestC<StopDeleteRequestPolicy>;
+    using StopFindRequest        = StopRequestC<StopFindRequestPolicy>;
+    using StopFindAllRequest     = StopRequestC<StopFindAllRequestPolicy>;
+
+#else // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    template <typename POLICY> class StopRequestM;
+    
+    using StopReplicationRequest = StopRequestM<StopReplicationRequestPolicy>;
+    using StopDeleteRequest      = StopRequestM<StopDeleteRequestPolicy>;
+    using StopFindRequest        = StopRequestM<StopFindRequestPolicy>;
+    using StopFindAllRequest     = StopRequestM<StopFindAllRequestPolicy>;
+
+#endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+    
+    typedef std::shared_ptr<StopReplicationRequest> StopReplicationRequest_pointer;
+    typedef std::shared_ptr<StopDeleteRequest>      StopDeleteRequest_pointer;
+    typedef std::shared_ptr<StopFindRequest>        StopFindRequest_pointer;
+    typedef std::shared_ptr<StopFindAllRequest>     StopFindAllRequest_pointer;
+    
+    typedef std::function<void(StopReplicationRequest_pointer)> StopReplicationRequest_callback_type;
+    typedef std::function<void(StopDeleteRequest_pointer)>      StopDeleteRequest_callback_type;
+    typedef std::function<void(StopFindRequest_pointer)>        StopFindRequest_callback_type;
+    typedef std::function<void(StopFindAllRequest_pointer)>     StopFindAllRequest_callback_type;
+
+
+    ////////////////////////////////////
+
+    
+    class StatusReplicationRequestPolicy;
+    class StatusDeleteRequestPolicy;
+    class StatusFindRequestPolicy;
+    class StatusFindAllRequestPolicy;
+
+#ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    template <typename POLICY> class StatusRequestC;
+    
+    using StatusReplicationRequest = StatusRequestC<StatusReplicationRequestPolicy>;
+    using StatusDeleteRequest      = StatusRequestC<StatusDeleteRequestPolicy>;
+    using StatusFindRequest        = StatusRequestC<StatusFindRequestPolicy>;
+    using StatusFindAllRequest     = StatusRequestC<StatusFindAllRequestPolicy>;
+
+#else // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    template <typename POLICY> class StatusRequestM;
+    
+    using StatusReplicationRequest = StatusRequestM<StatusReplicationRequestPolicy>;
+    using StatusDeleteRequest      = StatusRequestM<StatusDeleteRequestPolicy>;
+    using StatusFindRequest        = StatusRequestM<StatusFindRequestPolicy>;
+    using StatusFindAllRequest     = StatusRequestM<StatusFindAllRequestPolicy>;
+
+#endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    typedef std::shared_ptr<StatusReplicationRequest> StatusReplicationRequest_pointer;
+    typedef std::shared_ptr<StatusDeleteRequest>      StatusDeleteRequest_pointer;
+    typedef std::shared_ptr<StatusFindRequest>        StatusFindRequest_pointer;
+    typedef std::shared_ptr <StatusFindAllRequest>     StatusFindAllRequest_pointer;
+    
+    typedef std::function<void(StatusReplicationRequest_pointer)> StatusReplicationRequest_callback_type;
+    typedef std::function<void(StatusDeleteRequest_pointer)>      StatusDeleteRequest_callback_type;
+    typedef std::function<void(StatusFindRequest_pointer)>        StatusFindRequest_callback_type;
+    typedef std::function<void(StatusFindAllRequest_pointer)>     StatusFindAllRequest_callback_type;
+
+
+    ////////////////////////////////////////
+    // Worker service management requests //
+    ////////////////////////////////////////
+
+    class ServiceSuspendRequestPolicy;
+    class ServiceResumeRequestPolicy;
+    class ServiceRequestsRequestPolicy;
+    class ServiceStatusRequestPolicy;
+
+#ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    template <typename POLICY> class ServiceManagementRequestC;
+    
+    using ServiceSuspendRequest  = ServiceManagementRequestC<ServiceSuspendRequestPolicy>;
+    using ServiceResumeRequest   = ServiceManagementRequestC<ServiceResumeRequestPolicy>;
+    using ServiceStatusRequest   = ServiceManagementRequestC<ServiceStatusRequestPolicy>;
+    using ServiceRequestsRequest = ServiceManagementRequestC<ServiceRequestsRequestPolicy>;
+
+#else // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    template <typename POLICY> class ServiceManagementRequestM;
+    
+    using ServiceSuspendRequest  = ServiceManagementRequestM<ServiceSuspendRequestPolicy>;
+    using ServiceResumeRequest   = ServiceManagementRequestM<ServiceResumeRequestPolicy>;
+    using ServiceStatusRequest   = ServiceManagementRequestM<ServiceStatusRequestPolicy>;
+    using ServiceRequestsRequest = ServiceManagementRequestM<ServiceRequestsRequestPolicy>;
+
+#endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+
+    typedef std::shared_ptr<ServiceSuspendRequest>  ServiceSuspendRequest_pointer;
+    typedef std::shared_ptr<ServiceResumeRequest>   ServiceResumeRequest_pointer;
+    typedef std::shared_ptr<ServiceStatusRequest>   ServiceStatusRequest_pointer;
+    typedef std::shared_ptr<ServiceRequestsRequest> ServiceRequestsRequest_pointer;
+    
+    typedef std::function<void(ServiceSuspendRequest_pointer)>  ServiceSuspendRequest_callback_type;
+    typedef std::function<void(ServiceResumeRequest_pointer)>   ServiceResumeRequest_callback_type;
+    typedef std::function<void(ServiceStatusRequest_pointer)>   ServiceStatusRequest_callback_type;
+    typedef std::function<void(ServiceRequestsRequest_pointer)> ServiceRequestsRequest_callback_type;
 
 }}} // namespace lsst::qserv::replica_core
 

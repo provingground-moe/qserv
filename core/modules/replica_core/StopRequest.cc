@@ -49,13 +49,20 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-StopRequestBase::StopRequestBase (ServiceProvider                                   &serviceProvider,
-                                  boost::asio::io_service                           &io_service,
-                                  const char                                        *requestTypeName,
-                                  const std::string                                 &worker,
-                                  const std::string                                 &targetRequestId,
-                                  lsst::qserv::proto::ReplicationReplicaRequestType  requestType,
-                                  bool                                               keepTracking)
+
+///////////////////////////////////////
+//         StopRequestBaseC          //
+////////////////////////////////////////
+
+
+StopRequestBaseC::StopRequestBaseC (ServiceProvider&                                  serviceProvider,
+                                    boost::asio::io_service&                          io_service,
+                                    char const*                                       requestTypeName,
+                                    std::string const&                                worker,
+                                    std::string const&                                targetRequestId,
+                                    lsst::qserv::proto::ReplicationReplicaRequestType requestType,
+                                    bool                                              keepTracking)
+
     :   RequestConnection (serviceProvider,
                            io_service,
                            requestTypeName,
@@ -67,11 +74,11 @@ StopRequestBase::StopRequestBase (ServiceProvider                               
         _requestType     (requestType) {
 }
 
-StopRequestBase::~StopRequestBase () {
+StopRequestBaseC::~StopRequestBaseC () {
 }
 
 void
-StopRequestBase::beginProtocol () {
+StopRequestBaseC::beginProtocol () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
 
@@ -87,7 +94,7 @@ StopRequestBase::beginProtocol () {
 
     _bufferPtr->serialize(hdr);
 
-    proto::ReplicationRequestStatus message;
+    proto::ReplicationRequestStop message;
     message.set_id  (_targetRequestId);
     message.set_type(_requestType);
 
@@ -102,8 +109,8 @@ StopRequestBase::beginProtocol () {
             _bufferPtr->size()
         ),
         boost::bind (
-            &StopRequestBase::requestSent,
-            shared_from_base<StopRequestBase>(),
+            &StopRequestBaseC::requestSent,
+            shared_from_base<StopRequestBaseC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -111,8 +118,8 @@ StopRequestBase::beginProtocol () {
 }
 
 void
-StopRequestBase::requestSent (const boost::system::error_code &ec,
-                              size_t                           bytes_transferred) {
+StopRequestBaseC::requestSent (boost::system::error_code const& ec,
+                               size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
@@ -123,7 +130,7 @@ StopRequestBase::requestSent (const boost::system::error_code &ec,
 }
 
 void
-StopRequestBase::receiveResponse () {
+StopRequestBaseC::receiveResponse () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
@@ -135,7 +142,7 @@ StopRequestBase::receiveResponse () {
     // that the worker server sends the whol emessage (its frame and
     // the message itsef) at once.
 
-    const size_t bytes = sizeof(uint32_t);
+    size_t const bytes = sizeof(uint32_t);
 
     _bufferPtr->resize(bytes);
 
@@ -147,8 +154,8 @@ StopRequestBase::receiveResponse () {
         ),
         boost::asio::transfer_at_least(bytes),
         boost::bind (
-            &StopRequestBase::responseReceived,
-            shared_from_base<StopRequestBase>(),
+            &StopRequestBaseC::responseReceived,
+            shared_from_base<StopRequestBaseC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -156,8 +163,8 @@ StopRequestBase::receiveResponse () {
 }
 
 void
-StopRequestBase::responseReceived (const boost::system::error_code &ec,
-                                   size_t                           bytes_transferred) {
+StopRequestBaseC::responseReceived (boost::system::error_code const& ec,
+                                    size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
@@ -182,7 +189,7 @@ StopRequestBase::responseReceived (const boost::system::error_code &ec,
 }
 
 void
-StopRequestBase::wait () {
+StopRequestBaseC::wait () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "wait");
 
@@ -191,15 +198,15 @@ StopRequestBase::wait () {
     _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
     _timer.async_wait (
         boost::bind (
-            &StopRequestBase::awaken,
-            shared_from_base<StopRequestBase>(),
+            &StopRequestBaseC::awaken,
+            shared_from_base<StopRequestBaseC>(),
             boost::asio::placeholders::error
         )
     );
 }
 
 void
-StopRequestBase::awaken (const boost::system::error_code &ec) {
+StopRequestBaseC::awaken (boost::system::error_code const& ec) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
 
@@ -212,7 +219,7 @@ StopRequestBase::awaken (const boost::system::error_code &ec) {
 }
 
 void
-StopRequestBase::sendStatus () {
+StopRequestBaseC::sendStatus () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "sendStatus");
 
@@ -243,8 +250,8 @@ StopRequestBase::sendStatus () {
             _bufferPtr->size()
         ),
         boost::bind (
-            &StopRequestBase::statusSent,
-            shared_from_base<StopRequestBase>(),
+            &StopRequestBaseC::statusSent,
+            shared_from_base<StopRequestBaseC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -252,8 +259,8 @@ StopRequestBase::sendStatus () {
 }
 
 void
-StopRequestBase::statusSent (const boost::system::error_code &ec,
-                             size_t                           bytes_transferred) {
+StopRequestBaseC::statusSent (boost::system::error_code const& ec,
+                              size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
 
@@ -264,7 +271,7 @@ StopRequestBase::statusSent (const boost::system::error_code &ec,
 }
 
 void
-StopRequestBase::receiveStatus () {
+StopRequestBaseC::receiveStatus () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "receiveStatus");
 
@@ -276,7 +283,7 @@ StopRequestBase::receiveStatus () {
     // that the worker server sends the whol emessage (its frame and
     // the message itsef) at once.
 
-    const size_t bytes = sizeof(uint32_t);
+    size_t const bytes = sizeof(uint32_t);
 
     _bufferPtr->resize(bytes);
 
@@ -288,8 +295,8 @@ StopRequestBase::receiveStatus () {
         ),
         boost::asio::transfer_at_least(bytes),
         boost::bind (
-            &StopRequestBase::statusReceived,
-            shared_from_base<StopRequestBase>(),
+            &StopRequestBaseC::statusReceived,
+            shared_from_base<StopRequestBaseC>(),
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred
         )
@@ -297,8 +304,8 @@ StopRequestBase::receiveStatus () {
 }
 
 void
-StopRequestBase::statusReceived (const boost::system::error_code &ec,
-                                 size_t                           bytes_transferred) {
+StopRequestBaseC::statusReceived (boost::system::error_code const& ec,
+                                  size_t                           bytes_transferred) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
 
@@ -323,7 +330,7 @@ StopRequestBase::statusReceived (const boost::system::error_code &ec,
 }
 
 void
-StopRequestBase::analyze (proto::ReplicationStatus status) {
+StopRequestBaseC::analyze (proto::ReplicationStatus status) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "analyze  remote status: " << proto::ReplicationStatus_Name(status));
 
@@ -361,9 +368,166 @@ StopRequestBase::analyze (proto::ReplicationStatus status) {
             break;
 
         default:
-            throw std::logic_error("StopRequestBase::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
-                                   "' received from server");
+            throw std::logic_error (
+                    "StopRequestBaseC::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+                    "' received from server");
     }
 }
+
+
+///////////////////////////////////////
+//         StopRequestBaseM          //
+///////////////////////////////////////
+
+StopRequestBaseM::StopRequestBaseM (ServiceProvider&                                  serviceProvider,
+                                    boost::asio::io_service&                          io_service,
+                                    char const*                                       requestTypeName,
+                                    std::string const&                                worker,
+                                    std::string const&                                targetRequestId,
+                                    lsst::qserv::proto::ReplicationReplicaRequestType requestType,
+                                    bool                                              keepTracking,
+                                    std::shared_ptr<Messenger> const&                 messenger)
+
+    :   RequestMessenger (serviceProvider,
+                          io_service,
+                          requestTypeName,
+                          worker,
+                          0,    /* priority */
+                          keepTracking,
+                          messenger),
+
+        _targetRequestId (targetRequestId),
+        _requestType     (requestType) {
+}
+
+StopRequestBaseM::~StopRequestBaseM () {
+}
+
+void
+StopRequestBaseM::startImpl () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "startImpl");
+
+    // Serialize the Request message header and the request itself into
+    // the network buffer.
+
+    _bufferPtr->resize();
+
+    proto::ReplicationRequestHeader hdr;
+    hdr.set_id             (id());
+    hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
+    hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STOP);
+
+    _bufferPtr->serialize(hdr);
+
+    proto::ReplicationRequestStop message;
+    message.set_id  (_targetRequestId);
+    message.set_type(_requestType);
+
+    _bufferPtr->serialize(message);
+
+    send();
+}
+
+void
+StopRequestBaseM::wait () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "wait");
+
+    // Allways need to set the interval before launching the timer.
+    
+    _timer.expires_from_now(boost::posix_time::seconds(_timerIvalSec));
+    _timer.async_wait (
+        boost::bind (
+            &StopRequestBaseM::awaken,
+            shared_from_base<StopRequestBaseM>(),
+            boost::asio::placeholders::error
+        )
+    );
+}
+
+void
+StopRequestBaseM::awaken (boost::system::error_code const& ec) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
+
+    if (isAborted(ec)) return;
+
+    // Also ignore this event if the request expired
+    if (_state== State::FINISHED) return;
+
+    // Serialize the Status message header and the request itself into
+    // the network buffer.
+
+    _bufferPtr->resize();
+
+    proto::ReplicationRequestHeader hdr;
+    hdr.set_id             (id());
+    hdr.set_type           (proto::ReplicationRequestHeader::REQUEST);
+    hdr.set_management_type(proto::ReplicationManagementRequestType::REQUEST_STATUS);
+
+    _bufferPtr->serialize(hdr);
+
+    proto::ReplicationRequestStatus message;
+    message.set_id  (_targetRequestId);
+    message.set_type(_requestType);
+
+    _bufferPtr->serialize(message);
+
+    send();
+}
+
+void
+StopRequestBaseM::analyze (bool                     success,
+                           proto::ReplicationStatus status) {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
+
+    if (success) {
+
+        switch (status) {
+     
+            case proto::ReplicationStatus::SUCCESS:
+                finish (SUCCESS);
+                break;
+    
+            case proto::ReplicationStatus::QUEUED:
+                if (_keepTracking) wait();
+                else               finish (SERVER_QUEUED);
+                break;
+    
+            case proto::ReplicationStatus::IN_PROGRESS:
+                if (_keepTracking) wait();
+                else               finish (SERVER_IN_PROGRESS);
+                break;
+    
+            case proto::ReplicationStatus::IS_CANCELLING:
+                if (_keepTracking) wait();
+                else               finish (SERVER_IS_CANCELLING);
+                break;
+    
+            case proto::ReplicationStatus::BAD:
+                finish (SERVER_BAD);
+                break;
+    
+            case proto::ReplicationStatus::FAILED:
+                finish (SERVER_ERROR);
+                break;
+    
+            case proto::ReplicationStatus::CANCELLED:
+                finish (SERVER_CANCELLED);
+                break;
+    
+            default:
+                throw std::logic_error (
+                        "StopRequestBaseM::analyze() unknown status '" + proto::ReplicationStatus_Name(status) +
+                        "' received from server");
+        }
+
+    } else {
+        finish (CLIENT_ERROR);
+    }
+}
+
 
 }}} // namespace lsst::qserv::replica_core

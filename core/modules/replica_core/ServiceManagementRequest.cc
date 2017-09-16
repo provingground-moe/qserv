@@ -396,8 +396,7 @@ ServiceManagementRequestBaseM::startImpl () {
 
     // Send the message
 
-    ServiceManagementRequestBaseM::pointer self =
-        shared_from_base<ServiceManagementRequestBaseM>();
+    auto self = shared_from_base<ServiceManagementRequestBaseM>();
 
     _messenger->send<proto::ReplicationServiceResponse> (
         worker(),
