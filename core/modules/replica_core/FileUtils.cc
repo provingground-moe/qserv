@@ -77,6 +77,11 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+
+///////////////////////////
+//    class FileUtils    //
+///////////////////////////
+
 std::vector<std::string>
 FileUtils::partitionedFiles (const DatabaseInfo &databaseInfo,
                              unsigned int        chunk) {
@@ -185,6 +190,159 @@ FileUtils::compute_cs (const std::string &fileName,
     delete [] buf;
 
     return cs;
+}
+
+
+/////////////////////////////////////
+//    class FileCsComputeEngine    //
+/////////////////////////////////////
+
+FileCsComputeEngine::FileCsComputeEngine (std::string const& fileName,
+                                          size_t             recordSizeBytes)
+    :   _fileName        (fileName),
+        _recordSizeBytes (recordSizeBytes),
+        _fp    (0),
+        _buf   (0),
+        _bytes (0),
+        _cs    (0) {
+
+    if (_fileName.empty())
+        throw std::invalid_argument("FileCsComputeEngine:  empty file name");
+
+    if (!_recordSizeBytes || _recordSizeBytes > FileUtils::MAX_RECORD_SIZE_BYTES)
+        throw std::invalid_argument("FileCsComputeEngine:  invalid record size " + std::to_string(_recordSizeBytes));
+
+    _fp = std::fopen (_fileName.c_str(), "rb");
+    if (!_fp)
+        throw std::runtime_error (
+            std::string("FileCsComputeEngine:  file open error: ") + std::strerror(errno) +
+            std::string(", file: ") + _fileName);
+
+    _buf = new uint8_t[_recordSizeBytes];
+}
+
+
+FileCsComputeEngine::~FileCsComputeEngine () {
+    if (_fp)  std::fclose(_fp);
+    if (_buf) delete [] _buf;
+}
+
+bool
+FileCsComputeEngine::execute () {
+
+    if (!_fp) throw std::logic_error ("FileCsComputeEngine:  file is already closed");
+
+    size_t const num = std::fread(_buf, sizeof(uint8_t), _recordSizeBytes, _fp);
+    if (num) {
+        _bytes += num;
+        for (uint8_t *ptr = _buf, *end = _buf + num; ptr != end; ++ptr)
+            _cs += (uint64_t)(*ptr);
+        return true;
+    }
+    
+    // I/O error?
+    if (std::ferror(_fp)) {
+        const std::string err =
+            std::string("FileCsComputeEngine:  file read error: ") + std::strerror(errno) +
+            std::string(", file: ") + _fileName;
+ 
+        fclose(_fp);
+        _fp = nullptr;
+ 
+        delete [] _buf;
+        _buf = nullptr;
+ 
+        throw std::runtime_error(err);
+    }
+
+    // EOF
+    std::fclose(_fp);
+    _fp = nullptr;
+ 
+    delete [] _buf;
+    _buf = nullptr;
+ 
+    return false;
+}
+
+
+//////////////////////////////////////////
+//    class MultiFileCsComputeEngine    //
+//////////////////////////////////////////
+
+MultiFileCsComputeEngine::~MultiFileCsComputeEngine () {
+}
+
+MultiFileCsComputeEngine::MultiFileCsComputeEngine (
+                std::vector<std::string> const& fileNames,
+                size_t                          recordSizeBytes)
+
+    :   _fileNames       (fileNames),
+        _recordSizeBytes (recordSizeBytes) {
+
+    if (!_recordSizeBytes || _recordSizeBytes > FileUtils::MAX_RECORD_SIZE_BYTES)
+        throw std::invalid_argument("MultiFileCsComputeEngine:  invalid record size " + std::to_string(_recordSizeBytes));
+
+    // This will be the very first file to be processed
+    _currentFileItr = _fileNames.begin();
+    if (_currentFileItr == _fileNames.end())
+        throw std::invalid_argument("MultiFileCsComputeEngine: the input collection is empty");
+
+    // Open the very first file to be read
+    _processed[*_currentFileItr].reset (
+        new FileCsComputeEngine(*_currentFileItr, _recordSizeBytes));
+}
+
+bool
+MultiFileCsComputeEngine::processed (std::string const& fileName) const {
+
+    if (_fileNames.end() == std::find(_fileNames.begin(),
+                                      _fileNames.end(),
+                                      fileName))
+        throw std::invalid_argument (
+                "MultiFileCsComputeEngine::processed() unknown file: " + fileName);
+
+    return _processed.count(fileName);
+}
+
+size_t
+MultiFileCsComputeEngine::bytes (std::string const& fileName) const {
+    if (!processed(fileName))
+        throw std::logic_error (
+            "MultiFileCsComputeEngine::bytes()  the file hasn't been proccessed: " + fileName);
+
+    return _processed.at(fileName)->bytes();
+}
+
+uint64_t
+MultiFileCsComputeEngine::cs (std::string const& fileName) const {
+    if (!processed(fileName))
+        throw std::logic_error (
+            "MultiFileCsComputeEngine::cs()  the file hasn't been proccessed: " + fileName);
+
+    return _processed.at(fileName)->cs();
+}
+
+bool
+MultiFileCsComputeEngine::execute () {
+    if (_fileNames.end() == _currentFileItr)
+        throw std::logic_error ("FileCsComputeEngine:  all files have already been processed");
+
+    // Process possible EOF of the current or any subsequent files
+    // while there is any data or untill running out of files.
+ 
+    while (!_processed[*_currentFileItr]->execute()) {
+
+        // Move to the next file if any. If no more files then finish.
+        ++_currentFileItr;
+        if (_fileNames.end() == _currentFileItr) return false;
+        
+        // Open that file and expect it to be read at the next iteration
+        // of this loop
+        _processed[*_currentFileItr].reset (
+            new FileCsComputeEngine(*_currentFileItr, _recordSizeBytes));
+    }
+    return true;
 }
 
 }}} // namespace lsst::qserv::replica_core

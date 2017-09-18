@@ -25,11 +25,16 @@
 /// Configuration.h declares:
 ///
 /// class FileUtils
+/// class FileCsComputeEngine
+///
 /// (see individual class documentation for more information)
 
 // System headers
 
+#include <cstdio>       // C-style I/O
 #include <cstdint>      // size_t, uint64_t
+#include <map>
+#include <memory>       // shared_ptr, unique_ptr
 #include <string>
 #include <tuple>
 #include <vector>
@@ -56,6 +61,9 @@ class FileUtils {
 
 public:
 
+    /// The default number of bytes to be read during file I/O operations
+    static constexpr size_t DEFAULT_RECORD_SIZE_BYTES = 1024*1024;
+
     /// The maximum number of bytes to be read during file I/O operations
     static constexpr size_t MAX_RECORD_SIZE_BYTES = 1024*1024*1024;
 
@@ -63,7 +71,7 @@ public:
 
     FileUtils () = delete;
     FileUtils (FileUtils const&) = delete;
-    FileUtils & operator= (FileUtils const&) = delete;
+    FileUtils& operator= (FileUtils const&) = delete;
 
     ~FileUtils () = delete;
 
@@ -74,7 +82,7 @@ public:
      * @param databaseInfo - the description of the database and tables
      * @param chunk        - the chunk number
      */
-    static std::vector<std::string> partitionedFiles (const DatabaseInfo &databaseInfo,
+    static std::vector<std::string> partitionedFiles (DatabaseInfo const& databaseInfo,
                                                       unsigned int        chunk);
 
     /**
@@ -83,7 +91,7 @@ public:
      *
      * @param databaseInfo - the description of the database and tables
      */
-    static std::vector<std::string> regularFiles (const DatabaseInfo &databaseInfo);
+    static std::vector<std::string> regularFiles (DatabaseInfo const& databaseInfo);
 
 
     /**
@@ -107,9 +115,9 @@ public:
      * will be (in the order of their definition): the name of a table (including 'FullOverlap'
      * where applies), the number of a chunk, adm its extention (w/o the dot)
      */
-    static bool parsePartitionedFile (std::tuple<std::string, unsigned int, std::string> &parsed,
-                                      const std::string                                  &fileName,
-                                      const DatabaseInfo                                 &databaseInfo);
+    static bool parsePartitionedFile (std::tuple<std::string, unsigned int, std::string>& parsed,
+                                      std::string const&                                  fileName,
+                                      DatabaseInfo const&                                 databaseInfo);
 
     /**
      * Compute a simple control sum on the specified file
@@ -117,16 +125,206 @@ public:
      * The method will throw one of the following exceptions:
      *   std::runtime_error    - if there was a problem with opening or reading
      *                           the file
-     *   std::illegal_argument - if the file name is empty or if the record size
-     *                           is 0 or too huge (more than 1GB)
+     *   std::invalid_argument - if the file name is empty or if the record size
+     *                           is 0 or too huge (more than FileUtils::MAX_RECORD_SIZE_BYTES)
      *
      * @param fileName        - the name of a file to read
      * @param recordSizeBytes - desired record size
      *
      * @return the control sum of the file content
      */
-    static uint64_t compute_cs (const std::string &fileName,
-                                size_t             recordSizeBytes=MAX_RECORD_SIZE_BYTES);
+    static uint64_t compute_cs (std::string const& fileName,
+                                size_t             recordSizeBytes=DEFAULT_RECORD_SIZE_BYTES);
+};
+
+
+/**
+  * Class FileCsComputeEngine incrementally computes a control sum of
+  * the file content.
+  *
+  * Here is how the engine is supposed to be used:
+  *
+  * @code
+  *   try {
+  *       FileCsComputeEngine eng("myfile.dat");
+  *       while (eng.execute()) {
+  *           ctd::cout << "bytes read: " << eng.bytes() << "\n"
+  *                     << "running cs: " << eng.cs() << "\n";
+  *       }
+  *       std::cout << "total bytes read: " << eng.bytes() << "\n"
+  *                 << "final cs:         " << eng.cs() << "\n";
+  *   } catch (std::exception const& ex) {
+  *       std::cerr << ex.what() << std::endl;
+  *   }
+  * @endcode
+ */
+class FileCsComputeEngine {
+
+public:
+
+    // Default construction and copy semantics are prohibited
+
+    FileCsComputeEngine () = delete;
+    FileCsComputeEngine (FileCsComputeEngine const&) = delete;
+    FileCsComputeEngine& operator= (FileCsComputeEngine const&) = delete;
+
+    /// The destructor
+    virtual ~FileCsComputeEngine ();
+
+    /**
+     * The normal constructor
+     *
+     * Exceptions:
+     *   std::runtime_error    - if there was a problem with opening or reading the file
+     *   std::invalid_argument - if the file name is empty or if the record size
+     *                           is 0 or too huge (more than FileUtils::MAX_RECORD_SIZE_BYTES)
+     *
+     * At each iteration of the engine (when method FileCsComputeEngine::execute()
+     * is called) the engine will read up to 'recordSizeBytes' bytes from
+     * the input file. The method will return 'false' when all bytes of the file
+     * are read and the EOF is reached. Any attempts to read the file beyond that
+     * will throw exception std::runtime_error.
+     *
+     * The engine will close a file immediatelly after reaching its EOF.
+     *
+     * @param fileName        - the name of a file to read
+     * @param recordSizeBytes - desired record size
+     *
+     */
+    explicit FileCsComputeEngine (std::string const& fileName,
+                                  size_t             recordSizeBytes=FileUtils::DEFAULT_RECORD_SIZE_BYTES);
+
+    /// Return the name of the file
+    std::string const& fileName () const { return _fileName; }
+    
+    /// Return the number of bytes read so far
+    size_t bytes () const { return _bytes; }
+
+    /// Return the running (and the final one the file is fully read) control sum
+    uint64_t cs () const { return _cs; }
+
+    /**
+     * Run the next iteration of reading the file and computing its control sum
+     *
+     * Exceptions:
+     *   std::runtime_error - there was a problem with reading the file
+     *   std::logic_error   - an attempt to read the file after it was closed
+     *
+     * @return 'false' when the EOF has been reached.
+     */
+    bool execute ();
+
+private:
+
+    // Parameters of the object
+
+    std::string _fileName;          ///< the name of an input file
+    size_t      _recordSizeBytes;   ///< desired record size
+
+    /// The file pointer
+    std::FILE* _fp;
+
+    /// The record buffer
+    uint8_t* _buf;
+
+    /// The number of bytes read so far
+    size_t _bytes;
+    
+    /// The running (and the final one the file is fully read) control sum
+    uint64_t _cs;
+};
+
+
+
+class MultiFileCsComputeEngine {
+
+public:
+
+    // Default construction and copy semantics are prohibited
+
+    MultiFileCsComputeEngine () = delete;
+    MultiFileCsComputeEngine (MultiFileCsComputeEngine const&) = delete;
+    MultiFileCsComputeEngine& operator= (MultiFileCsComputeEngine const&) = delete;
+
+    /// The destructor
+    virtual ~MultiFileCsComputeEngine ();
+
+    /**
+     * The normal constructor
+     *
+    *  Exceptions:
+     *   std::runtime_error    - if there was a problem with opening the first file
+     *   std::invalid_argument - if a collection of file names is empty or if the record size
+     *                           is 0 or too huge (more than FileUtils::MAX_RECORD_SIZE_BYTES)
+     *
+     */
+    explicit MultiFileCsComputeEngine (
+                std::vector<std::string> const& fileNames,
+                size_t                          recordSizeBytes=FileUtils::DEFAULT_RECORD_SIZE_BYTES);
+
+    /// Return the names of the files
+    std::vector<std::string> const& fileNames () const { return _fileNames; }
+    
+    /**
+     * Return 'true' if the specified file has been or is being proccessed
+     * so that its final or running checksime or the number of bytes can be
+     * be obtained.
+     *
+     * Exceptions:
+     *   std::invalid_argument - unkown file name
+     *
+     * @param fileName - the name of a file
+     */
+    bool processed (std::string const& fileName) const;
+
+    /**
+     * Return the number of bytes read so far for the specified file.
+     *
+     * Exceptions:
+     *   std::invalid_argument - unkown file name
+     *   std::logic_error      - the file hasn't been proccessed
+     *
+     * @param fileName - the name of a file
+     */
+    size_t bytes (std::string const& fileName) const;
+
+   /**
+     * Return the running (and the final one the file is fully read) control sum for
+     * the specified file.
+     *
+     * Exceptions:
+     *   std::invalid_argument - unkown file name
+     *   std::logic_error      - the file hasn't been proccessed
+     *
+     * @param fileName - the name of a file
+     */
+    uint64_t cs (std::string const& fileName) const;
+
+    /**
+     * Run the next iteration of reading files and computing their control sums
+     *
+     * Exceptions:
+     *   std::runtime_error - there was a problem with reading a file
+     *   std::logic_error   - an attempt to read the last file after it was closed
+     *
+     * @return 'false' when the EOF of the last file has been reached.
+     */
+    bool execute ();
+
+private:
+
+    // Parameters of the object
+
+    std::vector<std::string> _fileNames;        ///< The names of files to be processed
+    size_t                   _recordSizeBytes;  ///< desired record size
+
+    /// The number of a file which is being processed. The iterator
+    /// is set to _fileNames.end() after finishing processing the very
+    /// last file of the collection.
+    std::vector<std::string>::iterator _currentFileItr;
+
+    /// Files which has been or are being processed
+    std::map<std::string, std::unique_ptr<FileCsComputeEngine>> _processed;
 };
 
 }}} // namespace lsst::qserv::replica_core

@@ -120,6 +120,20 @@ public:
     }
 
     /**
+     * Return a collection of positional parameters (except the command name itself)
+     * translated into the specified type. Throw exception std::invalid_argument if
+     * the type conversion is not possible.
+     */
+    template <class V>
+    void parameters (std::vector<V>& vals) const {
+        // Skipping the command path
+        size_t const size = _parameter.size();
+        vals.resize(size-1);
+        for (size_t pos=1; pos < size; ++pos)
+            parameterImpl(pos, vals[pos-1]);
+    }
+
+    /**
      * Return a value of a parameter at the specified position
      * translated into the specified type. Throw exception std::out_of_range
      * if there are fewer arguments than the specified position. Throw
