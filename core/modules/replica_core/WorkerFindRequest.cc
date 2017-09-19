@@ -183,6 +183,12 @@ WorkerFindRequestPOSIX::execute () {
          << "  database: " << database()
          << "  chunk: "    << chunk());
 
+    // Abort the operation right away
+    if (_status == STATUS_IS_CANCELLING) {
+        setStatus(STATUS_CANCELLED);
+        throw WorkerRequestCancelled();
+    }
+
     // There are two modes of operation of the code which would depend
     // on a presence (or a lack of that) to calculate control/check sums
     // for the found files.
