@@ -110,7 +110,7 @@ WorkerFindRequest::replicaInfo () const {
 }
 
 bool
-WorkerFindRequest::execute (bool incremental) {
+WorkerFindRequest::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
          << "  database: " << database()
@@ -118,7 +118,7 @@ WorkerFindRequest::execute (bool incremental) {
 
     // Set up the result if the operation is over
 
-    bool completed = WorkerRequest::execute(incremental);
+    bool completed = WorkerRequest::execute();
     if (completed) _replicaInfo =
         ReplicaInfo (ReplicaInfo::COMPLETE,
                      worker(),
@@ -177,109 +177,195 @@ WorkerFindRequestPOSIX::~WorkerFindRequestPOSIX () {
 }
 
 bool
-WorkerFindRequestPOSIX::execute (bool incremental) {
+WorkerFindRequestPOSIX::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
          << "  database: " << database()
          << "  chunk: "    << chunk());
 
-    const WorkerInfo   &workerInfo   = _serviceProvider.config().workerInfo  (worker  ());
-    const DatabaseInfo &databaseInfo = _serviceProvider.config().databaseInfo(database());
-
-    // Check if the data directory exists and it can be read
-    
-    WorkerRequest::ErrorContext errorContext;
-    boost::system::error_code   ec;
-
-    LOCK_DATA_FOLDER;
-
-    const fs::path        dataDir = fs::path(workerInfo.dataDir) / database();
-    const fs::file_status stat    = fs::status(dataDir, ec);
-
-    errorContext = errorContext
-        || reportErrorIf (
-                stat.type() == fs::status_error,
-                ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT,
-                "failed to check the status of directory: " + dataDir.string())
-        || reportErrorIf (
-                !fs::exists(stat),
-                ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER,
-                "the directory does not exists: " + dataDir.string());
-
-    if (errorContext.failed) {
-        setStatus(STATUS_FAILED, errorContext.extendedStatus);
-        return true;
-    }
-
-    // For each file associated with the chunk check if the file is present in
-    // the data directory.
+    // There are two modes of operation of the code which would depend
+    // on a presence (or a lack of that) to calculate control/check sums
+    // for the found files.
     //
-    // - assume the request failure for any file system operation failure
-    // - assume the successfull completion otherwise and adjust the replica
-    //   information record accordingly, depending on the findings.
+    // - if the control/check sum is NOT requested then the request will
+    //   be executed immediattely within this call.
+    //
+    // - otherwise the incremental approach will be used (which will require
+    //   setting up the incremental engine if this is the first call to the method)
+    //
+    // Both methods are combined witghin the same code block to avoid
+    // code duplication.
 
-    const std::vector<std::string> files =
-        FileUtils::partitionedFiles (databaseInfo, chunk());
+    if (!_computeCheckSum || !_csComputeEnginePtr) {
 
-    ReplicaInfo::FileInfoCollection fileInfoCollection;
-    for (const auto &file: files) {
-
-        const fs::path        path = dataDir / file;
-        const fs::file_status stat = fs::status(path, ec);
-
+        const WorkerInfo   &workerInfo   = _serviceProvider.config().workerInfo  (worker  ());
+        const DatabaseInfo &databaseInfo = _serviceProvider.config().databaseInfo(database());
+    
+        // Check if the data directory exists and it can be read
+        
+        WorkerRequest::ErrorContext errorContext;
+        boost::system::error_code   ec;
+    
+        LOCK_DATA_FOLDER;
+    
+        const fs::path        dataDir = fs::path(workerInfo.dataDir) / database();
+        const fs::file_status stat    = fs::status(dataDir, ec);
+    
         errorContext = errorContext
             || reportErrorIf (
                     stat.type() == fs::status_error,
-                    ExtendedCompletionStatus::EXT_STATUS_FILE_STAT,
-                    "failed to check the status of file: " + path.string());
+                    ExtendedCompletionStatus::EXT_STATUS_FOLDER_STAT,
+                    "failed to check the status of directory: " + dataDir.string())
+            || reportErrorIf (
+                    !fs::exists(stat),
+                    ExtendedCompletionStatus::EXT_STATUS_NO_FOLDER,
+                    "the directory does not exists: " + dataDir.string());
+    
+        if (errorContext.failed) {
+            setStatus(STATUS_FAILED, errorContext.extendedStatus);
+            return true;
+        }
+    
+        // For each file associated with the chunk check if the file is present in
+        // the data directory.
+        // 
+        // - not finding a file is not a failrure for this operation. Just reporting
+        //   those files which are present.
+        //
+        // - assume the request failure for any file system operation failure
+        //
+        // - assume the successfull completion otherwise and adjust the replica
+        //   information record accordingly, depending on the findings.
+    
+        
+        ReplicaInfo::FileInfoCollection fileInfoCollection; // file info if not using the incremental processing
+        std::vector<std::string>        files;              // file paths registered for the incremental processing
 
-        // Pull extra info on the file
-        if (fs::exists(stat)) {
-
-            std::string cs = "";
-            if (_computeCheckSum) {
-                try {
-                    cs = std::to_string(FileUtils::compute_cs (path.string()));
-                } catch (std::exception &ex) {
-                    errorContext = errorContext
-                        || reportErrorIf (true,
-                                          ExtendedCompletionStatus::EXT_STATUS_FILE_READ,
-                                          ex.what());
-                }
-            }
-            const uint64_t size = fs::file_size(path, ec);
+        for (const auto &file: FileUtils::partitionedFiles (databaseInfo, chunk())) {
+    
+            const fs::path        path = dataDir / file;
+            const fs::file_status stat = fs::status(path, ec);
+    
             errorContext = errorContext
                 || reportErrorIf (
-                        ec,
-                        ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
-                        "failed to read file size: " + path.string());
-                
-            fileInfoCollection.emplace_back (
-                ReplicaInfo::FileInfo({
-                    file, size, cs
-                })
-            );
+                        stat.type() == fs::status_error,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_STAT,
+                        "failed to check the status of file: " + path.string());
+    
+            if (fs::exists(stat)) {
+
+                if (!_computeCheckSum) {
+
+                    // Get file size right away
+                    const uint64_t size = fs::file_size(path, ec);
+                    errorContext = errorContext
+                        || reportErrorIf (
+                                ec,
+                                ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
+                                "failed to read file size: " + path.string());
+                        
+                    fileInfoCollection.emplace_back (
+                        ReplicaInfo::FileInfo({
+                            file,
+                            size,
+                            ""  /* cs */
+                        })
+                    );
+                } else {
+    
+                    // Register this file for the incremental processing
+                    files.push_back(path.string());
+                }
+            }
         }
+        if (errorContext.failed) {
+            setStatus(STATUS_FAILED, errorContext.extendedStatus);
+            return true;
+        }
+
+        // If that's so then finalize the operation right away
+        if (!_computeCheckSum) {
+
+            ReplicaInfo::Status status = ReplicaInfo::Status::NOT_FOUND;
+            if (fileInfoCollection.size())
+                status = FileUtils::partitionedFiles (databaseInfo, chunk()).size() == fileInfoCollection.size() ?
+                    ReplicaInfo::Status::COMPLETE :
+                    ReplicaInfo::Status::INCOMPLETE;
+          
+            // Fill in the info on the chunk before finishing the operation
+            _replicaInfo = ReplicaInfo (
+                status,
+                worker(),
+                database(),
+                chunk(),
+                fileInfoCollection);
+        
+            setStatus(STATUS_SUCCEEDED);
+        
+            return true;
+        }
+        
+        // Otherwise proceed with the incremental approach         
+        _csComputeEnginePtr.reset(new MultiFileCsComputeEngine(files));
     }
-    if (errorContext.failed) {
+    
+    // Next (or the first) iteration in the incremental approach
+    bool finished = true;
+    try {
+
+        finished = _csComputeEnginePtr->execute();
+        if (finished) {
+
+            // Extract statistics
+            ReplicaInfo::FileInfoCollection fileInfoCollection;
+
+            auto const fileNames = _csComputeEnginePtr->fileNames();
+            for (auto const& file: fileNames)
+                fileInfoCollection.emplace_back (
+                    ReplicaInfo::FileInfo ({
+                        fs::path(file).filename().string(),
+                        _csComputeEnginePtr->bytes(file),
+                        std::to_string(_csComputeEnginePtr->cs(file))
+                    })
+                );
+
+            // Fnalize the operation
+
+            const DatabaseInfo &databaseInfo = _serviceProvider.config().databaseInfo(database());
+
+            ReplicaInfo::Status status = ReplicaInfo::Status::NOT_FOUND;
+            if (fileInfoCollection.size())
+                status = FileUtils::partitionedFiles (databaseInfo, chunk()).size() == fileNames.size() ?
+                    ReplicaInfo::Status::COMPLETE :
+                    ReplicaInfo::Status::INCOMPLETE;
+          
+            // Fill in the info on the chunk before finishing the operation    
+            _replicaInfo = ReplicaInfo (
+                status,
+                worker(),
+                database(),
+                chunk(),
+                fileInfoCollection);
+        
+            setStatus(STATUS_SUCCEEDED);
+        }
+
+    } catch (std::exception const& ex) {
+        WorkerRequest::ErrorContext errorContext;
+        errorContext = errorContext
+            || reportErrorIf (
+                    true,
+                    ExtendedCompletionStatus::EXT_STATUS_FILE_READ,
+                    ex.what());
+
         setStatus(STATUS_FAILED, errorContext.extendedStatus);
-        return true;
     }
+    
+    // If done (either way) then get rid of the engine right away because
+    // it may still have allocated buffers
+    if (finished) _csComputeEnginePtr.reset();
 
-    ReplicaInfo::Status status = ReplicaInfo::Status::NOT_FOUND;
-    if (fileInfoCollection.size())
-        status = files.size() == fileInfoCollection.size() ?
-            ReplicaInfo::Status::COMPLETE :
-            ReplicaInfo::Status::INCOMPLETE;
-  
-    // Fill in the info on the chunk before finishing the operation    
-
-    _replicaInfo = ReplicaInfo (
-            status, worker(), database(), chunk(), fileInfoCollection);
-
-    setStatus(STATUS_SUCCEEDED);
-
-    return true;
+    return finished;
 }
 
 
@@ -332,11 +418,11 @@ WorkerFindRequestX::~WorkerFindRequestX () {
 
 
 bool
-WorkerFindRequestX::execute (bool incremental) {
+WorkerFindRequestX::execute () {
 
     // TODO: provide the actual implementation instead of the dummy one.
 
-    return WorkerFindRequest::execute(incremental);
+    return WorkerFindRequest::execute();
 }
 
 

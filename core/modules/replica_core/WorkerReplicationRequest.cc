@@ -115,7 +115,7 @@ WorkerReplicationRequest::~WorkerReplicationRequest () {
 
 
 bool
-WorkerReplicationRequest::execute (bool incremental) {
+WorkerReplicationRequest::execute () {
 
    LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
          << "  sourceWorker: " << sourceWorker()
@@ -124,7 +124,7 @@ WorkerReplicationRequest::execute (bool incremental) {
 
     // TODO: provide the actual implementation instead of the dummy one.
 
-    const bool complete = WorkerRequest::execute(incremental);
+    const bool complete = WorkerRequest::execute();
     if (complete) {
         _replicationInfo = ReplicaCreateInfo(100.);     // simulate 100% completed
     }
@@ -180,7 +180,7 @@ WorkerReplicationRequestPOSIX::~WorkerReplicationRequestPOSIX () {
 }
 
 bool
-WorkerReplicationRequestPOSIX::execute (bool incremental) {
+WorkerReplicationRequestPOSIX::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
          << "  sourceWorker: " << sourceWorker()
@@ -455,7 +455,7 @@ WorkerReplicationRequestFS::~WorkerReplicationRequestFS () {
 }
 
 bool
-WorkerReplicationRequestFS::execute (bool incremental) {
+WorkerReplicationRequestFS::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
          << "  sourceWorker: " << sourceWorker()
@@ -820,11 +820,11 @@ WorkerReplicationRequestX::~WorkerReplicationRequestX () {
 }
 
 bool
-WorkerReplicationRequestX::execute (bool incremental) {
+WorkerReplicationRequestX::execute () {
 
     // TODO: provide the actual implementation instead of the dummy one.
 
-    return WorkerReplicationRequest::execute(incremental);
+    return WorkerReplicationRequest::execute();
 }
 
 }}} // namespace lsst::qserv::replica_core

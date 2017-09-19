@@ -47,6 +47,8 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+// Forward declarations
+class MultiFileCsComputeEngine;
 
 /**
   * Class WorkerFindRequest represents a context and a state of replica lookup
@@ -104,7 +106,7 @@ public:
      *
      * @see WorkerRequest::execute
      */
-    bool execute (bool incremental=true) override;
+    bool execute () override;
 
 protected:
 
@@ -171,7 +173,7 @@ public:
      *
      * @see WorkerFindRequest::execute
      */
-    bool execute (bool incremental=true) override;
+    bool execute () override;
 
 private:
 
@@ -185,6 +187,11 @@ private:
                             const std::string &database,
                             unsigned int       chunk,
                             bool               computeCheckSum);
+
+private:
+    
+    /// The engine for incremental control sum calculation
+    std::unique_ptr<MultiFileCsComputeEngine> _csComputeEnginePtr;
 };
 
 
@@ -237,7 +244,7 @@ public:
      *
      * @see WorkerFindRequest::execute
      */
-    bool execute (bool incremental=true) override;
+    bool execute () override;
 
 private:
 

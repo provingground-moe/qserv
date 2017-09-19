@@ -108,14 +108,14 @@ WorkerFindAllRequest::replicaInfoCollection () const {
 
 
 bool
-WorkerFindAllRequest::execute (bool incremental) {
+WorkerFindAllRequest::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
          << "  database: " << database());
 
     // Set up the result if the operation is over
 
-    bool completed = WorkerRequest::execute(incremental);
+    bool completed = WorkerRequest::execute();
     if (completed)
         for (unsigned int chunk=0; chunk<8; ++chunk)
             _replicaInfoCollection.emplace_back (
@@ -173,7 +173,7 @@ WorkerFindAllRequestPOSIX::~WorkerFindAllRequestPOSIX () {
 }
 
 bool
-WorkerFindAllRequestPOSIX::execute (bool incremental) {
+WorkerFindAllRequestPOSIX::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
         << "  database: " << database());
@@ -324,11 +324,11 @@ WorkerFindAllRequestX::~WorkerFindAllRequestX () {
 }
 
 bool
-WorkerFindAllRequestX::execute (bool incremental) {
+WorkerFindAllRequestX::execute () {
 
     // TODO: provide the actual implementation instead of the dummy one.
 
-    return WorkerRequest::execute(incremental);
+    return WorkerRequest::execute();
 }
 
 
