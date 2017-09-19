@@ -243,7 +243,7 @@ bool test () {
         rc::BlockPost blockPost (0, 5000);  // for random delays (milliseconds) between iterations
 
         while (request->state() != rc::Request::State::FINISHED) {
-            blockPost.wait();
+            std::cout << "HEARTBEAT: " << blockPost.wait() << " msec" << std::endl;;
         }
         controller->stop();
 
@@ -326,16 +326,16 @@ int main (int argc, const char* const argv[]) {
             "SERVICE_STATUS",
             "SERVICE_REQUESTS"});
 
-        ::worker = parser.parameter<std::string>(1);
+        ::worker = parser.parameter<std::string>(2);
 
         if (parser.found_in(::operation, {
 
             "REPLICA_CREATE",
             "REPLICA_CREATE,CANCEL"})) {
             
-            ::sourceWorker = parser.parameter<std::string>(2);
-            ::db           = parser.parameter<std::string>(3);
-            ::chunk        = parser.parameter<int>        (4);
+            ::sourceWorker = parser.parameter<std::string>(3);
+            ::db           = parser.parameter<std::string>(4);
+            ::chunk        = parser.parameter<int>        (5);
 
         } else if (parser.found_in(::operation, {
 
@@ -343,8 +343,8 @@ int main (int argc, const char* const argv[]) {
             "REPLICA_FIND",
             "REPLICA_FIND_ALL"})) {
 
-            ::db    = parser.parameter<std::string>(2);
-            ::chunk = parser.parameter<int>        (3);
+            ::db    = parser.parameter<std::string>(3);
+            ::chunk = parser.parameter<int>        (4);
 
         } else if (parser.found_in(::operation, {
 
@@ -357,14 +357,15 @@ int main (int argc, const char* const argv[]) {
             "REQUEST_STOP:REPLICA_FIND",
             "REQUEST_STOP:REPLICA_FIND_ALL"})) {
 
-            ::id  =   parser.parameter<std::string>(2);
+            ::id  =   parser.parameter<std::string>(3);
         }
-        ::computeCheckSum =   parser.flag ("progress-report");
+        ::computeCheckSum =   parser.flag ("check-sum");
         ::keepTracking    = ! parser.flag ("do-not-track");
         ::priority        =   parser.option<int>         ("priority", 1);
         ::configFileName  =   parser.option<std::string> ("config",   "replication.cfg");
 
     } catch (std::exception const& ex) {
+        std::cerr << ex.what() << std::endl;
         return 1;
     }
     ::test();

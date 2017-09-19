@@ -242,7 +242,7 @@ public:
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
 
-        if (WorkerRequest::pointer ptr = dequeueOrCancelImpl(id)) {
+        if (WorkerRequest::pointer ptr = dequeueOrCancelImpl(request.id())) {
             try {
 
                 // Set request-specific fields. Note exception handling for scenarios
@@ -281,7 +281,7 @@ public:
         // Try to locate a request with specified identifier and make sure
         // its actual type matches expecations
 
-        if (WorkerRequest::pointer ptr = checkStatusImpl(id)) {
+        if (WorkerRequest::pointer ptr = checkStatusImpl(request.id())) {
             try {
 
                 // Set request-specific fields. Note exception handling for scenarios
