@@ -71,7 +71,7 @@ public:
 
     WorkerRequestFactoryBase () = delete;
     WorkerRequestFactoryBase (WorkerRequestFactoryBase const&) = delete;
-    WorkerRequestFactoryBase & operator= (WorkerRequestFactoryBase const&) = delete;
+    WorkerRequestFactoryBase& operator= (WorkerRequestFactoryBase const&) = delete;
 
     /// Destructor
     virtual ~WorkerRequestFactoryBase ();
@@ -87,12 +87,12 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerReplicationRequest_pointer createReplicationRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
-            const std::string &sourceWorker) = 0;
+            std::string const& sourceWorker) = 0;
 
    /**
      * Create an instance of the replica deletion request
@@ -102,10 +102,10 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerDeleteRequest_pointer createDeleteRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk) = 0;
 
    /**
@@ -116,10 +116,10 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerFindRequest_pointer createFindRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
             bool               computeCheckSum) = 0;
 
@@ -131,11 +131,10 @@ public:
      * @return a pointer to the newely created object
      */
     virtual WorkerFindAllRequest_pointer createFindAllRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
-            bool               computeCheckSum) = 0;
+            std::string const& database) = 0;
             
 protected:
 
@@ -144,7 +143,7 @@ protected:
      *
      * @param serviceProvider - a provider of various services
      */
-    explicit WorkerRequestFactoryBase (ServiceProvider &serviceProvider);
+    explicit WorkerRequestFactoryBase (ServiceProvider& serviceProvider);
 
 protected:
 
@@ -167,7 +166,7 @@ public:
 
     WorkerRequestFactory () = delete;
     WorkerRequestFactory (WorkerRequestFactory const&) = delete;
-    WorkerRequestFactory & operator= (WorkerRequestFactory const&) = delete;
+    WorkerRequestFactory& operator= (WorkerRequestFactory const&) = delete;
 
     /**
      * The constructor of the class.
@@ -194,8 +193,8 @@ public:
      * @param serviceProvider - a provider of various serviceses (including configurations)
      * @param technology      - the name of the technology
      */
-    explicit WorkerRequestFactory (ServiceProvider   &serviceProvider,
-                                   const std::string &technology=std::string());
+    explicit WorkerRequestFactory (ServiceProvider&   serviceProvider,
+                                   std::string const& technology=std::string());
 
     /// Destructor
     ~WorkerRequestFactory () override {
@@ -217,12 +216,12 @@ public:
      * @see WorkerReplicationRequestBase::createReplicationRequest
      */
     WorkerReplicationRequest_pointer createReplicationRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
-            const std::string &sourceWorker) override {
+            std::string const& sourceWorker) override {
 
         return _ptr->createReplicationRequest (
             worker,
@@ -239,10 +238,10 @@ public:
      * @see WorkerReplicationRequestBase::createDeleteRequest
      */
     WorkerDeleteRequest_pointer createDeleteRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk) override {
 
         return _ptr->createDeleteRequest (
@@ -259,10 +258,10 @@ public:
      * @see WorkerReplicationRequestBase::createFindRequest
      */
     WorkerFindRequest_pointer createFindRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
             bool               computeCheckSum) override {
         
@@ -281,24 +280,22 @@ public:
      * @see WorkerReplicationRequestBase::createFindAllRequest
      */
     WorkerFindAllRequest_pointer createFindAllRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
-            bool               computeCheckSum) override {
+            std::string const& database) override {
         
         return _ptr->createFindAllRequest (
             worker,
             id,
             priority,
-            database,
-            computeCheckSum);
+            database);
     }
 
 protected:
 
     /// A pointer to the final implementation of the factory
-    WorkerRequestFactoryBase *_ptr;
+    WorkerRequestFactoryBase* _ptr;
 };
 
 

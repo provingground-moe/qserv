@@ -76,10 +76,10 @@ public:
 
     WorkerRequestFactoryTest () = delete;
     WorkerRequestFactoryTest (WorkerRequestFactoryTest const&) = delete;
-    WorkerRequestFactoryTest & operator= (WorkerRequestFactoryTest const&) = delete;
+    WorkerRequestFactoryTest& operator= (WorkerRequestFactoryTest const&) = delete;
 
     /// Normal constructor
-    WorkerRequestFactoryTest (ServiceProvider &serviceProvider)
+    WorkerRequestFactoryTest (ServiceProvider& serviceProvider)
         :   WorkerRequestFactoryBase (serviceProvider) {}
     
     /// Destructor
@@ -98,12 +98,12 @@ public:
      * @see WorkerReplicationRequestBase::createReplicationRequest
      */
     WorkerReplicationRequest_pointer createReplicationRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
-            const std::string &sourceWorker) override {
+            std::string const& sourceWorker) override {
 
         return WorkerReplicationRequest::create (
             _serviceProvider,
@@ -121,10 +121,10 @@ public:
      * @see WorkerReplicationRequestBase::createDeleteRequest
      */
     WorkerDeleteRequest_pointer createDeleteRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk) override {
 
         return WorkerDeleteRequest::create (
@@ -142,10 +142,10 @@ public:
      * @see WorkerReplicationRequestBase::createFindRequest
      */
     WorkerFindRequest_pointer createFindRequest (
-            const std::string &worker,
-             const std::string &id,
+             std::string const& worker,
+             std::string const& id,
              int                priority,
-             const std::string &database,
+             std::string const& database,
              unsigned int       chunk,
              bool               computeCheckSum) override {
 
@@ -165,19 +165,17 @@ public:
      * @see WorkerReplicationRequestBase::createFindAllRequest
      */
     WorkerFindAllRequest_pointer createFindAllRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
-            bool               computeCheckSum) override {
+            std::string const& database) override {
 
         return WorkerFindAllRequest::create (
             _serviceProvider,
             worker,
             id,
             priority,
-            database,
-            computeCheckSum);
+            database);
     }
 };
 
@@ -199,10 +197,10 @@ public:
 
     WorkerRequestFactoryPOSIX () = delete;
     WorkerRequestFactoryPOSIX (WorkerRequestFactoryPOSIX const&) = delete;
-    WorkerRequestFactoryPOSIX & operator= (WorkerRequestFactoryPOSIX const&) = delete;
+    WorkerRequestFactoryPOSIX& operator= (WorkerRequestFactoryPOSIX const&) = delete;
 
     /// Normal constructor
-    WorkerRequestFactoryPOSIX (ServiceProvider &serviceProvider)
+    WorkerRequestFactoryPOSIX (ServiceProvider& serviceProvider)
         :   WorkerRequestFactoryBase (serviceProvider) {}
     
     /// Destructor
@@ -221,12 +219,12 @@ public:
      * @see WorkerReplicationRequestBase::createReplicationRequest
      */
     WorkerReplicationRequest_pointer createReplicationRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
-            const std::string &sourceWorker) override {
+            std::string const& sourceWorker) override {
 
         return WorkerReplicationRequestPOSIX::create (
             _serviceProvider,
@@ -244,10 +242,10 @@ public:
      * @see WorkerReplicationRequestBase::createDeleteRequest
      */
     WorkerDeleteRequest_pointer createDeleteRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk) override {
 
         return WorkerDeleteRequestPOSIX::create (
@@ -265,12 +263,12 @@ public:
      * @see WorkerReplicationRequestBase::createFindRequest
      */
     WorkerFindRequest_pointer createFindRequest (
-            const std::string &worker,
-             const std::string &id,
-             int                priority,
-             const std::string &database,
-             unsigned int       chunk,
-             bool               computeCheckSum) override {
+            std::string const& worker,
+            std::string const& id,
+            int                priority,
+            std::string const& database,
+            unsigned int       chunk,
+            bool               computeCheckSum) override {
 
         return WorkerFindRequestPOSIX::create (
             _serviceProvider,
@@ -288,19 +286,17 @@ public:
      * @see WorkerReplicationRequestBase::createFindAllRequest
      */
     WorkerFindAllRequest_pointer createFindAllRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
-            bool               computeCheckSum) override {
+            std::string const& database) override {
 
         return WorkerFindAllRequestPOSIX::create (
             _serviceProvider,
             worker,
             id,
             priority,
-            database,
-            computeCheckSum);
+            database);
     }
 };
 
@@ -323,10 +319,10 @@ public:
 
     WorkerRequestFactoryFS () = delete;
     WorkerRequestFactoryFS (WorkerRequestFactoryFS const&) = delete;
-    WorkerRequestFactoryFS & operator= (WorkerRequestFactoryFS const&) = delete;
+    WorkerRequestFactoryFS& operator= (WorkerRequestFactoryFS const&) = delete;
 
     /// Normal constructor
-    WorkerRequestFactoryFS (ServiceProvider &serviceProvider)
+    WorkerRequestFactoryFS (ServiceProvider& serviceProvider)
         :   WorkerRequestFactoryBase (serviceProvider) {}
     
     /// Destructor
@@ -345,12 +341,12 @@ public:
      * @see WorkerReplicationRequestBase::createReplicationRequest
      */
     WorkerReplicationRequest_pointer createReplicationRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
-            const std::string &sourceWorker) override {
+            std::string const& sourceWorker) override {
 
         return WorkerReplicationRequestFS::create (
             _serviceProvider,
@@ -368,10 +364,10 @@ public:
      * @see WorkerReplicationRequestBase::createDeleteRequest
      */
     WorkerDeleteRequest_pointer createDeleteRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk) override {
 
         return WorkerDeleteRequestFS::create (
@@ -389,10 +385,10 @@ public:
      * @see WorkerReplicationRequestBase::createFindRequest
      */
     WorkerFindRequest_pointer createFindRequest (
-            const std::string &worker,
-             const std::string &id,
+             std::string const& worker,
+             std::string const& id,
              int                priority,
-             const std::string &database,
+             std::string const& database,
              unsigned int       chunk,
              bool               computeCheckSum) override {
 
@@ -412,19 +408,17 @@ public:
      * @see WorkerReplicationRequestBase::createFindAllRequest
      */
     WorkerFindAllRequest_pointer createFindAllRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
-            bool               computeCheckSum) override {
+            std::string const& database) override {
 
         return WorkerFindAllRequestFS::create (
             _serviceProvider,
             worker,
             id,
             priority,
-            database,
-            computeCheckSum);
+            database);
     }
 };
 
@@ -447,10 +441,10 @@ public:
 
     WorkerRequestFactoryX () = delete;
     WorkerRequestFactoryX (WorkerRequestFactoryX const&) = delete;
-    WorkerRequestFactoryX & operator= (WorkerRequestFactoryX const&) = delete;
+    WorkerRequestFactoryX& operator= (WorkerRequestFactoryX const&) = delete;
 
     /// Normal constructor
-    WorkerRequestFactoryX (ServiceProvider &serviceProvider)
+    WorkerRequestFactoryX (ServiceProvider& serviceProvider)
         :   WorkerRequestFactoryBase (serviceProvider) {}
     
     /// Destructor
@@ -469,12 +463,12 @@ public:
      * @see WorkerReplicationRequestBase::createReplicationRequest
      */
     WorkerReplicationRequest_pointer createReplicationRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk,
-            const std::string &sourceWorker) override {
+            std::string const& sourceWorker) override {
 
         return WorkerReplicationRequestX::create (
             _serviceProvider,
@@ -492,10 +486,10 @@ public:
      * @see WorkerReplicationRequestBase::createDeleteRequest
      */
     WorkerDeleteRequest_pointer createDeleteRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
+            std::string const& database,
             unsigned int       chunk) override {
 
         return WorkerDeleteRequestX::create (
@@ -513,10 +507,10 @@ public:
      * @see WorkerReplicationRequestBase::createFindRequest
      */
     WorkerFindRequest_pointer createFindRequest (
-            const std::string &worker,
-             const std::string &id,
+             std::string const& worker,
+             std::string const& id,
              int                priority,
-             const std::string &database,
+             std::string const& database,
              unsigned int       chunk,
              bool               computeCheckSum) override {
 
@@ -536,19 +530,17 @@ public:
      * @see WorkerReplicationRequestBase::createFindAllRequest
      */
     WorkerFindAllRequest_pointer createFindAllRequest (
-            const std::string &worker,
-            const std::string &id,
+            std::string const& worker,
+            std::string const& id,
             int                priority,
-            const std::string &database,
-            bool               computeCheckSum) override {
+            std::string const& database) override {
 
         return WorkerFindAllRequestX::create (
             _serviceProvider,
             worker,
             id,
             priority,
-            database,
-            computeCheckSum);
+            database);
     }
 };
 
@@ -557,11 +549,11 @@ public:
 ///////////////////// WorkerRequestFactory ////////////////////
 ///////////////////////////////////////////////////////////////
 
-WorkerRequestFactory::WorkerRequestFactory (ServiceProvider   &serviceProvider,
-                                            const std::string &technology)
+WorkerRequestFactory::WorkerRequestFactory (ServiceProvider&   serviceProvider,
+                                            std::string const& technology)
     :   WorkerRequestFactoryBase (serviceProvider) {
         
-    const std::string finalTechnology =
+    std::string const finalTechnology =
         technology.empty() ? serviceProvider.config().workerTechnology() : technology;
 
     if      (finalTechnology == "TEST")   _ptr = new WorkerRequestFactoryTest  (serviceProvider);

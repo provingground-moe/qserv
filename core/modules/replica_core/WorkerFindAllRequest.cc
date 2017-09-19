@@ -59,12 +59,11 @@ namespace replica_core {
 
 WorkerFindAllRequest::pointer
 WorkerFindAllRequest::create (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
+        ServiceProvider&   serviceProvider,
+        std::string const& worker,
+        std::string const& id,
         int                priority,
-        const std::string &database,
-        bool               computeCheckSum) {
+        std::string const& database) {
 
     return WorkerFindAllRequest::pointer (
         new WorkerFindAllRequest (
@@ -72,17 +71,15 @@ WorkerFindAllRequest::create (
                 worker,
                 id,
                 priority,
-                database,
-                computeCheckSum));
+                database));
 }
 
 WorkerFindAllRequest::WorkerFindAllRequest (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
+        ServiceProvider&   serviceProvider,
+        std::string const& worker,
+        std::string const& id,
         int                priority,
-        const std::string &database,
-        bool               computeCheckSum)
+        std::string const& database)
 
     :   WorkerRequest (
             serviceProvider,
@@ -92,7 +89,6 @@ WorkerFindAllRequest::WorkerFindAllRequest (
             priority),
 
         _database              (database),
-        _computeCheckSum       (computeCheckSum),
         _replicaInfoCollection () {
 }
 
@@ -101,7 +97,7 @@ WorkerFindAllRequest::~WorkerFindAllRequest () {
 }
 
 
-const ReplicaInfoCollection&
+ReplicaInfoCollection const&
 WorkerFindAllRequest::replicaInfoCollection () const {
     return _replicaInfoCollection;
 }
@@ -116,7 +112,11 @@ WorkerFindAllRequest::execute () {
     // Set up the result if the operation is over
 
     bool completed = WorkerRequest::execute();
-    if (completed)
+    if (completed) {
+
+        // Simulate the request processing by making an arbitrary number of
+        // datasets.
+
         for (unsigned int chunk=0; chunk<8; ++chunk)
             _replicaInfoCollection.emplace_back (
                 ReplicaInfo::COMPLETE,
@@ -124,7 +124,7 @@ WorkerFindAllRequest::execute () {
                 database(),
                 chunk,
                 ReplicaInfo::FileInfoCollection());
-
+    }
     return completed;
 }
 
@@ -135,12 +135,11 @@ WorkerFindAllRequest::execute () {
 
 WorkerFindAllRequestPOSIX::pointer
 WorkerFindAllRequestPOSIX::create (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
+        ServiceProvider&   serviceProvider,
+        std::string const& worker,
+        std::string const& id,
         int                priority,
-        const std::string &database,
-        bool               computeCheckSum) {
+        std::string const& database) {
 
     return WorkerFindAllRequestPOSIX::pointer (
         new WorkerFindAllRequestPOSIX (
@@ -148,25 +147,22 @@ WorkerFindAllRequestPOSIX::create (
                 worker,
                 id,
                 priority,
-                database,
-                computeCheckSum));
+                database));
 }
 
 WorkerFindAllRequestPOSIX::WorkerFindAllRequestPOSIX (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
+        ServiceProvider&   serviceProvider,
+        std::string const& worker,
+        std::string const& id,
         int                priority,
-        const std::string &database,
-        bool               computeCheckSum)
+        std::string const& database)
 
     :   WorkerFindAllRequest (
             serviceProvider,
             worker,
             id,
             priority,
-            database,
-            computeCheckSum) {
+            database) {
 }
 
 WorkerFindAllRequestPOSIX::~WorkerFindAllRequestPOSIX () {
@@ -178,8 +174,8 @@ WorkerFindAllRequestPOSIX::execute () {
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
         << "  database: " << database());
 
-    const WorkerInfo   &workerInfo    = _serviceProvider.config().workerInfo  (worker());
-    const DatabaseInfo &databaseInfo  = _serviceProvider.config().databaseInfo(database());
+    WorkerInfo   const& workerInfo    = _serviceProvider.config().workerInfo  (worker());
+    DatabaseInfo const& databaseInfo  = _serviceProvider.config().databaseInfo(database());
 
     // Scan the data directory to find all files which match the expected pattern(s)
     // and group them by their chunk number
@@ -191,8 +187,8 @@ WorkerFindAllRequestPOSIX::execute () {
     {
         LOCK_DATA_FOLDER;
         
-        const fs::path dataDir = fs::path(workerInfo.dataDir) / database();
-        const fs::file_status stat = fs::status(dataDir, ec);
+        fs::path        const dataDir = fs::path(workerInfo.dataDir) / database();
+        fs::file_status const stat    = fs::status(dataDir, ec);
         errorContext = errorContext
             || reportErrorIf (
                     stat.type() == fs::status_error,
@@ -217,36 +213,25 @@ WorkerFindAllRequestPOSIX::execute () {
                         << "  chunk: "    << std::get<1>(parsed)
                         << "  ext: "      << std::get<2>(parsed));
 
-                    std::string cs = "";
-                    if (_computeCheckSum) {
-                        try {
-                            cs = std::to_string(FileUtils::compute_cs (entry.path().string()));
-                        } catch (std::exception &ex) {
-                            errorContext = errorContext
-                                || reportErrorIf (true,
-                                                  ExtendedCompletionStatus::EXT_STATUS_FILE_READ,
-                                                  ex.what());
-                        }
-                    }
-                    const uint64_t size = fs::file_size(entry.path(), ec);
+                    uint64_t const size = fs::file_size(entry.path(), ec);
                     errorContext = errorContext
                         || reportErrorIf (
                                 ec,
                                 ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
                                 "failed to read file size: " + entry.path().string());
                         
-                    const unsigned chunk = std::get<1>(parsed);
+                    unsigned const chunk = std::get<1>(parsed);
 
                     chunk2fileInfoCollection[chunk].emplace_back (
                         ReplicaInfo::FileInfo({
                             entry.path().filename().string(),
                             size,
-                            cs
+                            ""  /* cs is never computed for this type of requests */
                         })
                     );
                 }
             }
-        } catch (const fs::filesystem_error &ex) {
+        } catch (fs::filesystem_error const& ex) {
             errorContext = errorContext
                 || reportErrorIf (
                         true,
@@ -262,12 +247,12 @@ WorkerFindAllRequestPOSIX::execute () {
     // Analyze results to see which chunks are complete using chunk 0 as an example
     // of the total number of files which are normally associated with each chunk.
 
-    const size_t numFilesPerChunkRequired =
+    size_t const numFilesPerChunkRequired =
         FileUtils::partitionedFiles (databaseInfo, 0).size();
 
     for (auto &entry: chunk2fileInfoCollection) {
-        const unsigned int chunk    = entry.first;
-        const size_t       numFiles = entry.second.size();
+        unsigned int const chunk    = entry.first;
+        size_t       const numFiles = entry.second.size();
         _replicaInfoCollection.emplace_back (
                 numFiles < numFilesPerChunkRequired ? ReplicaInfo::INCOMPLETE : ReplicaInfo::COMPLETE,
                 worker(),
@@ -286,12 +271,11 @@ WorkerFindAllRequestPOSIX::execute () {
 
 WorkerFindAllRequestX::pointer
 WorkerFindAllRequestX::create (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
+        ServiceProvider&   serviceProvider,
+        std::string const& worker,
+        std::string const& id,
         int                priority,
-        const std::string &database,
-        bool               computeCheckSum) {
+        std::string const& database) {
 
     return WorkerFindAllRequestX::pointer (
         new WorkerFindAllRequestX (
@@ -299,25 +283,22 @@ WorkerFindAllRequestX::create (
                 worker,
                 id,
                 priority,
-                database,
-                computeCheckSum));
+                database));
 }
 
 WorkerFindAllRequestX::WorkerFindAllRequestX (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
+        ServiceProvider&   serviceProvider,
+        std::string const& worker,
+        std::string const& id,
         int                priority,
-        const std::string &database,
-        bool               computeCheckSum)
+        std::string const& database)
 
     :   WorkerFindAllRequest (
             serviceProvider,
             worker,
             id,
             priority,
-            database,
-            computeCheckSum) {
+            database) {
 }
 
 WorkerFindAllRequestX::~WorkerFindAllRequestX () {

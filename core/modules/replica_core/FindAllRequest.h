@@ -95,8 +95,7 @@ public:
 
     // Trivial acccessors
  
-    std::string const& database        () const { return _database; }
-    bool               computeCheckSum () const { return _computeCheckSum; }
+    std::string const& database () const { return _database; }
 
     /**
      * Return a refernce to a result of the completed request.
@@ -119,7 +118,6 @@ public:
      * @param database         - the name of a database
      * @param onFinish         - an optional callback function to be called upon a completion of the request.
      * @param priority         - a priority level of the request
-     * @param computeCheckSum  - tell a worker server to compute check/control sum on each file
      * @param keepTracking     - keep tracking the request before it finishes or fails
      */
     static pointer create (ServiceProvider&         serviceProvider,
@@ -128,7 +126,6 @@ public:
                            std::string const&       database,
                            callback_type            onFinish,
                            int                      priority,
-                           bool                     computeCheckSum,
                            bool                     keepTracking);
 
 private:
@@ -142,7 +139,6 @@ private:
                      std::string const&       database,
                      callback_type            onFinish,
                      int                      priority,
-                     bool                     computeCheckSum,
                      bool                     keepTracking);
 
     /**
@@ -203,7 +199,6 @@ private:
     // Parameters of the object
 
     std::string _database;
-    bool        _computeCheckSum;
 
     // Registered callback to be called when the operation finishes
 
@@ -244,8 +239,7 @@ public:
 
     // Trivial acccessors
  
-    std::string const& database        () const { return _database; }
-    bool               computeCheckSum () const { return _computeCheckSum; }
+    std::string const& database () const { return _database; }
 
     /**
      * Return a refernce to a result of the completed request.
@@ -268,7 +262,6 @@ public:
      * @param database         - the name of a database
      * @param onFinish         - an optional callback function to be called upon a completion of the request.
      * @param priority         - a priority level of the request
-     * @param computeCheckSum  - tell a worker server to compute check/control sum on each file
      * @param keepTracking     - keep tracking the request before it finishes or fails
      * @param messenger        - an interface for communicating with workers
      */
@@ -278,7 +271,6 @@ public:
                            std::string const&                database,
                            callback_type                     onFinish,
                            int                               priority,
-                           bool                              computeCheckSum,
                            bool                              keepTracking,
                            std::shared_ptr<Messenger> const& messenger);
 
@@ -293,7 +285,6 @@ private:
                      std::string const&                database,
                      callback_type                     onFinish,
                      int                               priority,
-                     bool                              computeCheckSum,
                      bool                              keepTracking,
                      std::shared_ptr<Messenger> const& messenger);
 
@@ -333,7 +324,6 @@ private:
     // Parameters of the object
 
     std::string _database;
-    bool        _computeCheckSum;
 
     // Registered callback to be called when the operation finishes
 

@@ -214,21 +214,10 @@ public:
     /**
      * Initiate a new replicas lookup request.
      *
-     * PERFORMANCE NOTE: enabling 'computeCheckSum' will require reading each file.
-     *                   Hence this will slow down the operation, and it may also
-     *                   affcet the overall perfromance of Qserv on the corresponding
-     *                   worker node.
-     *                   It is NOT recommended to use this option for this operation
-     *                   unless this is is strictly required. Use the above defined
-     *                   method Controlller::findReplica for getting CS of files
-     *                   due to it's greater scalability and a possibility of executing
-     *                   multiple such requess in parellel.
-     *
      * @param workerName      - the name of a worker node where the replicas are located
      * @param database        - database name
      * @param onFinish        - an optional callback function to be called upon the completion of the request
      * @param priority        - a priority level of the request
-     * @param computeCheckSum - tell a worker server to compute check/control sum on each file
      *
      * @return a pointer to the replication request
      */
@@ -236,7 +225,6 @@ public:
                                             const std::string            &database,
                                             FindAllRequest_callback_type  onFinish=nullptr,
                                             int                           priority=0,
-                                            bool                          computeCheckSum=false,
                                             bool                          keepTracking=true);
 
     /**
