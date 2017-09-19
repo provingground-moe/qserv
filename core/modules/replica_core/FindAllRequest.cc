@@ -64,7 +64,6 @@ FindAllRequestC::create (ServiceProvider&        serviceProvider,
                         std::string const&       database,
                         callback_type            onFinish,
                         int                      priority,
-                        bool                     computeCheckSum,
                         bool                     keepTracking) {
 
     return FindAllRequestC::pointer (
@@ -75,7 +74,6 @@ FindAllRequestC::create (ServiceProvider&        serviceProvider,
             database,
             onFinish,
             priority,
-            computeCheckSum,
             keepTracking));
 }
 
@@ -85,7 +83,6 @@ FindAllRequestC::FindAllRequestC (ServiceProvider&         serviceProvider,
                                   std::string const&       database,
                                   callback_type            onFinish,
                                   int                      priority,
-                                  bool                     computeCheckSum,
                                   bool                     keepTracking)
     :   RequestConnection (serviceProvider,
                            io_service,
@@ -95,7 +92,6 @@ FindAllRequestC::FindAllRequestC (ServiceProvider&         serviceProvider,
                            keepTracking),
 
         _database              (database),
-        _computeCheckSum       (computeCheckSum),
         _onFinish              (onFinish),
         _replicaInfoCollection () {
 
@@ -130,7 +126,6 @@ FindAllRequestC::beginProtocol () {
     proto::ReplicationRequestFindAll message;
     message.set_priority  (priority());
     message.set_database  (database());
-    message.set_compute_cs(computeCheckSum());
 
     _bufferPtr->serialize(message);
 
@@ -463,7 +458,6 @@ FindAllRequestM::create (ServiceProvider&                  serviceProvider,
                          std::string const&                database,
                          callback_type                     onFinish,
                          int                               priority,
-                         bool                              computeCheckSum,
                          bool                              keepTracking,
                          std::shared_ptr<Messenger> const& messenger) {
 
@@ -475,7 +469,6 @@ FindAllRequestM::create (ServiceProvider&                  serviceProvider,
             database,
             onFinish,
             priority,
-            computeCheckSum,
             keepTracking,
             messenger));
 }
@@ -486,7 +479,6 @@ FindAllRequestM::FindAllRequestM (ServiceProvider&                  serviceProvi
                                   std::string const&                database,
                                   callback_type                     onFinish,
                                   int                               priority,
-                                  bool                              computeCheckSum,
                                   bool                              keepTracking,
                                   std::shared_ptr<Messenger> const& messenger)
     :   RequestMessenger (serviceProvider,
@@ -498,7 +490,6 @@ FindAllRequestM::FindAllRequestM (ServiceProvider&                  serviceProvi
                           messenger),
 
         _database              (database),
-        _computeCheckSum       (computeCheckSum),
         _onFinish              (onFinish),
         _replicaInfoCollection () {
 
@@ -533,7 +524,6 @@ FindAllRequestM::startImpl () {
     proto::ReplicationRequestFindAll message;
     message.set_priority  (priority());
     message.set_database  (database());
-    message.set_compute_cs(computeCheckSum());
 
     _bufferPtr->serialize(message);
 

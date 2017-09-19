@@ -131,7 +131,6 @@ bool test () {
                     printRequest<rc::FindAllRequest>(request);
                 },
                 priority,
-                computeCheckSum,
                 keepTracking);
 
         } else if ("REQUEST_STATUS:REPLICA_CREATE"  == operation) {

@@ -68,26 +68,24 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+    static pointer create (ServiceProvider&   serviceProvider,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
-                           bool               computeCheckSum);
+                           std::string const& database);
 
     // Default construction and copy semantics are proxibited
 
     WorkerFindAllRequest () = delete;
     WorkerFindAllRequest (WorkerFindAllRequest const&) = delete;
-    WorkerFindAllRequest & operator= (WorkerFindAllRequest const&) = delete;
+    WorkerFindAllRequest& operator= (WorkerFindAllRequest const&) = delete;
 
     /// Destructor
     ~WorkerFindAllRequest () override;
 
     // Trivial accessors
 
-    const std::string& database        () const { return _database; }
-    bool               computeCheckSum () const { return _computeCheckSum; }
+    std::string const& database () const { return _database; }
 
    /**
      * Return a refernce to a result of the completed request.
@@ -95,7 +93,7 @@ public:
      * Note that this operation returns a meanigful result only when a request
      * is completed with status STATUS_SUCCEEDED.
      */
-    const ReplicaInfoCollection& replicaInfoCollection () const;
+    ReplicaInfoCollection const& replicaInfoCollection () const;
 
     /**
      * This method implements the virtual method of the base class
@@ -110,17 +108,15 @@ protected:
      * The normal constructor of the class.
      */
     WorkerFindAllRequest (ServiceProvider   &serviceProvider,
-                          const std::string &worker,
-                          const std::string &id,
+                          std::string const& worker,
+                          std::string const& id,
                           int                priority,
-                          const std::string &database,
-                          bool               computeCheckSum);
+                          std::string const& database);
 protected:
 
     // Parameters of the request
 
     std::string _database;
-    bool        _computeCheckSum;
 
     /// Result of the operation
     ReplicaInfoCollection _replicaInfoCollection;
@@ -146,17 +142,16 @@ public:
      * low-level pointers).
      */
     static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
-                           bool               computeCheckSum);
+                           std::string const& database);
 
     // Default construction and copy semantics are proxibited
 
     WorkerFindAllRequestPOSIX () = delete;
     WorkerFindAllRequestPOSIX (WorkerFindAllRequestPOSIX const&) = delete;
-    WorkerFindAllRequestPOSIX & operator= (WorkerFindAllRequestPOSIX const&) = delete;
+    WorkerFindAllRequestPOSIX& operator= (WorkerFindAllRequestPOSIX const&) = delete;
 
     /// Destructor
     ~WorkerFindAllRequestPOSIX () override;
@@ -174,11 +169,10 @@ private:
      * The normal constructor of the class.
      */
     WorkerFindAllRequestPOSIX (ServiceProvider   &serviceProvider,
-                               const std::string &worker,
-                               const std::string &id,
+                               std::string const& worker,
+                               std::string const& id,
                                int                priority,
-                               const std::string &database,
-                               bool               computeCheckSum);
+                               std::string const& database);
 };
 
 
@@ -210,17 +204,16 @@ public:
      * low-level pointers).
      */
     static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
-                           bool               computeCheckSum);
+                           std::string const& database);
 
     // Default construction and copy semantics are proxibited
 
     WorkerFindAllRequestX () = delete;
     WorkerFindAllRequestX (WorkerFindAllRequestX const&) = delete;
-    WorkerFindAllRequestX & operator= (WorkerFindAllRequestX const&) = delete;
+    WorkerFindAllRequestX& operator= (WorkerFindAllRequestX const&) = delete;
 
     /// Destructor
     ~WorkerFindAllRequestX () override;
@@ -238,11 +231,10 @@ private:
      * The normal constructor of the class.
      */
     WorkerFindAllRequestX (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
-                           bool               computeCheckSum);
+                           std::string const& database);
 };
 
 

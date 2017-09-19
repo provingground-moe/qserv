@@ -143,9 +143,6 @@ message ReplicationRequestFindAll {
 
     required int32  priority = 1;
     required string database = 2;
-    
-    /// Compute a check/control sum for each file
-    required bool compute_cs = 3;
 }
 
 // This request is sent to stop an on-going replication (if any is still in progress).

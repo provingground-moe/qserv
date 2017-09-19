@@ -342,8 +342,7 @@ WorkerProcessor::enqueueForFindAll (const std::string                      &id,
             _worker,
             id,
             request.priority(),
-            request.database(),
-            request.compute_cs());
+            request.database());
 
     _newRequests.push(ptr);
 

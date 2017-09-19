@@ -530,7 +530,6 @@ Controller::findAllReplicas (const std::string             &workerName,
                              const std::string             &database,
                              FindAllRequest::callback_type  onFinish,
                              int                            priority,
-                             bool                           computeCheckSum,
                              bool                           keepTracking) {
     LOCK_GUARD;
 
@@ -548,7 +547,6 @@ Controller::findAllReplicas (const std::string             &workerName,
                 controller->finish(request->id());
             },
             priority,
-            computeCheckSum,
             keepTracking
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
             ,_messenger
