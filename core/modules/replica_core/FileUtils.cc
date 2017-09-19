@@ -237,7 +237,7 @@ FileCsComputeEngine::execute () {
         _bytes += num;
         for (uint8_t *ptr = _buf, *end = _buf + num; ptr != end; ++ptr)
             _cs += (uint64_t)(*ptr);
-        return true;
+        return false;
     }
     
     // I/O error?
@@ -262,7 +262,7 @@ FileCsComputeEngine::execute () {
     delete [] _buf;
     _buf = nullptr;
  
-    return false;
+    return true;
 }
 
 
@@ -283,14 +283,13 @@ MultiFileCsComputeEngine::MultiFileCsComputeEngine (
     if (!_recordSizeBytes || _recordSizeBytes > FileUtils::MAX_RECORD_SIZE_BYTES)
         throw std::invalid_argument("MultiFileCsComputeEngine:  invalid record size " + std::to_string(_recordSizeBytes));
 
-    // This will be the very first file to be processed
+    // This will be the very first file (if any) to be processed
     _currentFileItr = _fileNames.begin();
-    if (_currentFileItr == _fileNames.end())
-        throw std::invalid_argument("MultiFileCsComputeEngine: the input collection is empty");
 
-    // Open the very first file to be read
-    _processed[*_currentFileItr].reset (
-        new FileCsComputeEngine(*_currentFileItr, _recordSizeBytes));
+    // Open the very first file to be read if the input collection is not empty
+    if (_currentFileItr != _fileNames.end())
+        _processed[*_currentFileItr].reset (
+            new FileCsComputeEngine(*_currentFileItr, _recordSizeBytes));
 }
 
 bool
@@ -325,24 +324,24 @@ MultiFileCsComputeEngine::cs (std::string const& fileName) const {
 
 bool
 MultiFileCsComputeEngine::execute () {
-    if (_fileNames.end() == _currentFileItr)
-        throw std::logic_error ("FileCsComputeEngine:  all files have already been processed");
+
+    // All files have been proccessed
+    if (_fileNames.end() == _currentFileItr) return true;
 
     // Process possible EOF of the current or any subsequent files
-    // while there is any data or untill running out of files.
- 
-    while (!_processed[*_currentFileItr]->execute()) {
+    // while there is any data or until running out of files.
+    while (_processed[*_currentFileItr]->execute()) {
 
         // Move to the next file if any. If no more files then finish.
         ++_currentFileItr;
-        if (_fileNames.end() == _currentFileItr) return false;
+        if (_fileNames.end() == _currentFileItr) return true;
         
         // Open that file and expect it to be read at the next iteration
         // of this loop
         _processed[*_currentFileItr].reset (
             new FileCsComputeEngine(*_currentFileItr, _recordSizeBytes));
     }
-    return true;
+    return false;
 }
 
 }}} // namespace lsst::qserv::replica_core

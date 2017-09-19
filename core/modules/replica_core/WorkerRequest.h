@@ -132,22 +132,14 @@ public:
      * may mean both success or failure, depeniding on the completion status
      * of the request.
      *
-     * The default (and preferred) mode of operation (see parameter 'incremental') is
-     * to let the method do its work in progressive steps returning 'false' after
-     * each increment while the work is still being done. This prevents a calling thread
-     * from being blocked for the whole duration of the request execution and be gracefully
-     * stopped if needed.
-     *
      * The method will throw custom exception WorkerRequestCancelled when
      * it detects a cancellation request.
      *
      * The default implementation of the method will do nothing, just simulate
      * processing. This can be serve as a foundation for various tests
      * of this framework.
-     * 
-     * @param incremental - setting it to 'false' will disable the incremental mode
      */
-    virtual bool execute (bool incremental=true);
+    virtual bool execute ();
 
     /**
      * Cancel execution of the request.

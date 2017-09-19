@@ -102,7 +102,7 @@ public:
      *
      * @see WorkerRequest::execute
      */
-    bool execute (bool incremental=true) override;
+    bool execute () override;
 
 protected:
 
@@ -166,7 +166,7 @@ public:
      *
      * @see WorkerRequest::execute
      */
-    bool execute (bool incremental=true) override;
+    bool execute () override;
 
 private:
 
@@ -230,7 +230,7 @@ public:
      *
      * @see WorkerRequest::execute
      */
-    bool execute (bool incremental=true) override;
+    bool execute () override;
 
 private:
 

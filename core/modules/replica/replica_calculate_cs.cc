@@ -23,7 +23,7 @@ void test () {
     try {
         if (incremental) {
             rc::MultiFileCsComputeEngine eng(fileNames);
-            while (eng.execute()) ;
+            while (!eng.execute()) ;
             for (auto const& name: fileNames)
                 std::cout << name << ": " << eng.cs(name) << std::endl;
         } else {

@@ -153,7 +153,7 @@ WorkerRequest::setStatus (CompletionStatus         status,
 }
 
 bool
-WorkerRequest::execute (bool incremental) {
+WorkerRequest::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute");
 
@@ -175,8 +175,7 @@ WorkerRequest::execute (bool incremental) {
                                     WorkerRequest::status2string(status()));
     }
     
-    _durationMillisec += incremental ? ::incrementIvalMillisec.wait() :
-                                       ::maxDurationMillisec;
+    _durationMillisec += ::incrementIvalMillisec.wait();
 
     if (_durationMillisec < ::maxDurationMillisec) return false;
 

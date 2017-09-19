@@ -96,13 +96,13 @@ WorkerDeleteRequest::~WorkerDeleteRequest () {
 }
 
 bool
-WorkerDeleteRequest::execute (bool incremental) {
+WorkerDeleteRequest::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
         << "  db: "    << database()
         << "  chunk: " << chunk());
 
-    const bool complete = WorkerRequest::execute(incremental);
+    const bool complete = WorkerRequest::execute();
     if (complete) {
         _deleteInfo = ReplicaDeleteInfo(100.0);     // simulate 100% completed
     }
@@ -154,7 +154,7 @@ WorkerDeleteRequestPOSIX::~WorkerDeleteRequestPOSIX () {
 }
 
 bool
-WorkerDeleteRequestPOSIX::execute (bool incremental) {
+WorkerDeleteRequestPOSIX::execute () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
          << "  db: "    << database()
@@ -251,11 +251,11 @@ WorkerDeleteRequestX::~WorkerDeleteRequestX () {
 }
 
 bool
-WorkerDeleteRequestX::execute (bool incremental) {
+WorkerDeleteRequestX::execute () {
 
     // TODO: provide the actual implementation instead of the dummy one.
 
-    return WorkerDeleteRequest::execute(incremental);
+    return WorkerDeleteRequest::execute();
 }
 
 

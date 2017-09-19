@@ -210,7 +210,7 @@ public:
      *   std::runtime_error - there was a problem with reading the file
      *   std::logic_error   - an attempt to read the file after it was closed
      *
-     * @return 'false' when the EOF has been reached.
+     * @return 'true' (meaning 'done') when the EOF has been reached.
      */
     bool execute ();
 
@@ -236,6 +236,10 @@ private:
 
 
 
+/**
+ * Class MultiFileCsComputeEngine would compute control sums and measure file sizes
+ * for each file in a collection (of files).
+ */
 class MultiFileCsComputeEngine {
 
 public:
@@ -254,8 +258,7 @@ public:
      *
     *  Exceptions:
      *   std::runtime_error    - if there was a problem with opening the first file
-     *   std::invalid_argument - if a collection of file names is empty or if the record size
-     *                           is 0 or too huge (more than FileUtils::MAX_RECORD_SIZE_BYTES)
+     *   std::invalid_argument - if the record size is 0 or too huge (more than FileUtils::MAX_RECORD_SIZE_BYTES)
      *
      */
     explicit MultiFileCsComputeEngine (
@@ -307,7 +310,7 @@ public:
      *   std::runtime_error - there was a problem with reading a file
      *   std::logic_error   - an attempt to read the last file after it was closed
      *
-     * @return 'false' when the EOF of the last file has been reached.
+     * @return 'true' (meaning 'done') when the EOF of the last file has been reached.
      */
     bool execute ();
 
