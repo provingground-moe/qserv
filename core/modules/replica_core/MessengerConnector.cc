@@ -95,11 +95,37 @@ MessengerConnector::~MessengerConnector () {
 }
 
 void
+MessengerConnector::stop () {
+
+    LOCK_GUARD;
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "stop");
+
+    // Cancel any asynchronous operation(s) if not in the initial state
+
+    switch (_state) {
+
+        case STATE_INITIAL:
+            break;
+
+        case STATE_CONNECTING:
+        case STATE_COMMUNICATING:
+            _resolver.cancel();
+            _socket.cancel();
+            _socket.close();
+            _timer.cancel();
+
+            _state = STATE_INITIAL;
+            break;
+    }
+}
+
+void
 MessengerConnector::cancel (std::string const& id) {
 
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "cancel");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "cancel");
     
     if (!_id2request.count(id))
         throw std::logic_error (
@@ -126,7 +152,7 @@ MessengerConnector::exists (std::string const& id) const {
 
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "exists");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "exists");
     
     return _id2request.count(id);
 }
@@ -137,7 +163,7 @@ MessengerConnector::sendImpl (std::string const&                             id,
 
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "sendImpl  id: " + id);
+    LOGS(_log, LOG_LVL_DEBUG, context() << "sendImpl  id: " + id);
     
     if (_id2request.count(id))
         throw std::logic_error (
@@ -168,7 +194,7 @@ MessengerConnector::sendImpl (std::string const&                             id,
 void
 MessengerConnector::restart () {
 
-    LOGS(_log, LOG_LVL_DEBUG, "restart");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "restart");
 
     // Cancel any asynchronous operation(s) if not in the initial state
 
@@ -193,7 +219,7 @@ MessengerConnector::restart () {
 void
 MessengerConnector::resolve () {
 
-    LOGS(_log, LOG_LVL_DEBUG, "resolve");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "resolve");
 
     if (_state != STATE_INITIAL) return;
 
@@ -219,7 +245,7 @@ MessengerConnector::resolved (boost::system::error_code         const& ec,
 
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "resolved");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "resolved");
 
     if (isAborted(ec)) return;
 
@@ -230,7 +256,7 @@ MessengerConnector::resolved (boost::system::error_code         const& ec,
 void
 MessengerConnector::connect (boost::asio::ip::tcp::resolver::iterator iter) {
 
-    LOGS(_log, LOG_LVL_DEBUG, "connect");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "connect");
 
     boost::asio::async_connect (
         _socket,
@@ -250,7 +276,7 @@ MessengerConnector::connected (boost::system::error_code         const& ec,
 
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "connected");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "connected");
 
     if (isAborted(ec)) return;
 
@@ -264,7 +290,7 @@ MessengerConnector::connected (boost::system::error_code         const& ec,
 void
 MessengerConnector::waitBeforeRestart () {
 
-    LOGS(_log, LOG_LVL_DEBUG, "waitBeforeRestart");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "waitBeforeRestart");
 
     // Allways need to set the interval before launching the timer.
     
@@ -283,9 +309,11 @@ MessengerConnector::awakenForRestart (boost::system::error_code const& ec) {
 
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "awakenForRestart");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "awakenForRestart");
 
-    //if (isAborted(ec)) return;
+    if (isAborted(ec)) return;
+
+    if (_state != STATE_CONNECTING) return;
 
     restart();
 }
@@ -293,7 +321,7 @@ MessengerConnector::awakenForRestart (boost::system::error_code const& ec) {
 void
 MessengerConnector::sendRequest () {
 
-    LOGS(_log, LOG_LVL_DEBUG, "sendRequest");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "sendRequest");
   
     // Check if there is an outstanding send request
     if (_currentRequest) return;
@@ -330,7 +358,7 @@ MessengerConnector::requestSent (boost::system::error_code const& ec,
 
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "requestSent");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
 
     // Check if the request was cancelled while still in flight.
     // If that happens then _currentRequest should already be nullified
@@ -371,7 +399,7 @@ MessengerConnector::requestSent (boost::system::error_code const& ec,
 void
 MessengerConnector::receiveResponse () {
 
-    LOGS(_log, LOG_LVL_DEBUG, "receiveResponse");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "receiveResponse");
 
     // Start with receiving the fixed length frame carrying
     // the size (in bytes) the length of the subsequent message.
@@ -404,7 +432,7 @@ void
 MessengerConnector::responseReceived (boost::system::error_code const& ec,
                                       size_t                           bytes_transferred) {
 
-    LOGS(_log, LOG_LVL_DEBUG, "responseReceived");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
 
     // The notification if any should be happening outside the lock guard
     // to prevent deadlocks
@@ -590,11 +618,17 @@ bool
 MessengerConnector::isAborted (boost::system::error_code const& ec) const {
 
     if (ec == boost::asio::error::operation_aborted) {
-        LOGS(_log, LOG_LVL_DEBUG, "isAborted  ** ABORTED **");
+        LOGS(_log, LOG_LVL_DEBUG, context() << "isAborted  ** ABORTED **");
         return true;
     }
     return false;
 }
 
+std::string
+MessengerConnector::context () const {
+    return
+        "MESSENGER-CONNECTION [worker=" + _workerInfo.name +
+        ", state=" + state2string(_state) + "]  ";
+}
 
 }}} // namespace lsst::qserv::replica_core

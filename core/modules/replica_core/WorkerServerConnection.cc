@@ -436,6 +436,21 @@ WorkerServerConnection::processServiceRequest (proto::ReplicationRequestHeader h
             reply(hdr.id(), response);
             break;
         }
+        case proto::ReplicationServiceRequestType::SERVICE_DRAIN: {
+
+            _processor.drain ();
+
+            const bool extendedReport = true;   // to return detailed info on all known
+                                                // replica-related requests
+            _processor.setServiceResponse (
+                  response,
+                  hdr.id(),
+                  proto::ReplicationServiceResponse::SUCCESS,
+                  extendedReport);
+
+            reply(hdr.id(), response);
+            break;
+        }
         default:
             throw std::logic_error (
                   "WorkerServerConnection::processServiceRequest() unhandled request type: '" +

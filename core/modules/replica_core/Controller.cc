@@ -366,6 +366,10 @@ Controller::stop () {
 
     // LOCK_GUARD  (disabled)
 
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+    _messenger->stop();
+#endif
+
     // Destoring this object will let the I/O service to (eventually) finish
     // all on-going work and shut down the thread. In that case there is no need
     // to stop the service explicitly (which is not a good idea anyway because
@@ -793,7 +797,7 @@ Controller::requestsOfWorkerService (std::string const&                    worke
                                      ServiceRequestsRequest::callback_type onFinish) {
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, "statusOfWorkerService  workerName: " << workerName);
+    LOGS(_log, LOG_LVL_DEBUG, "requestsOfWorkerService  workerName: " << workerName);
 
     return ControllerImpl::serviceManagementOperation<ServiceRequestsRequest> (
         shared_from_this(),
@@ -805,6 +809,22 @@ Controller::requestsOfWorkerService (std::string const&                    worke
         );
 }
 
+ServiceDrainRequest::pointer
+Controller::drainWorkerService (std::string const&                 workerName,
+                                ServiceDrainRequest::callback_type onFinish) {
+    LOCK_GUARD;
+
+    LOGS(_log, LOG_LVL_DEBUG, "drainWorkerService  workerName: " << workerName);
+
+    return ControllerImpl::serviceManagementOperation<ServiceDrainRequest> (
+        shared_from_this(),
+        workerName,
+        onFinish
+#ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
+        ,_messenger
+#endif
+        );
+}
 
 std::vector<ReplicationRequest::pointer>
 Controller::activeReplicationRequests () {
@@ -895,6 +915,18 @@ std::vector<ServiceStatusRequest::pointer>
 Controller::activeServiceStatusRequests () {
     LOCK_GUARD;
     return ControllerImpl::requestsByType<ServiceStatusRequest>(shared_from_this());
+}
+
+std::vector<ServiceRequestsRequest::pointer>
+Controller::activeServiceRequestsRequests () {
+    LOCK_GUARD;
+    return ControllerImpl::requestsByType<ServiceRequestsRequest>(shared_from_this());
+}
+
+std::vector<ServiceDrainRequest::pointer>
+Controller::activeServiceDrainRequests () {
+    LOCK_GUARD;
+    return ControllerImpl::requestsByType<ServiceDrainRequest>(shared_from_this());
 }
 
 size_t
@@ -993,6 +1025,18 @@ size_t
 Controller::numActiveServiceStatusRequests () {
     LOCK_GUARD;
     return ControllerImpl::numRequestsByType<ServiceStatusRequest>(shared_from_this());
+}
+
+size_t
+Controller::numActiveServiceRequestsRequests () {
+    LOCK_GUARD;
+    return ControllerImpl::numRequestsByType<ServiceRequestsRequest>(shared_from_this());
+}
+
+size_t
+Controller::numActiveServiceDrainRequests () {
+    LOCK_GUARD;
+    return ControllerImpl::numRequestsByType<ServiceDrainRequest>(shared_from_this());
 }
 
 void

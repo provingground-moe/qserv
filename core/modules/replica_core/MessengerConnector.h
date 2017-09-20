@@ -223,6 +223,11 @@ public:
                            std::string const&       worker);
 
     /**
+     * Stop operations
+     */
+    void stop ();
+
+    /**
      * Initiate sending a message
      *
      * The response message will be initialized only in case of successfull completion
@@ -412,6 +417,11 @@ private:
      *    a proper state.
      */
     bool isAborted (boost::system::error_code const& ec) const;
+
+    /**
+     * Return the worker-specific context string
+     */
+    std::string context () const;
 
 private:
 

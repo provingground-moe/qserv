@@ -164,7 +164,14 @@ struct ServiceRequestsRequestPolicy {
         return lsst::qserv::proto::ReplicationServiceRequestType::SERVICE_REQUESTS;
     }
 };
-
+struct ServiceDrainRequestPolicy {
+    static const char* requestTypeName () {
+        return "SERVICE_DRAIN";
+    } 
+    static lsst::qserv::proto::ReplicationServiceRequestType requestType () {
+        return lsst::qserv::proto::ReplicationServiceRequestType::SERVICE_DRAIN;
+    }
+};
 
 // =============================================
 //   Classes based on the dedicated connectors
@@ -533,6 +540,7 @@ typedef ServiceManagementRequestC<ServiceSuspendRequestPolicy>  ServiceSuspendRe
 typedef ServiceManagementRequestC<ServiceResumeRequestPolicy>   ServiceResumeRequest;
 typedef ServiceManagementRequestC<ServiceStatusRequestPolicy>   ServiceStatusRequest;
 typedef ServiceManagementRequestC<ServiceRequestsRequestPolicy> ServiceRequestsRequest;
+typedef ServiceManagementRequestC<ServiceDrainRequestPolicy>    ServiceDrainRequest;
 
 #else  // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
@@ -542,6 +550,7 @@ typedef ServiceManagementRequestM<ServiceSuspendRequestPolicy>  ServiceSuspendRe
 typedef ServiceManagementRequestM<ServiceResumeRequestPolicy>   ServiceResumeRequest;
 typedef ServiceManagementRequestM<ServiceStatusRequestPolicy>   ServiceStatusRequest;
 typedef ServiceManagementRequestM<ServiceRequestsRequestPolicy> ServiceRequestsRequest;
+typedef ServiceManagementRequestM<ServiceDrainRequestPolicy>    ServiceDrainRequest;
 
 #endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
