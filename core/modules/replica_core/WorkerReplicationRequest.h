@@ -32,6 +32,9 @@
 
 // System headers
 
+#include <boost/filesystem.hpp>
+#include <cstdio>               // std::FILE, C-style file I/O
+#include <map>
 #include <string>
 
 // Qserv headers
@@ -47,6 +50,11 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+// Forward declarations
+
+class DatabaseInfo;
+class FileClient;
+class WorkerInfo;
 
 /**
   * Class WorkerReplicationRequest represents a context and a state of replication
@@ -68,28 +76,28 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+    static pointer create (ServiceProvider&   serviceProvider,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
+                           std::string const& database,
                            unsigned int       chunk,
-                           const std::string &sourceWorker);
+                           std::string const& sourceWorker);
 
     // Default construction and copy semantics are proxibited
 
     WorkerReplicationRequest () = delete;
     WorkerReplicationRequest (WorkerReplicationRequest const&) = delete;
-    WorkerReplicationRequest & operator= (WorkerReplicationRequest const&) = delete;
+    WorkerReplicationRequest& operator= (WorkerReplicationRequest const&) = delete;
 
     /// Destructor
     ~WorkerReplicationRequest () override;
 
     // Trivial accessors
 
-    const std::string& database     () const { return _database; }
+    std::string const& database     () const { return _database; }
     unsigned int       chunk        () const { return _chunk; }
-    const std::string& sourceWorker () const { return _sourceWorker; }
+    std::string const& sourceWorker () const { return _sourceWorker; }
 
     /// Return extended status of the request
     const ReplicaCreateInfo& replicationInfo () const { return _replicationInfo; }
@@ -106,13 +114,13 @@ protected:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequest (ServiceProvider   &serviceProvider,
-                              const std::string &worker,
-                              const std::string &id,
+    WorkerReplicationRequest (ServiceProvider&   serviceProvider,
+                              std::string const& worker,
+                              std::string const& id,
                               int                priority,
-                              const std::string &database,
+                              std::string const& database,
                               unsigned int       chunk,
-                              const std::string &sourceWorker);
+                              std::string const& sourceWorker);
 
 protected:
 
@@ -145,19 +153,19 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+    static pointer create (ServiceProvider&   serviceProvider,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
+                           std::string const& database,
                            unsigned int       chunk,
-                           const std::string &sourceWorker);
+                           std::string const& sourceWorker);
 
     // Default construction and copy semantics are proxibited
 
     WorkerReplicationRequestPOSIX () = delete;
     WorkerReplicationRequestPOSIX (WorkerReplicationRequestPOSIX const&) = delete;
-    WorkerReplicationRequestPOSIX & operator= (WorkerReplicationRequestPOSIX const&) = delete;
+    WorkerReplicationRequestPOSIX& operator= (WorkerReplicationRequestPOSIX const&) = delete;
 
     /// Destructor
     ~WorkerReplicationRequestPOSIX () override;
@@ -174,13 +182,13 @@ protected:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequestPOSIX (ServiceProvider   &serviceProvider,
-                                   const std::string &worker,
-                                   const std::string &id,
+    WorkerReplicationRequestPOSIX (ServiceProvider&   serviceProvider,
+                                   std::string const& worker,
+                                   std::string const& id,
                                    int                priority,
-                                   const std::string &database,
+                                   std::string const& database,
                                    unsigned int       chunk,
-                                   const std::string &sourceWorker);
+                                   std::string const& sourceWorker);
 };
 
 
@@ -203,19 +211,19 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+    static pointer create (ServiceProvider&   serviceProvider,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
+                           std::string const& database,
                            unsigned int       chunk,
-                           const std::string &sourceWorker);
+                           std::string const& sourceWorker);
 
     // Default construction and copy semantics are proxibited
 
     WorkerReplicationRequestFS () = delete;
     WorkerReplicationRequestFS (WorkerReplicationRequestFS const&) = delete;
-    WorkerReplicationRequestFS & operator= (WorkerReplicationRequestFS const&) = delete;
+    WorkerReplicationRequestFS& operator= (WorkerReplicationRequestFS const&) = delete;
 
     /// Destructor
     ~WorkerReplicationRequestFS () override;
@@ -232,15 +240,76 @@ protected:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequestFS (ServiceProvider   &serviceProvider,
-                                const std::string &worker,
-                                const std::string &id,
+    WorkerReplicationRequestFS (ServiceProvider&   serviceProvider,
+                                std::string const& worker,
+                                std::string const& id,
                                 int                priority,
-                                const std::string &database,
+                                std::string const& database,
                                 unsigned int       chunk,
-                                const std::string &sourceWorker);
+                                std::string const& sourceWorker);
 
 private:
+    
+    /**
+     * Open files associated with the current state of iterator _fileItr.
+     *
+     * @return 'true' in case of any error
+     */
+    bool openFiles ();
+
+    /**
+     * The final stage to be executed just once after copying the content
+     * of the remote files into the local temporary ones. It will rename
+     * the temporary files into the standard ones.
+     *
+     * Resources will also be released.
+     *
+     * @return always 'true'
+     */
+    bool finalize ();
+
+    /**
+     * Close connections, deallocate resources, etc.
+     *
+     * Any connections and open files will be closed, the buffers will be
+     * released to prevent unneccesary resource utilization. Note that
+     * request objects can stay in the server's memory for an extended
+     * period of time.
+     */
+    void releaseResources ();
+
+private:
+
+    // Cached parameters of the operation
+
+    WorkerInfo   const& _inWorkerInfo;
+    WorkerInfo   const& _outWorkerInfo;
+    DatabaseInfo const& _databaseInfo;
+
+    /// The flag indicating if the initialization phase of the operation
+    /// has alreadty completed
+    bool _initialized;
+
+    /// Short names of files to be copied
+    std::vector<std::string> const _files;
+
+    /// The iterator pointing to the currently processed file.
+    /// If it's set to _files.end() then it means the operation
+    /// has finished.
+    std::vector<std::string>::const_iterator _fileItr;
+
+    /// This object represents teh currently open (if any) input file
+    /// on the source worker node
+    std::shared_ptr<FileClient> _inFilePtr;
+
+    /// The file pointer for the temporary output file
+    std::FILE* _tmpFilePtr;
+
+    // Cached mapping from short file names into the corresponidng
+    // path names
+
+    std::map<std::string,boost::filesystem::path> _file2tmpFile;
+    std::map<std::string,boost::filesystem::path> _file2outFile;
 
     /// The buffer for records read from the remote service
     uint8_t *_buf;
@@ -267,19 +336,19 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      */
-    static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
+    static pointer create (ServiceProvider&   serviceProvider,
+                           std::string const& worker,
+                           std::string const& id,
                            int                priority,
-                           const std::string &database,
+                           std::string const& database,
                            unsigned int       chunk,
-                           const std::string &sourceWorker);
+                           std::string const& sourceWorker);
 
     // Default construction and copy semantics are proxibited
 
     WorkerReplicationRequestX () = delete;
     WorkerReplicationRequestX (WorkerReplicationRequestX const&) = delete;
-    WorkerReplicationRequestX & operator= (WorkerReplicationRequestX const&) = delete;
+    WorkerReplicationRequestX& operator= (WorkerReplicationRequestX const&) = delete;
 
     /// Destructor
     ~WorkerReplicationRequestX () override;
@@ -296,13 +365,13 @@ private:
     /**
      * The normal constructor of the class.
      */
-    WorkerReplicationRequestX (ServiceProvider   &serviceProvider,
-                               const std::string &worker,
-                               const std::string &id,
+    WorkerReplicationRequestX (ServiceProvider&   serviceProvider,
+                               std::string const& worker,
+                               std::string const& id,
                                int                priority,
-                               const std::string &database,
+                               std::string const& database,
                                unsigned int       chunk,
-                               const std::string &sourceWorker);
+                               std::string const& sourceWorker);
 };
 
 

@@ -101,7 +101,7 @@ public:
 
     Controller () = delete;
     Controller (Controller const&) = delete;
-    Controller & operator= (Controller const&) = delete;
+    Controller& operator= (Controller const&) = delete;
  
     /// Destructor
     virtual ~Controller ();
@@ -160,13 +160,13 @@ public:
      *
      * @return a pointer to the replication request
      */
-    ReplicationRequest_pointer replicate (const std::string                &workerName,
-                                          const std::string                &sourceWorkerName,
-                                          const std::string                &database,
-                                          unsigned int                      chunk,
-                                          ReplicationRequest_callback_type  onFinish=nullptr,
-                                          int                               priority=0,
-                                          bool                              keepTracking=true);
+    ReplicationRequest_pointer replicate (std::string const&               workerName,
+                                          std::string const&               sourceWorkerName,
+                                          std::string const&               database,
+                                          unsigned int                     chunk,
+                                          ReplicationRequest_callback_type onFinish=nullptr,
+                                          int                              priority=0,
+                                          bool                             keepTracking=true);
 
     /**
      * Initiate a new replica deletion request.
@@ -179,12 +179,12 @@ public:
      *
      * @return a pointer to the replication request
      */
-    DeleteRequest_pointer deleteReplica (const std::string           &workerName,
-                                         const std::string           &database,
-                                         unsigned int                 chunk,
-                                         DeleteRequest_callback_type  onFinish=nullptr,
-                                         int                          priority=0,
-                                         bool                         keepTracking=true);
+    DeleteRequest_pointer deleteReplica (std::string const&          workerName,
+                                         std::string const&          database,
+                                         unsigned int                chunk,
+                                         DeleteRequest_callback_type onFinish=nullptr,
+                                         int                         priority=0,
+                                         bool                        keepTracking=true);
 
     /**
      * Initiate a new replica lookup request.
@@ -203,13 +203,13 @@ public:
      *
      * @return a pointer to the replication request
      */
-    FindRequest_pointer findReplica (const std::string         &workerName,
-                                     const std::string         &database,
-                                     unsigned int               chunk,
-                                     FindRequest_callback_type  onFinish=nullptr,
-                                     int                        priority=0,
-                                     bool                       computeCheckSum=false,
-                                     bool                       keepTracking=true);
+    FindRequest_pointer findReplica (std::string const&        workerName,
+                                     std::string const&        database,
+                                     unsigned int              chunk,
+                                     FindRequest_callback_type onFinish=nullptr,
+                                     int                       priority=0,
+                                     bool                      computeCheckSum=false,
+                                     bool                      keepTracking=true);
 
     /**
      * Initiate a new replicas lookup request.
@@ -221,11 +221,11 @@ public:
      *
      * @return a pointer to the replication request
      */
-    FindAllRequest_pointer findAllReplicas (const std::string            &workerName,
-                                            const std::string            &database,
-                                            FindAllRequest_callback_type  onFinish=nullptr,
-                                            int                           priority=0,
-                                            bool                          keepTracking=true);
+    FindAllRequest_pointer findAllReplicas (std::string const&           workerName,
+                                            std::string const&           database,
+                                            FindAllRequest_callback_type onFinish=nullptr,
+                                            int                          priority=0,
+                                            bool                         keepTracking=true);
 
     /**
      * Stop an outstanding replication request.
@@ -237,10 +237,10 @@ public:
      *
      * @return a pointer to the stop request
      */
-    StopReplicationRequest_pointer stopReplication (const std::string                    &workerName,
-                                                    const std::string                    &targetRequestId,
-                                                    StopReplicationRequest_callback_type  onFinish=nullptr,
-                                                    bool                                  keepTracking=true);
+    StopReplicationRequest_pointer stopReplication (std::string const&                   workerName,
+                                                    std::string const&                   targetRequestId,
+                                                    StopReplicationRequest_callback_type onFinish=nullptr,
+                                                    bool                                 keepTracking=true);
 
     /**
      * Stop an outstanding replica deletion request.
@@ -252,10 +252,10 @@ public:
      *
      * @return a pointer to the stop request
      */
-    StopDeleteRequest_pointer stopReplicaDelete (const std::string               &workerName,
-                                                 const std::string               &targetRequestId,
-                                                 StopDeleteRequest_callback_type  onFinish=nullptr,
-                                                 bool                             keepTracking=true);
+    StopDeleteRequest_pointer stopReplicaDelete (std::string const&              workerName,
+                                                 std::string const&              targetRequestId,
+                                                 StopDeleteRequest_callback_type onFinish=nullptr,
+                                                 bool                            keepTracking=true);
 
     /**
      * Stop an outstanding replica lookup request.
@@ -267,10 +267,10 @@ public:
      *
      * @return a pointer to the stop request
      */
-    StopFindRequest_pointer stopReplicaFind (const std::string             &workerName,
-                                             const std::string             &targetRequestId,
-                                             StopFindRequest_callback_type  onFinish=nullptr,
-                                             bool                           keepTracking=true);
+    StopFindRequest_pointer stopReplicaFind (std::string const&            workerName,
+                                             std::string const&            targetRequestId,
+                                             StopFindRequest_callback_type onFinish=nullptr,
+                                             bool                          keepTracking=true);
 
     /**
      * Stop an outstanding replicas lookup request.
@@ -282,10 +282,10 @@ public:
      *
      * @return a pointer to the stop request
      */
-    StopFindAllRequest_pointer stopReplicaFindAll (const std::string                &workerName,
-                                                   const std::string                &targetRequestId,
-                                                   StopFindAllRequest_callback_type  onFinish=nullptr,
-                                                   bool                              keepTracking=true);
+    StopFindAllRequest_pointer stopReplicaFindAll (std::string const&               workerName,
+                                                   std::string const&               targetRequestId,
+                                                   StopFindAllRequest_callback_type onFinish=nullptr,
+                                                   bool                             keepTracking=true);
 
     /**
      * Check the on-going status of an outstanding replication request.
@@ -297,10 +297,10 @@ public:
      *
      * @return a pointer to the status inquery request
      */
-    StatusReplicationRequest_pointer statusOfReplication (const std::string                      &workerName,
-                                                          const std::string                      &targetRequestId,
-                                                          StatusReplicationRequest_callback_type  onFinish=nullptr,
-                                                          bool                                    keepTracking=false);
+    StatusReplicationRequest_pointer statusOfReplication (std::string const&                     workerName,
+                                                          std::string const&                     targetRequestId,
+                                                          StatusReplicationRequest_callback_type onFinish=nullptr,
+                                                          bool                                   keepTracking=false);
  
     /**
      * Check the on-going status of an outstanding replica deletion request.
@@ -312,10 +312,10 @@ public:
      *
      * @return a pointer to the status inquery request
      */
-    StatusDeleteRequest_pointer statusOfDelete (const std::string                 &workerName,
-                                                const std::string                 &targetRequestId,
-                                                StatusDeleteRequest_callback_type  onFinish=nullptr,
-                                                bool                               keepTracking=false);
+    StatusDeleteRequest_pointer statusOfDelete (std::string const&                workerName,
+                                                std::string const&                targetRequestId,
+                                                StatusDeleteRequest_callback_type onFinish=nullptr,
+                                                bool                              keepTracking=false);
 
     /**
      * Check the on-going status of an outstanding replica lookup request.
@@ -327,10 +327,10 @@ public:
      *
      * @return a pointer to the status inquery request
      */
-    StatusFindRequest_pointer statusOfFind (const std::string               &workerName,
-                                            const std::string               &targetRequestId,
-                                            StatusFindRequest_callback_type  onFinish=nullptr,
-                                            bool                             keepTracking=false);
+    StatusFindRequest_pointer statusOfFind (std::string const&              workerName,
+                                            std::string const&              targetRequestId,
+                                            StatusFindRequest_callback_type onFinish=nullptr,
+                                            bool                            keepTracking=false);
 
     /**
      * Check the on-going status of an outstanding (multiple) replicas lookup request.
@@ -342,10 +342,10 @@ public:
      *
      * @return a pointer to the status inquery request
      */
-    StatusFindAllRequest_pointer statusOfFindAll (const std::string                  &workerName,
-                                                  const std::string                  &targetRequestId,
-                                                  StatusFindAllRequest_callback_type  onFinish=nullptr,
-                                                  bool                                keepTracking=false);
+    StatusFindAllRequest_pointer statusOfFindAll (std::string const&                 workerName,
+                                                  std::string const&                 targetRequestId,
+                                                  StatusFindAllRequest_callback_type onFinish=nullptr,
+                                                  bool                               keepTracking=false);
 
     /**
      * Tell the worker-side service to temporarily suspend processing requests
@@ -355,8 +355,8 @@ public:
      *
      * @return a pointer to the request
      */
-    ServiceSuspendRequest_pointer suspendWorkerService (const std::string                   &workerName,
-                                                        ServiceSuspendRequest_callback_type  onFinish=nullptr);
+    ServiceSuspendRequest_pointer suspendWorkerService (std::string const&                  workerName,
+                                                        ServiceSuspendRequest_callback_type onFinish=nullptr);
 
     /**
      * Tell the worker-side service to resume processing requests
@@ -366,8 +366,8 @@ public:
      *
      * @return a pointer to the request
      */
-    ServiceResumeRequest_pointer resumeWorkerService (const std::string                  &workerName,
-                                                      ServiceResumeRequest_callback_type  onFinish=nullptr);
+    ServiceResumeRequest_pointer resumeWorkerService (std::string const&                 workerName,
+                                                      ServiceResumeRequest_callback_type onFinish=nullptr);
     /**
      * Request the current status of the worker-side service
      *
@@ -376,8 +376,8 @@ public:
      *
      * @return a pointer to the request
      */
-    ServiceStatusRequest_pointer statusOfWorkerService (const std::string                  &workerName,
-                                                        ServiceStatusRequest_callback_type  onFinish=nullptr);
+    ServiceStatusRequest_pointer statusOfWorkerService (std::string const&                 workerName,
+                                                        ServiceStatusRequest_callback_type onFinish=nullptr);
                                                          
     /**
      * Request detailed info on which replication-related requests are known
@@ -388,8 +388,8 @@ public:
      *
      * @return a pointer to the request
      */
-    ServiceRequestsRequest_pointer requestsOfWorkerService (const std::string                    &workerName,
-                                                            ServiceRequestsRequest_callback_type  onFinish=nullptr);
+    ServiceRequestsRequest_pointer requestsOfWorkerService (std::string const&                   workerName,
+                                                            ServiceRequestsRequest_callback_type onFinish=nullptr);
                                                          
     // Filters for active requests
 
@@ -443,14 +443,14 @@ private:
      *
      * @param serviceProvider - for configuration, other services
      */
-    explicit Controller (ServiceProvider &serviceProvider);
+    explicit Controller (ServiceProvider& serviceProvider);
 
     /**
      * Finalize the completion of the request. This method will notify
      * a requestor on the completion of the operation and it will also
      * remove the request from the server's registry.
      */
-    void finish (const std::string &id);
+    void finish (std::string const& id);
 
     /**
      * Make sure the server is runnning. Otherwise throw std::runtime_error.

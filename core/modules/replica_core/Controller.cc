@@ -97,7 +97,7 @@ struct RequestWrapperImpl
         _onFinish(_request);
     }
 
-    RequestWrapperImpl(const typename T::pointer &request,
+    RequestWrapperImpl(typename T::pointer const& request,
                        typename T::callback_type  onFinish)
 
         :   RequestWrapper(),
@@ -142,7 +142,7 @@ public:
     // Default copy semantics is proxibited
 
     ControllerImpl (ControllerImpl const&) = delete;
-    ControllerImpl & operator= (ControllerImpl const&) = delete;
+    ControllerImpl& operator= (ControllerImpl const&) = delete;
 
     /// Destructor
     ~ControllerImpl () {}
@@ -158,13 +158,14 @@ public:
     template <class REQUEST_TYPE>
     static
     typename REQUEST_TYPE::pointer requestManagementOperation (
-            Controller::pointer                   controller, 
-            const std::string                    &workerName,
-            const std::string                    &targetRequestId,
-            typename REQUEST_TYPE::callback_type  onFinish,
-            bool                                  keepTracking
+
+            Controller::pointer const&           controller, 
+            std::string const&                   workerName,
+            std::string const&                   targetRequestId,
+            typename REQUEST_TYPE::callback_type onFinish,
+            bool                                 keepTracking
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-            ,typename Messenger::pointer         &messenger
+            ,typename Messenger::pointer const&  messenger
 #endif
             ) {
 
@@ -209,11 +210,12 @@ public:
     template <class REQUEST_TYPE>
     static
     typename REQUEST_TYPE::pointer serviceManagementOperation (
-            Controller::pointer                   controller, 
-            const std::string                    &workerName,
-            typename REQUEST_TYPE::callback_type  onFinish
+
+            Controller::pointer const&           controller, 
+            std::string const&                   workerName,
+            typename REQUEST_TYPE::callback_type onFinish
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-            ,typename Messenger::pointer         &messenger
+            ,typename Messenger::pointer const&  messenger
 #endif
             ) {
 
@@ -251,11 +253,11 @@ public:
      */
     template <class REQUEST_TYPE>
     static
-    std::vector<typename REQUEST_TYPE::pointer> requestsByType (Controller::pointer controller) {
+    std::vector<typename REQUEST_TYPE::pointer> requestsByType (Controller::pointer const& controller) {
     
         std::vector<typename REQUEST_TYPE::pointer> result;
     
-        for (auto itr : controller->_registry) {
+        for (auto const itr: controller->_registry) {
         
             typename REQUEST_TYPE::pointer request =
                 std::dynamic_pointer_cast<REQUEST_TYPE>(itr.second->request());
@@ -270,11 +272,11 @@ public:
      */
     template <class REQUEST_TYPE>
     static
-    size_t numRequestsByType (Controller::pointer controller) {
+    size_t numRequestsByType (Controller::pointer const& controller) {
     
         size_t result{0};
     
-        for (auto itr : controller->_registry) {
+        for (auto const itr : controller->_registry) {
         
             typename REQUEST_TYPE::pointer request =
                 std::dynamic_pointer_cast<REQUEST_TYPE>(itr.second->request());
@@ -292,12 +294,12 @@ public:
 
 
 Controller::pointer
-Controller::create (ServiceProvider &serviceProvider) {
+Controller::create (ServiceProvider& serviceProvider) {
     return Controller::pointer (
         new Controller(serviceProvider));
 }
 
-Controller::Controller (ServiceProvider &serviceProvider)
+Controller::Controller (ServiceProvider& serviceProvider)
     :   _serviceProvider (serviceProvider),
         _io_service      (),
         _work     (nullptr),
@@ -390,13 +392,13 @@ Controller::join () {
 }
 
 ReplicationRequest::pointer
-Controller::replicate (const std::string                 &workerName,
-                       const std::string                 &sourceWorkerName,
-                       const std::string                 &database,
-                       unsigned int                       chunk,
-                       ReplicationRequest::callback_type  onFinish,
-                       int                                priority,
-                       bool                               keepTracking) {
+Controller::replicate (std::string const&                workerName,
+                       std::string const&                sourceWorkerName,
+                       std::string const&                database,
+                       unsigned int                      chunk,
+                       ReplicationRequest::callback_type onFinish,
+                       int                               priority,
+                       bool                              keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -436,12 +438,12 @@ Controller::replicate (const std::string                 &workerName,
 }
 
 DeleteRequest::pointer
-Controller::deleteReplica (const std::string            &workerName,
-                           const std::string            &database,
-                           unsigned int                  chunk,
-                           DeleteRequest::callback_type  onFinish,
-                           int                           priority,
-                           bool                          keepTracking) {
+Controller::deleteReplica (std::string const&           workerName,
+                           std::string const&           database,
+                           unsigned int                 chunk,
+                           DeleteRequest::callback_type onFinish,
+                           int                          priority,
+                           bool                         keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -480,13 +482,13 @@ Controller::deleteReplica (const std::string            &workerName,
 }
 
 FindRequest::pointer
-Controller::findReplica (const std::string          &workerName,
-                         const std::string          &database,
-                         unsigned int                chunk,
-                         FindRequest::callback_type  onFinish,
-                         int                         priority,
-                         bool                        computeCheckSum,
-                         bool                        keepTracking) {
+Controller::findReplica (std::string const&         workerName,
+                         std::string const&         database,
+                         unsigned int               chunk,
+                         FindRequest::callback_type onFinish,
+                         int                        priority,
+                         bool                       computeCheckSum,
+                         bool                       keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -526,11 +528,11 @@ Controller::findReplica (const std::string          &workerName,
 }
 
 FindAllRequest::pointer
-Controller::findAllReplicas (const std::string             &workerName,
-                             const std::string             &database,
-                             FindAllRequest::callback_type  onFinish,
-                             int                            priority,
-                             bool                           keepTracking) {
+Controller::findAllReplicas (std::string const&            workerName,
+                             std::string const&            database,
+                             FindAllRequest::callback_type onFinish,
+                             int                           priority,
+                             bool                          keepTracking) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -568,10 +570,10 @@ Controller::findAllReplicas (const std::string             &workerName,
 }
 
 StopReplicationRequest::pointer
-Controller::stopReplication (const std::string                     &workerName,
-                             const std::string                     &targetRequestId,
-                             StopReplicationRequest::callback_type  onFinish,
-                             bool                                   keepTracking) {
+Controller::stopReplication (std::string const&                    workerName,
+                             std::string const&                    targetRequestId,
+                             StopReplicationRequest::callback_type onFinish,
+                             bool                                  keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplication  targetRequestId = " << targetRequestId);
@@ -589,10 +591,10 @@ Controller::stopReplication (const std::string                     &workerName,
 }
 
 StopDeleteRequest::pointer
-Controller::stopReplicaDelete (const std::string                &workerName,
-                               const std::string                &targetRequestId,
-                               StopDeleteRequest::callback_type  onFinish,
-                               bool                              keepTracking) {
+Controller::stopReplicaDelete (std::string const&               workerName,
+                               std::string const&               targetRequestId,
+                               StopDeleteRequest::callback_type onFinish,
+                               bool                             keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaDelete  targetRequestId = " << targetRequestId);
@@ -610,10 +612,10 @@ Controller::stopReplicaDelete (const std::string                &workerName,
 }
 
 StopFindRequest::pointer
-Controller::stopReplicaFind (const std::string              &workerName,
-                             const std::string              &targetRequestId,
-                             StopFindRequest::callback_type  onFinish,
-                             bool                            keepTracking) {
+Controller::stopReplicaFind (std::string const&             workerName,
+                             std::string const&             targetRequestId,
+                             StopFindRequest::callback_type onFinish,
+                             bool                           keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaFind  targetRequestId = " << targetRequestId);
@@ -631,10 +633,10 @@ Controller::stopReplicaFind (const std::string              &workerName,
 }
 
 StopFindAllRequest::pointer
-Controller::stopReplicaFindAll (const std::string                 &workerName,
-                                const std::string                 &targetRequestId,
-                                StopFindAllRequest::callback_type  onFinish,
-                                bool                               keepTracking) {
+Controller::stopReplicaFindAll (std::string const&                workerName,
+                                std::string const&                targetRequestId,
+                                StopFindAllRequest::callback_type onFinish,
+                                bool                              keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaFindAll  targetRequestId = " << targetRequestId);
@@ -652,10 +654,10 @@ Controller::stopReplicaFindAll (const std::string                 &workerName,
 }
 
 StatusReplicationRequest::pointer
-Controller::statusOfReplication (const std::string                       &workerName,
-                                 const std::string                       &targetRequestId,
-                                 StatusReplicationRequest::callback_type  onFinish,
-                                 bool                                     keepTracking) {
+Controller::statusOfReplication (std::string const&                      workerName,
+                                 std::string const&                      targetRequestId,
+                                 StatusReplicationRequest::callback_type onFinish,
+                                 bool                                    keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfReplication  targetRequestId = " << targetRequestId);
@@ -673,10 +675,10 @@ Controller::statusOfReplication (const std::string                       &worker
 }
 
 StatusDeleteRequest::pointer
-Controller::statusOfDelete (const std::string                  &workerName,
-                            const std::string                  &targetRequestId,
-                            StatusDeleteRequest::callback_type  onFinish,
-                            bool                                keepTracking) {
+Controller::statusOfDelete (std::string const&                 workerName,
+                            std::string const&                 targetRequestId,
+                            StatusDeleteRequest::callback_type onFinish,
+                            bool                               keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfDelete  targetRequestId = " << targetRequestId);
@@ -694,10 +696,10 @@ Controller::statusOfDelete (const std::string                  &workerName,
 }
 
 StatusFindRequest::pointer
-Controller::statusOfFind (const std::string                &workerName,
-                          const std::string                &targetRequestId,
-                          StatusFindRequest::callback_type  onFinish,
-                          bool                              keepTracking) {
+Controller::statusOfFind (std::string const&               workerName,
+                          std::string const&               targetRequestId,
+                          StatusFindRequest::callback_type onFinish,
+                          bool                             keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfFind  targetRequestId = " << targetRequestId);
@@ -715,10 +717,10 @@ Controller::statusOfFind (const std::string                &workerName,
 }
 
 StatusFindAllRequest::pointer
-Controller::statusOfFindAll (const std::string                   &workerName,
-                             const std::string                   &targetRequestId,
-                             StatusFindAllRequest::callback_type  onFinish,
-                             bool                                 keepTracking) {
+Controller::statusOfFindAll (std::string const&                  workerName,
+                             std::string const&                  targetRequestId,
+                             StatusFindAllRequest::callback_type onFinish,
+                             bool                                keepTracking) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfFindAll  targetRequestId = " << targetRequestId);
@@ -736,8 +738,8 @@ Controller::statusOfFindAll (const std::string                   &workerName,
 }
 
 ServiceSuspendRequest::pointer
-Controller::suspendWorkerService (const std::string                    &workerName,
-                                  ServiceSuspendRequest::callback_type  onFinish) {
+Controller::suspendWorkerService (std::string const&                   workerName,
+                                  ServiceSuspendRequest::callback_type onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "suspendWorkerService  workerName: " << workerName);
@@ -753,8 +755,8 @@ Controller::suspendWorkerService (const std::string                    &workerNa
 }
 
 ServiceResumeRequest::pointer
-Controller::resumeWorkerService (const std::string                   &workerName,
-                                 ServiceResumeRequest::callback_type  onFinish) {
+Controller::resumeWorkerService (std::string const&                  workerName,
+                                 ServiceResumeRequest::callback_type onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "resumeWorkerService  workerName: " << workerName);
@@ -770,8 +772,8 @@ Controller::resumeWorkerService (const std::string                   &workerName
 }
 
 ServiceStatusRequest::pointer
-Controller::statusOfWorkerService (const std::string                   &workerName,
-                                   ServiceStatusRequest::callback_type  onFinish) {
+Controller::statusOfWorkerService (std::string const&                  workerName,
+                                   ServiceStatusRequest::callback_type onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfWorkerService  workerName: " << workerName);
@@ -787,8 +789,8 @@ Controller::statusOfWorkerService (const std::string                   &workerNa
 }
 
 ServiceRequestsRequest::pointer
-Controller::requestsOfWorkerService (const std::string                     &workerName,
-                                     ServiceRequestsRequest::callback_type  onFinish) {
+Controller::requestsOfWorkerService (std::string const&                    workerName,
+                                     ServiceRequestsRequest::callback_type onFinish) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfWorkerService  workerName: " << workerName);
@@ -994,7 +996,7 @@ Controller::numActiveServiceStatusRequests () {
 }
 
 void
-Controller::finish (const std::string &id) {
+Controller::finish (std::string const& id) {
 
     // IMPORTANT:
     //
