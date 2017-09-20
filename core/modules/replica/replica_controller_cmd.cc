@@ -232,6 +232,12 @@ bool test () {
                 [] (rc::ServiceRequestsRequest::pointer request) {
                     printRequest<rc::ServiceManagementRequestBase>(request);
                 });
+        } else if ("SERVICE_DRAIN"  == operation) {
+            request = controller->drainWorkerService (
+                worker,
+                [] (rc::ServiceDrainRequest::pointer request) {
+                    printRequest<rc::ServiceManagementRequestBase>(request);
+                });
 
         } else {
             return false;
@@ -297,6 +303,7 @@ int main (int argc, const char* const argv[]) {
             "    SERVICE_RESUME                  <worker>\n"
             "    SERVICE_STATUS                  <worker>\n"
             "    SERVICE_REQUESTS                <worker>\n"
+            "    SERVICE_DRAIN                   <worker>\n"
             "\n"
             "Flags and options:\n"
             "  --priority=<level>  - assign the specific priority level (default: 0)\n"
@@ -323,7 +330,8 @@ int main (int argc, const char* const argv[]) {
             "SERVICE_SUSPEND",
             "SERVICE_RESUME",
             "SERVICE_STATUS",
-            "SERVICE_REQUESTS"});
+            "SERVICE_REQUESTS",
+            "SERVICE_DRAIN"});
 
         ::worker = parser.parameter<std::string>(2);
 

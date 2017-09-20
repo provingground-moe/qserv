@@ -82,6 +82,13 @@ bool test () {
                         [&tracker] (rc::ServiceRequestsRequest::pointer ptr) {
                             tracker.onFinish(ptr);
                         }));
+            else if (operation == "DRAIN")
+                tracker.add (
+                    controller->drainWorkerService (
+                        worker,
+                        [&tracker] (rc::ServiceDrainRequest::pointer ptr) {
+                            tracker.onFinish(ptr);
+                        }));
 
         // Wait before all request are finished
 
@@ -170,6 +177,7 @@ int main (int argc, const char* const argv[]) {
             "      SUSPEND  : suspend all servers\n"
             "      RESUME   : resume all server\n"
             "      REQUESTS : pull and display info on requests known to all server\n"
+            "      DRAIN    : cancel all queued and on-going requests\n"
             "\n"
             "Flags and options:\n"
             "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
@@ -180,7 +188,8 @@ int main (int argc, const char* const argv[]) {
         ::operation = parser.parameterRestrictedBy (1, {"STATUS",
                                                         "SUSPEND",
                                                          "RESUME",
-                                                         "REQUESTS"});
+                                                         "REQUESTS",
+                                                         "DRAIN"});
 
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");

@@ -88,6 +88,11 @@ public:
                            boost::asio::io_service& io_service);
 
     /**
+     * Stop operations
+     */
+    void stop ();
+
+    /**
      * Initiate sending a message
      *
      * The response message will be initialized only in case of successfull completion

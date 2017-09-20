@@ -66,6 +66,12 @@ Messenger::~Messenger () {
 }
 
 void
+Messenger::stop () {
+    for (auto const& entry: _connector)
+        entry.second->stop();
+}
+
+void
 Messenger::cancel (std::string const& worker,
                    std::string const& id) {
 

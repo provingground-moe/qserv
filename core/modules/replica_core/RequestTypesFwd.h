@@ -191,8 +191,9 @@ namespace replica_core {
 
     class ServiceSuspendRequestPolicy;
     class ServiceResumeRequestPolicy;
-    class ServiceRequestsRequestPolicy;
     class ServiceStatusRequestPolicy;
+    class ServiceRequestsRequestPolicy;
+    class ServiceDrainRequestPolicy;
 
 #ifdef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
@@ -202,6 +203,7 @@ namespace replica_core {
     using ServiceResumeRequest   = ServiceManagementRequestC<ServiceResumeRequestPolicy>;
     using ServiceStatusRequest   = ServiceManagementRequestC<ServiceStatusRequestPolicy>;
     using ServiceRequestsRequest = ServiceManagementRequestC<ServiceRequestsRequestPolicy>;
+    using ServiceDrainRequest    = ServiceManagementRequestC<ServiceDrainRequestPolicy>;
 
 #else // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
@@ -211,6 +213,7 @@ namespace replica_core {
     using ServiceResumeRequest   = ServiceManagementRequestM<ServiceResumeRequestPolicy>;
     using ServiceStatusRequest   = ServiceManagementRequestM<ServiceStatusRequestPolicy>;
     using ServiceRequestsRequest = ServiceManagementRequestM<ServiceRequestsRequestPolicy>;
+    using ServiceDrainRequest    = ServiceManagementRequestM<ServiceDrainRequestPolicy>;
 
 #endif // LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
 
@@ -218,11 +221,13 @@ namespace replica_core {
     typedef std::shared_ptr<ServiceResumeRequest>   ServiceResumeRequest_pointer;
     typedef std::shared_ptr<ServiceStatusRequest>   ServiceStatusRequest_pointer;
     typedef std::shared_ptr<ServiceRequestsRequest> ServiceRequestsRequest_pointer;
-    
+    typedef std::shared_ptr<ServiceDrainRequest>    ServiceDrainRequest_pointer;
+
     typedef std::function<void(ServiceSuspendRequest_pointer)>  ServiceSuspendRequest_callback_type;
     typedef std::function<void(ServiceResumeRequest_pointer)>   ServiceResumeRequest_callback_type;
     typedef std::function<void(ServiceStatusRequest_pointer)>   ServiceStatusRequest_callback_type;
     typedef std::function<void(ServiceRequestsRequest_pointer)> ServiceRequestsRequest_callback_type;
+    typedef std::function<void(ServiceDrainRequest_pointer)>    ServiceDrainRequest_callback_type;
 
 }}} // namespace lsst::qserv::replica_core
 

@@ -58,9 +58,9 @@ namespace proto        = ::lsst::qserv::proto;
 
 template <class PROTOCOL_RESPONSE_TYPE,
           class PROTOCOL_REQUEST_TYPE>
-bool ifDuplicateRequest (PROTOCOL_RESPONSE_TYPE                     &response,
-                         const replica_core::WorkerRequest::pointer &p,
-                         const PROTOCOL_REQUEST_TYPE                &request) {
+bool ifDuplicateRequest (PROTOCOL_RESPONSE_TYPE&                     response,
+                         replica_core::WorkerRequest::pointer const& p,
+                         PROTOCOL_REQUEST_TYPE const&                request) {
 
     bool isDuplicate = false;
 
@@ -119,9 +119,9 @@ WorkerProcessor::translateReplicationStatus (WorkerRequest::CompletionStatus sta
     }
 }
 
-WorkerProcessor::WorkerProcessor (ServiceProvider      &serviceProvider,
-                                  WorkerRequestFactory &requestFactory,
-                                  const std::string    &worker)
+WorkerProcessor::WorkerProcessor (ServiceProvider&      serviceProvider,
+                                  WorkerRequestFactory& requestFactory,
+                                  std::string const&    worker)
 
     :   _serviceProvider (serviceProvider),
         _requestFactory  (requestFactory),
@@ -142,7 +142,7 @@ WorkerProcessor::run () {
 
     if (_state == STATE_IS_STOPPED) {
 
-        const size_t numThreads = _serviceProvider.config().workerNumProcessingThreads();
+        size_t const numThreads = _serviceProvider.config().workerNumProcessingThreads();
         if (!numThreads) throw std::out_of_range("the number of procesisng threads can't be 0");
     
         // Create threads if needed
@@ -186,9 +186,29 @@ WorkerProcessor::stop () {
 }
 
 void
-WorkerProcessor::enqueueForReplication (const std::string                        &id,
-                                        const proto::ReplicationRequestReplicate &request,
-                                        proto::ReplicationResponseReplicate      &response) {
+WorkerProcessor::drain () {
+
+    LOGS(_log, LOG_LVL_DEBUG, context() << "drain");
+    
+    // Collect identifiers of requests from both queues under the guard
+    std::list<std::string> ids;
+    {
+        LOCK_GUARD;
+
+        for (auto const& ptr: _newRequests)        ids.push_back(ptr->id());
+        for (auto const& ptr: _inProgressRequests) ids.push_back(ptr->id());
+    }
+    
+    // Dequeue requests w/o the guard to avoid a dedlock because
+    // the dequeuing method will request the lock.
+    for (auto const& id: ids)
+        dequeueOrCancelImpl(id);
+}
+
+void
+WorkerProcessor::enqueueForReplication (std::string const&                        id,
+                                        proto::ReplicationRequestReplicate const& request,
+                                        proto::ReplicationResponseReplicate&      response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForReplication"
@@ -231,7 +251,7 @@ WorkerProcessor::enqueueForReplication (const std::string                       
 
         setInfo(ptr, response);
 
-    } catch (const std::invalid_argument &ec) {
+    } catch (std::invalid_argument const& ec) {
         LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForReplication  " << ec.what());
 
         setDefaultResponse (response,
@@ -241,9 +261,9 @@ WorkerProcessor::enqueueForReplication (const std::string                       
 }
 
 void
-WorkerProcessor::enqueueForDeletion (const std::string                     &id,
-                                     const proto::ReplicationRequestDelete &request,
-                                     proto::ReplicationResponseDelete      &response) {
+WorkerProcessor::enqueueForDeletion (std::string const&                     id,
+                                     proto::ReplicationRequestDelete const& request,
+                                     proto::ReplicationResponseDelete&      response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForDeletion"
@@ -285,7 +305,7 @@ WorkerProcessor::enqueueForDeletion (const std::string                     &id,
      
         setInfo(ptr, response);
 
-    } catch (const std::invalid_argument &ec) {
+    } catch (std::invalid_argument const& ec) {
         LOGS(_log, LOG_LVL_ERROR, context() << "enqueueForDeletion  " << ec.what());
 
         setDefaultResponse (response,
@@ -295,9 +315,9 @@ WorkerProcessor::enqueueForDeletion (const std::string                     &id,
 }
 
 void
-WorkerProcessor::enqueueForFind (const std::string                   &id,
-                                 const proto::ReplicationRequestFind &request,
-                                 proto::ReplicationResponseFind      &response) {
+WorkerProcessor::enqueueForFind (std::string const&                   id,
+                                 proto::ReplicationRequestFind const& request,
+                                 proto::ReplicationResponseFind&      response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFind"
@@ -325,9 +345,9 @@ WorkerProcessor::enqueueForFind (const std::string                   &id,
 
 
 void
-WorkerProcessor::enqueueForFindAll (const std::string                      &id,
-                                    const proto::ReplicationRequestFindAll &request,
-                                    proto::ReplicationResponseFindAll      &response) {
+WorkerProcessor::enqueueForFindAll (std::string const&                      id,
+                                    proto::ReplicationRequestFindAll const& request,
+                                    proto::ReplicationResponseFindAll&      response) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "enqueueForFindAll"
@@ -355,7 +375,7 @@ WorkerProcessor::enqueueForFindAll (const std::string                      &id,
 
 
 WorkerRequest::pointer
-WorkerProcessor::dequeueOrCancelImpl (const std::string &id) {
+WorkerProcessor::dequeueOrCancelImpl (std::string const& id) {
 
     LOCK_GUARD;
 
@@ -404,6 +424,7 @@ WorkerProcessor::dequeueOrCancelImpl (const std::string &id) {
 
             switch (ptr->status()) {
 
+                case WorkerRequest::STATUS_CANCELLED:
                 case WorkerRequest::STATUS_IS_CANCELLING:
                     return ptr;
 
@@ -443,7 +464,7 @@ WorkerProcessor::dequeueOrCancelImpl (const std::string &id) {
 }
 
 WorkerRequest::pointer
-WorkerProcessor::checkStatusImpl (const std::string &id) {
+WorkerProcessor::checkStatusImpl (std::string const& id) {
 
     LOCK_GUARD;
 
@@ -499,10 +520,10 @@ WorkerProcessor::checkStatusImpl (const std::string &id) {
 }
 
 void
-WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &response,
-                                     const std::string                         &id,
-                                     proto::ReplicationServiceResponse::Status  status,
-                                     bool                                       extendedReport) {
+WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse&        response,
+                                     std::string const&                        id,
+                                     proto::ReplicationServiceResponse::Status status,
+                                     bool                                      extendedReport) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "setServiceResponse");
@@ -530,20 +551,20 @@ WorkerProcessor::setServiceResponse (proto::ReplicationServiceResponse         &
     response.set_num_finished_requests   (_finishedRequests.size());
     
     if (extendedReport) {
-        for (const auto &request : _newRequests)
+        for (auto const& request: _newRequests)
             setServiceResponseInfo(request, response.add_new_requests());
 
-        for (const auto &request : _inProgressRequests)
+        for (auto const& request: _inProgressRequests)
             setServiceResponseInfo(request, response.add_in_progress_requests());
 
-        for (const auto &request : _finishedRequests)
+        for (auto const& request: _finishedRequests)
             setServiceResponseInfo(request, response.add_finished_requests());
     }
 }
 
 void
-WorkerProcessor::setServiceResponseInfo (const WorkerRequest::pointer          &request,
-                                         proto::ReplicationServiceResponseInfo *info) const {
+WorkerProcessor::setServiceResponseInfo (WorkerRequest::pointer const&          request,
+                                         proto::ReplicationServiceResponseInfo* info) const {
 
     if (
         WorkerReplicationRequest::pointer ptr =
@@ -611,7 +632,7 @@ WorkerProcessor::numFinishedRequests () const {
 }
 
 WorkerRequest::pointer
-WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &processorThread,
+WorkerProcessor::fetchNextForProcessing (WorkerProcessorThread::pointer const& processorThread,
                                          unsigned int                          timeoutMilliseconds) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "fetchNextForProcessing"
@@ -655,7 +676,7 @@ WorkerProcessor::fetchNextForProcessing (const WorkerProcessorThread::pointer &p
 }
 
 void
-WorkerProcessor::processingRefused (const WorkerRequest::pointer &request) {
+WorkerProcessor::processingRefused (WorkerRequest::pointer const& request) {
 
     LOCK_GUARD;
 
@@ -666,7 +687,7 @@ WorkerProcessor::processingRefused (const WorkerRequest::pointer &request) {
 
     request->setStatus(WorkerRequest::STATUS_NONE);
     _inProgressRequests.remove_if (
-        [&request] (const WorkerRequest::pointer &ptr) {
+        [&request] (WorkerRequest::pointer const& ptr) {
             return ptr->id() == request->id();
         }
     );
@@ -674,7 +695,7 @@ WorkerProcessor::processingRefused (const WorkerRequest::pointer &request) {
 }
 
 void
-WorkerProcessor::processingFinished (const WorkerRequest::pointer &request) {
+WorkerProcessor::processingFinished (WorkerRequest::pointer const& request) {
 
     LOCK_GUARD;
 
@@ -685,7 +706,7 @@ WorkerProcessor::processingFinished (const WorkerRequest::pointer &request) {
     // Then move it forward into the finished queue.
 
     _inProgressRequests.remove_if (
-        [&request] (const WorkerRequest::pointer &ptr) {
+        [&request] (WorkerRequest::pointer const& ptr) {
             return ptr->id() == request->id();
         }
     );
@@ -693,7 +714,7 @@ WorkerProcessor::processingFinished (const WorkerRequest::pointer &request) {
 }
 
 void
-WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &processorThread) {
+WorkerProcessor::processorThreadStopped (WorkerProcessorThread::pointer const& processorThread) {
 
     LOCK_GUARD;
 
@@ -712,8 +733,8 @@ WorkerProcessor::processorThreadStopped (const WorkerProcessorThread::pointer &p
 
 
 void
-WorkerProcessor::setInfo (const WorkerRequest::pointer        &request,
-                          proto::ReplicationResponseReplicate &response) {
+WorkerProcessor::setInfo (WorkerRequest::pointer const&        request,
+                          proto::ReplicationResponseReplicate& response) {
 
     if (!request) return;
 
@@ -737,8 +758,8 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer        &request,
 
 
 void
-WorkerProcessor::setInfo (const WorkerRequest::pointer     &request,
-                          proto::ReplicationResponseDelete &response) {
+WorkerProcessor::setInfo (WorkerRequest::pointer const&     request,
+                          proto::ReplicationResponseDelete& response) {
 
     WorkerDeleteRequest::pointer ptr =
         std::dynamic_pointer_cast<WorkerDeleteRequest>(request);
@@ -760,8 +781,8 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer     &request,
 
 
 void
-WorkerProcessor::setInfo (const WorkerRequest::pointer   &request,
-                          proto::ReplicationResponseFind &response){
+WorkerProcessor::setInfo (WorkerRequest::pointer const&   request,
+                          proto::ReplicationResponseFind& response) {
 
     WorkerFindRequest::pointer ptr =
         std::dynamic_pointer_cast<WorkerFindRequest>(request);
@@ -782,8 +803,8 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer   &request,
 }
 
 void
-WorkerProcessor::setInfo (const WorkerRequest::pointer      &request,
-                          proto::ReplicationResponseFindAll &response) {
+WorkerProcessor::setInfo (WorkerRequest::pointer const&      request,
+                          proto::ReplicationResponseFindAll& response) {
 
     WorkerFindAllRequest::pointer ptr =
         std::dynamic_pointer_cast<WorkerFindAllRequest>(request);
@@ -800,8 +821,8 @@ WorkerProcessor::setInfo (const WorkerRequest::pointer      &request,
     // the 'replica_info_many' series at each step of the iteration below.
     // The protobuf runtime will take care of deleting those objects.
 
-    for (const auto &replicaInfo : ptr->replicaInfoCollection()) {
-        proto::ReplicationReplicaInfo *info = response.add_replica_info_many();
+    for (auto const& replicaInfo: ptr->replicaInfoCollection()) {
+        proto::ReplicationReplicaInfo* info = response.add_replica_info_many();
         replicaInfo.setInfo(info);
     }
 }

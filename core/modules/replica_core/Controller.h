@@ -390,27 +390,41 @@ public:
      */
     ServiceRequestsRequest_pointer requestsOfWorkerService (std::string const&                   workerName,
                                                             ServiceRequestsRequest_callback_type onFinish=nullptr);
+
+    /**
+     * Cancel all queue or being processed replica-related requsts known
+     * to the worker-side service and return detailed info on all known requests. 
+     *
+     * @param workerName - the name of a worker node where the service runs
+     * @param onFinish   - a callback function to be called upon completion of the operation
+     *
+     * @return a pointer to the request
+     */
+    ServiceDrainRequest_pointer drainWorkerService (std::string const&                workerName,
+                                                    ServiceDrainRequest_callback_type onFinish=nullptr);
                                                          
     // Filters for active requests
 
     std::vector<ReplicationRequest_pointer>       activeReplicationRequests ();
-    std::vector<DeleteRequest_pointer>            activeDeleteRequests ();
-    std::vector<FindRequest_pointer>              activeFindRequests ();
-    std::vector<FindAllRequest_pointer>           activeFindAllRequests ();
+    std::vector<DeleteRequest_pointer>            activeDeleteRequests      ();
+    std::vector<FindRequest_pointer>              activeFindRequests        ();
+    std::vector<FindAllRequest_pointer>           activeFindAllRequests     ();
 
     std::vector<StopReplicationRequest_pointer>   activeStopReplicationRequests ();
-    std::vector<StopDeleteRequest_pointer>        activeStopDeleteRequests ();
-    std::vector<StopFindRequest_pointer>          activeStopFindRequests ();
-    std::vector<StopFindAllRequest_pointer>       activeStopFindAllRequests ();
+    std::vector<StopDeleteRequest_pointer>        activeStopDeleteRequests      ();
+    std::vector<StopFindRequest_pointer>          activeStopFindRequests        ();
+    std::vector<StopFindAllRequest_pointer>       activeStopFindAllRequests     ();
 
     std::vector<StatusReplicationRequest_pointer> activeStatusReplicationRequests ();
-    std::vector<StatusDeleteRequest_pointer>      activeStatusDeleteRequests ();
-    std::vector<StatusFindRequest_pointer>        activeStatusFindRequests ();
-    std::vector<StatusFindAllRequest_pointer>     activeStatusFindAllRequests ();
+    std::vector<StatusDeleteRequest_pointer>      activeStatusDeleteRequests      ();
+    std::vector<StatusFindRequest_pointer>        activeStatusFindRequests        ();
+    std::vector<StatusFindAllRequest_pointer>     activeStatusFindAllRequests     ();
 
-    std::vector<ServiceSuspendRequest_pointer>    activeServiceSuspendRequests ();
-    std::vector<ServiceResumeRequest_pointer>     activeServiceResumeRequests ();
-    std::vector<ServiceStatusRequest_pointer>     activeServiceStatusRequests ();
+    std::vector<ServiceSuspendRequest_pointer>    activeServiceSuspendRequests  ();
+    std::vector<ServiceResumeRequest_pointer>     activeServiceResumeRequests   ();
+    std::vector<ServiceStatusRequest_pointer>     activeServiceStatusRequests   ();
+    std::vector<ServiceRequestsRequest_pointer>   activeServiceRequestsRequests ();
+    std::vector<ServiceDrainRequest_pointer>      activeServiceDrainRequests    ();
 
     // Counters of active requests
 
@@ -418,23 +432,25 @@ public:
     size_t numActiveRequests ();
 
     size_t numActiveReplicationRequests ();
-    size_t numActiveDeleteRequests ();
-    size_t numActiveFindRequests ();
-    size_t numActiveFindAllRequests ();
+    size_t numActiveDeleteRequests      ();
+    size_t numActiveFindRequests        ();
+    size_t numActiveFindAllRequests     ();
 
     size_t numActiveStopReplicationRequests ();
-    size_t numActiveStopDeleteRequests ();
-    size_t numActiveStopFindRequests ();
-    size_t numActiveStopFindAllRequests ();
+    size_t numActiveStopDeleteRequests      ();
+    size_t numActiveStopFindRequests        ();
+    size_t numActiveStopFindAllRequests     ();
 
     size_t numActiveStatusReplicationRequests ();
-    size_t numActiveStatusDeleteRequests ();
-    size_t numActiveStatusFindRequests ();
-    size_t numActiveStatusFindAllRequests ();
+    size_t numActiveStatusDeleteRequests      ();
+    size_t numActiveStatusFindRequests        ();
+    size_t numActiveStatusFindAllRequests     ();
 
-    size_t numActiveServiceSuspendRequests ();
-    size_t numActiveServiceResumeRequests ();
-    size_t numActiveServiceStatusRequests ();
+    size_t numActiveServiceSuspendRequests  ();
+    size_t numActiveServiceResumeRequests   ();
+    size_t numActiveServiceStatusRequests   ();
+    size_t numActiveServiceRequestsRequests ();
+    size_t numActiveServiceDrainRequests    ();
 
 private:
 
