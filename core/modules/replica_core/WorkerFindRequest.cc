@@ -183,7 +183,8 @@ WorkerFindRequestPOSIX::execute () {
          << "  database: " << database()
          << "  chunk: "    << chunk());
 
-    // Abort the operation right away
+    // Abort the operation right away if that's the case
+
     if (_status == STATUS_IS_CANCELLING) {
         setStatus(STATUS_CANCELLED);
         throw WorkerRequestCancelled();

@@ -77,9 +77,9 @@ bool test () {
                         }));
             else if (operation == "REQUESTS")
                 tracker.add (
-                    controller->resumeWorkerService (
+                    controller->requestsOfWorkerService (
                         worker,
-                        [&tracker] (rc::ServiceResumeRequest::pointer ptr) {
+                        [&tracker] (rc::ServiceRequestsRequest::pointer ptr) {
                             tracker.onFinish(ptr);
                         }));
 
