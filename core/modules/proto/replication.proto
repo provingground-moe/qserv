@@ -263,6 +263,15 @@ message ReplicationFileInfo {
 
     /// Control sum (if available)
     required string cs = 3;
+
+    // The following parameters are set in the relevant contexts only.
+    // Otherwise they'll be set to some default value)
+  
+    /// When the file migration started
+    optional uint64 begin_transfer_time = 4 [default = 0];
+
+    /// When the file migration finished
+    optional uint64 end_transfer_time = 5 [default = 0];
 }
 
 message ReplicationReplicaInfo {
@@ -281,11 +290,6 @@ message ReplicationReplicaInfo {
     repeated ReplicationFileInfo file_info_many = 5;
 }
 
-message ReplicationReplicaCreateInfo {
-
-    /// The progress of the operation (YET TO BE REFINED)
-    required float progress = 1;
-}
 message ReplicationResponseReplicate {
 
     /// The completion status of the operation
@@ -302,11 +306,8 @@ message ReplicationResponseReplicate {
     /// management operations
     optional ReplicationPerformance target_performance = 4;
 
-    /// Extended information on the request
-    optional ReplicationReplicaCreateInfo replication_info = 5;
-
     /// Extended information on the replica
-    optional ReplicationReplicaInfo replica_info = 6;
+    optional ReplicationReplicaInfo replica_info = 5;
 }
 
 message ReplicationReplicaDeleteInfo {

@@ -102,7 +102,7 @@ ReplicationRequestC::ReplicationRequestC (ServiceProvider&         serviceProvid
         _chunk        (chunk),
         _sourceWorker (sourceWorker),
         _onFinish     (onFinish),
-        _responseData () {
+        _replicaInfo  () {
 
     _serviceProvider.assertWorkerIsValid       (sourceWorker);
     _serviceProvider.assertWorkersAreDifferent (sourceWorker, worker);
@@ -399,7 +399,7 @@ ReplicationRequestC::analyze (proto::ReplicationResponseReplicate const& message
     // Always extract extended data regardless of the completion status
     // reported by the worker service.
 
-    _responseData = ReplicaCreateInfo(&(message.replication_info()));
+    _replicaInfo = ReplicaInfo(&(message.replica_info()));
 
     switch (message.status()) {
  
@@ -499,7 +499,7 @@ ReplicationRequestM::ReplicationRequestM (ServiceProvider&                  serv
         _chunk        (chunk),
         _sourceWorker (sourceWorker),
         _onFinish     (onFinish),
-        _responseData () {
+        _replicaInfo  () {
 
     _serviceProvider.assertWorkerIsValid       (sourceWorker);
     _serviceProvider.assertWorkersAreDifferent (sourceWorker, worker);
@@ -633,7 +633,7 @@ ReplicationRequestM::analyze (bool                                       success
         // Always extract extended data regardless of the completion status
         // reported by the worker service.
     
-        _responseData = ReplicaCreateInfo(&(message.replication_info()));
+        _replicaInfo = ReplicaInfo(&(message.replica_info()));
     
         switch (message.status()) {
      

@@ -258,6 +258,9 @@ protected:
 
     /// Mutex guarding operations with the worker's data folder
     static std::mutex _mtxDataFolderOperations;
+
+    /// Mutex guarding API calls where it's needed
+    static std::mutex _mtx;
 };
 
 

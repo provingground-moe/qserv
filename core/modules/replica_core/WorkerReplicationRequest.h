@@ -39,7 +39,6 @@
 
 // Qserv headers
 
-#include "replica_core/ReplicaCreateInfo.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/WorkerRequest.h"
 
@@ -100,16 +99,10 @@ public:
     unsigned int       chunk        () const { return _chunk; }
     std::string const& sourceWorker () const { return _sourceWorker; }
 
-    /// Return extended status of the request
-    const ReplicaCreateInfo& replicationInfo () const { return _replicationInfo; }
-
    /**
      * Return a refernce to a result of the completed request.
-     *
-     * Note that this operation returns a meanigful result only when a request
-     * is completed with status STATUS_SUCCEEDED.
      */
-    const ReplicaInfo& replicaInfo () const { return _replicaInfo; }
+    ReplicaInfo replicaInfo () const;
 
     /**
      * This method implements the virtual method of the base class
@@ -138,9 +131,6 @@ protected:
     std::string  _database;
     unsigned int _chunk;
     std::string  _sourceWorker;
-
-    /// Extended status of the replication request
-    ReplicaCreateInfo _replicationInfo;
 
     /// Result of the operation
     ReplicaInfo _replicaInfo;
@@ -290,6 +280,11 @@ private:
      */
     void releaseResources ();
 
+    /**
+     * Update file migration statistics
+     */
+    void updateInfo ();
+
 private:
 
     // Cached parameters of the operation
@@ -338,6 +333,12 @@ private:
         /// The final (canonic) file name the temporary file will be renamed intp
         /// upon a successfull completion of the operation.
         boost::filesystem::path outFile;
+
+        /// When the file transfer started
+        uint64_t beginTransferTime;
+
+        /// When the file transfer ended
+        uint64_t endTransferTime;
     };
     std::map<std::string,FileDescr> _file2descr;
 

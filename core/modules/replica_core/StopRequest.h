@@ -66,7 +66,6 @@
 #include "proto/replication.pb.h"
 #include "replica_core/Common.h"
 #include "replica_core/Messenger.h"
-#include "replica_core/ReplicaCreateInfo.h"
 #include "replica_core/ReplicaDeleteInfo.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/RequestConnection.h"
@@ -92,10 +91,10 @@ struct StopReplicationRequestPolicy {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_CREATE; }
 
     using responseMessageType = lsst::qserv::proto::ReplicationResponseReplicate;
-    using responseDataType    = ReplicaCreateInfo;
+    using responseDataType    = ReplicaInfo;
 
     static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
-        data = responseDataType(&(msg.replication_info()));
+        data = responseDataType(&(msg.replica_info()));
     }
 };
 
