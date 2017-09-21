@@ -99,7 +99,7 @@ public:
      * Note that this operation returns a meanigful result only when a request
      * is completed with status STATUS_SUCCEEDED.
      */
-    const ReplicaInfo& replicaInfo () const;
+    const ReplicaInfo& replicaInfo () const { return _replicaInfo; }
 
     /**
      * This method implements the virtual method of the base class

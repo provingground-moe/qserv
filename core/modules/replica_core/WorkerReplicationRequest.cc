@@ -100,7 +100,8 @@ WorkerReplicationRequest::WorkerReplicationRequest (
         _database        (database),
         _chunk           (chunk),
         _sourceWorker    (sourceWorker),
-        _replicationInfo () {
+        _replicationInfo (),
+        _replicaInfo     () {
 
     _serviceProvider.assertWorkerIsValid       (sourceWorker);
     _serviceProvider.assertWorkersAreDifferent (worker, sourceWorker);
@@ -123,7 +124,12 @@ WorkerReplicationRequest::execute () {
 
     bool const complete = WorkerRequest::execute();
     if (complete) {
-        _replicationInfo = ReplicaCreateInfo(100.);     // simulate 100% completed
+        _replicationInfo = ReplicaCreateInfo (100.);
+        _replicaInfo     = ReplicaInfo (ReplicaInfo::COMPLETE,
+                                        worker(),
+                                        database(),
+                                        chunk(),
+                                        ReplicaInfo::FileInfoCollection());
     }
     return complete;
 }
@@ -502,14 +508,18 @@ WorkerReplicationRequestFS::execute () {
         std::vector<fs::path> outFiles;
     
         for (auto const& file: _files) {
-    
+
             fs::path const tmpFile = outDir / ("_" + file);
             tmpFiles.push_back(tmpFile);
-            _file2tmpFile[file] = tmpFile;
-    
+
             fs::path const outFile = outDir / file;
             outFiles.push_back(outFile);
-            _file2outFile[file] = outFile;
+
+            _file2descr[file].inSizeBytes  = 0;
+            _file2descr[file].outSizeBytes = 0;
+            _file2descr[file].cs           = 0;
+            _file2descr[file].tmpFile      = tmpFile;
+            _file2descr[file].outFile      = outFile;
         }
     
         // Check input files, check and sanitize the destination folder
@@ -545,6 +555,8 @@ WorkerReplicationRequestFS::execute () {
                 }
                 file2size[file] = inFilePtr->size();
                 totalBytes     += inFilePtr->size();
+                
+                _file2descr[file].inSizeBytes = inFilePtr->size();
             }
     
             // Check and sanitize the output directory
@@ -618,7 +630,7 @@ WorkerReplicationRequestFS::execute () {
     
             for (auto const& file: _files) {
                 
-                fs::path const tmpFile = _file2tmpFile[file];
+                fs::path const tmpFile = _file2descr[file].tmpFile;
     
                 // Create a file of size 0
     
@@ -629,8 +641,10 @@ WorkerReplicationRequestFS::execute () {
                             ExtendedCompletionStatus::EXT_STATUS_FILE_CREATE,
                             "failed to open/create temporary file: " + tmpFile.string() +
                             ", error: " + std::strerror(errno));
-                if (tmpFilePtr)
+                if (tmpFilePtr) {
+                    std::fflush(tmpFilePtr);
                     std::fclose(tmpFilePtr);
+                }
      
                 // Resize the file (will be filled with \0)
     
@@ -673,6 +687,17 @@ WorkerReplicationRequestFS::execute () {
             num = _inFilePtr->read(_buf, _bufSize);
             if (num) {
                 if (num == std::fwrite(_buf, sizeof(uint8_t), num, _tmpFilePtr)) {
+
+                    // Update the descriptor (the number of bytes copied so far
+                    // and the control sum)
+                    _file2descr[*_fileItr].outSizeBytes += num;
+                    uint64_t& cs = _file2descr[*_fileItr].cs;
+                    for (uint8_t *ptr = _buf, *end = _buf + num;
+                         ptr != end; ++ptr) cs += *ptr;
+
+                    // Keep updating this stats while copying the files
+                    updateInfo ();
+
                     // Keep copying the same file
                     return false;
                 }
@@ -680,7 +705,7 @@ WorkerReplicationRequestFS::execute () {
                     || reportErrorIf (
                         true,
                         ExtendedCompletionStatus::EXT_STATUS_FILE_WRITE,
-                        "failed to write into temporary file: " + _file2tmpFile[*_fileItr].string() +
+                        "failed to write into temporary file: " + _file2descr[*_fileItr].tmpFile.string() +
                         ", error: " + std::strerror(errno));
             }
                 
@@ -693,11 +718,31 @@ WorkerReplicationRequestFS::execute () {
                     ", database: " + _databaseInfo.name +
                     ", file: " + *_fileItr);
         }
+
+        // Make sure the number of bytes copied from the remote server
+        // matches expectations.
+        errorContext = errorContext
+            || reportErrorIf (
+                _file2descr[*_fileItr].inSizeBytes != _file2descr[*_fileItr].outSizeBytes,
+                ExtendedCompletionStatus::EXT_STATUS_FILE_READ,
+                "short read of the input file from remote worker: " + _inWorkerInfo.name +
+                ", database: " + _databaseInfo.name +
+                ", file: " + *_fileItr);
+
         if (errorContext.failed) {
             setStatus(STATUS_FAILED, errorContext.extendedStatus);
             releaseResources();
             return true;
         }
+
+        // Keep updating this stats after finishing to copy each file
+        updateInfo ();
+
+        // Flush and close the current file
+
+        std::fflush(_tmpFilePtr);
+        std::fclose(_tmpFilePtr);
+        _tmpFilePtr = 0;
 
         // Move the iterator to the name of the next file to be copied
         ++_fileItr;
@@ -746,9 +791,9 @@ WorkerReplicationRequestFS::openFiles () {
     // Reopen a temporary output file locally in the 'append binary mode'
     // then 'rewind' to the begining of the file before writing into it.
 
-    fs::path const tmpFile = _file2tmpFile[*_fileItr];
+    fs::path const tmpFile = _file2descr[*_fileItr].tmpFile;
 
-    _tmpFilePtr = std::fopen(tmpFile.string().c_str(), "ab");
+    _tmpFilePtr = std::fopen(tmpFile.string().c_str(), "wb");
     errorContext = errorContext
         || reportErrorIf (
             !_tmpFilePtr,
@@ -791,8 +836,8 @@ WorkerReplicationRequestFS::finalize () {
 
     for (auto const& file: _files) {
 
-        fs::path const tmpFile = _file2tmpFile[file];
-        fs::path const outFile = _file2outFile[file];
+        fs::path const tmpFile = _file2descr[file].tmpFile;
+        fs::path const outFile = _file2descr[file].outFile;
 
         fs::rename(tmpFile, outFile, ec);
         errorContext = errorContext
@@ -806,15 +851,48 @@ WorkerReplicationRequestFS::finalize () {
         setStatus(STATUS_FAILED, errorContext.extendedStatus);
         return true;
     }
-
-    // For now (before finalizing the progress reporting protocol) just return
-    // the perentage of the total amount of data moved
- 
-    _replicationInfo = ReplicaCreateInfo(100.);
-
+    
     setStatus(STATUS_SUCCEEDED);
     return true;
 }
+
+void
+WorkerReplicationRequestFS::updateInfo () {
+
+    size_t totalInSizeBytes  = 0;
+    size_t totalOutSizeBytes = 0;
+
+    ReplicaInfo::FileInfoCollection fileInfoCollection;
+    for (auto const& file: _files) {
+        fileInfoCollection.emplace_back (
+            ReplicaInfo::FileInfo ({
+                file,
+                _file2descr[file].outSizeBytes,
+                std::to_string(_file2descr[file].cs)
+            })
+        );
+        totalInSizeBytes  += _file2descr[file].inSizeBytes;
+        totalOutSizeBytes += _file2descr[file].outSizeBytes;
+    }
+    ReplicaInfo::Status const status =
+        _files.size() == fileInfoCollection.size() ?
+            ReplicaInfo::Status::COMPLETE :
+            ReplicaInfo::Status::INCOMPLETE;
+
+    // Fill in the info on the chunk before finishing the operation
+    _replicaInfo = ReplicaInfo (
+        status,
+        worker(),
+        database(),
+        chunk(),
+        fileInfoCollection);
+
+    // the perentage of the total amount of data moved
+    float const progress = 100.0 * (totalOutSizeBytes / totalInSizeBytes);
+    _replicationInfo = ReplicaCreateInfo(progress);
+}
+
+
 
 void
 WorkerReplicationRequestFS::releaseResources() {
