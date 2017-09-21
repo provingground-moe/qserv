@@ -40,6 +40,7 @@
 // Qserv headers
 
 #include "replica_core/ReplicaCreateInfo.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/WorkerRequest.h"
 
 // Forward declarations
@@ -102,6 +103,14 @@ public:
     /// Return extended status of the request
     const ReplicaCreateInfo& replicationInfo () const { return _replicationInfo; }
 
+   /**
+     * Return a refernce to a result of the completed request.
+     *
+     * Note that this operation returns a meanigful result only when a request
+     * is completed with status STATUS_SUCCEEDED.
+     */
+    const ReplicaInfo& replicaInfo () const { return _replicaInfo; }
+
     /**
      * This method implements the virtual method of the base class
      *
@@ -132,6 +141,9 @@ protected:
 
     /// Extended status of the replication request
     ReplicaCreateInfo _replicationInfo;
+
+    /// Result of the operation
+    ReplicaInfo _replicaInfo;
 };
 
 
@@ -305,11 +317,29 @@ private:
     /// The file pointer for the temporary output file
     std::FILE* _tmpFilePtr;
 
-    // Cached mapping from short file names into the corresponidng
-    // path names
+    // Cached file descriptions mapping from short file names into
+    // the corresponidng parameters
 
-    std::map<std::string,boost::filesystem::path> _file2tmpFile;
-    std::map<std::string,boost::filesystem::path> _file2outFile;
+    struct FileDescr {
+
+        /// The input file size as reported by a remote server
+        size_t inSizeBytes;
+
+        /// The actual number of bytes read so far (changes as the operation
+        /// is progressing)
+        size_t outSizeBytes;
+        
+        /// Control sum computed locally while copying the file
+        uint64_t cs;
+
+        /// The absolute path of a temporary file at a local directory.
+        boost::filesystem::path tmpFile;
+
+        /// The final (canonic) file name the temporary file will be renamed intp
+        /// upon a successfull completion of the operation.
+        boost::filesystem::path outFile;
+    };
+    std::map<std::string,FileDescr> _file2descr;
 
     /// The buffer for records read from the remote service
     uint8_t *_buf;

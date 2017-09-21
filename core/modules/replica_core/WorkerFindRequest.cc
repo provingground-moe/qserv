@@ -104,11 +104,6 @@ WorkerFindRequest::WorkerFindRequest (
 WorkerFindRequest::~WorkerFindRequest () {
 }
 
-const ReplicaInfo&
-WorkerFindRequest::replicaInfo () const {
-    return _replicaInfo;
-}
-
 bool
 WorkerFindRequest::execute () {
 

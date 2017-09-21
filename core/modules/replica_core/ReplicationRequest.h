@@ -51,6 +51,7 @@
 #include "proto/replication.pb.h"
 #include "replica_core/Common.h"
 #include "replica_core/ReplicaCreateInfo.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/RequestConnection.h"
 #include "replica_core/RequestMessenger.h"
 
@@ -99,9 +100,11 @@ public:
     unsigned int       chunk        () const { return _chunk; }
     std::string const& sourceWorker () const { return _sourceWorker; }
 
-    /// Return request-specific extended data reported upon a successfull completion
-    /// of the request
+    /// Return request-specific extended status of the operation
     ReplicaCreateInfo const& responseData () const { return _responseData; }
+
+    /// Return the status of the replica
+    ReplicaInfo const& replicaInfo () const { return _replicaInfo; }
 
     /**
      * Create a new request with specified parameters.
@@ -213,6 +216,9 @@ private:
     
     /// Extended informationon on a status of the operation
     ReplicaCreateInfo _responseData;
+
+    /// Detailed info on the replica status
+    ReplicaInfo _replicaInfo;
 };
 
 
@@ -253,7 +259,9 @@ public:
     /// Return request-specific extended data reported upon a successfull completion
     /// of the request
     ReplicaCreateInfo const& responseData () const { return _responseData; }
+    ReplicaCreateInfo const& responseData () const { return _responseData; }
 
+    
     /**
      * Create a new request with specified parameters.
      * 
@@ -342,6 +350,9 @@ private:
     
     /// Extended informationon on a status of the operation
     ReplicaCreateInfo _responseData;
+
+    /// Detailed info on the replica status
+    ReplicaInfo _replicaInfo;
 };
 
 
