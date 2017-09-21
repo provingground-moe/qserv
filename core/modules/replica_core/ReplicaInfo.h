@@ -71,6 +71,8 @@ public:
         std::string name;
         uint64_t    size;
         std::string cs;
+        uint64_t    beginTransferTime;
+        uint64_t    endTransferTime;
     };
     typedef std::vector<FileInfo> FileInfoCollection;
 

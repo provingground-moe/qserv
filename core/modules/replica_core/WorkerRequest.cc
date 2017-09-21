@@ -56,6 +56,9 @@ namespace replica_core {
 
 std::mutex
 WorkerRequest::_mtxDataFolderOperations;
+
+std::mutex
+WorkerRequest::_mtx;
     
 std::string
 WorkerRequest::status2string (CompletionStatus status) {

@@ -36,12 +36,17 @@
 #include "replica_core/Configuration.h"
 #include "replica_core/FileClient.h"
 #include "replica_core/FileUtils.h"
+#include "replica_core/Performance.h"
 #include "replica_core/ServiceProvider.h"
 
-// This macro to appear witin each block which requires thread safety
+// These macros to appear witin each block which requires thread safety
+// at the corresponding level
 
 #define LOCK_DATA_FOLDER \
 std::lock_guard<std::mutex> lock(_mtxDataFolderOperations)
+
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
 
 namespace fs = boost::filesystem;
 
@@ -97,11 +102,10 @@ WorkerReplicationRequest::WorkerReplicationRequest (
             id,
             priority),
 
-        _database        (database),
-        _chunk           (chunk),
-        _sourceWorker    (sourceWorker),
-        _replicationInfo (),
-        _replicaInfo     () {
+        _database     (database),
+        _chunk        (chunk),
+        _sourceWorker (sourceWorker),
+        _replicaInfo  () {
 
     _serviceProvider.assertWorkerIsValid       (sourceWorker);
     _serviceProvider.assertWorkersAreDifferent (worker, sourceWorker);
@@ -111,6 +115,20 @@ WorkerReplicationRequest::WorkerReplicationRequest (
 WorkerReplicationRequest::~WorkerReplicationRequest () {
 }
 
+ReplicaInfo
+WorkerReplicationRequest::replicaInfo () const {
+
+    // This implementation guarantees that a consistent snapshot of
+    // the object will be returned to a calling thread while
+    // a processing thread may be attempting to update the object.
+
+    LOCK_GUARD;
+
+    ReplicaInfo const info = _replicaInfo;
+
+    return info;
+}
+    
 
 bool
 WorkerReplicationRequest::execute () {
@@ -124,12 +142,11 @@ WorkerReplicationRequest::execute () {
 
     bool const complete = WorkerRequest::execute();
     if (complete) {
-        _replicationInfo = ReplicaCreateInfo (100.);
-        _replicaInfo     = ReplicaInfo (ReplicaInfo::COMPLETE,
-                                        worker(),
-                                        database(),
-                                        chunk(),
-                                        ReplicaInfo::FileInfoCollection());
+        _replicaInfo = ReplicaInfo (ReplicaInfo::COMPLETE,
+                                    worker(),
+                                    database(),
+                                    chunk(),
+                                    ReplicaInfo::FileInfoCollection());
     }
     return complete;
 }
@@ -394,8 +411,6 @@ WorkerReplicationRequestPOSIX::execute () {
 
     // For now (before finalizing the progress reporting protocol) just return
     // the perentage of the total amount of data moved
- 
-    _replicationInfo = ReplicaCreateInfo(100.);
 
     setStatus(STATUS_SUCCEEDED);
     return true;
@@ -515,11 +530,13 @@ WorkerReplicationRequestFS::execute () {
             fs::path const outFile = outDir / file;
             outFiles.push_back(outFile);
 
-            _file2descr[file].inSizeBytes  = 0;
-            _file2descr[file].outSizeBytes = 0;
-            _file2descr[file].cs           = 0;
-            _file2descr[file].tmpFile      = tmpFile;
-            _file2descr[file].outFile      = outFile;
+            _file2descr[file].inSizeBytes       = 0;
+            _file2descr[file].outSizeBytes      = 0;
+            _file2descr[file].cs                = 0;
+            _file2descr[file].tmpFile           = tmpFile;
+            _file2descr[file].outFile           = outFile;
+            _file2descr[file].beginTransferTime = 0;
+            _file2descr[file].endTransferTime   = 0;
         }
     
         // Check input files, check and sanitize the destination folder
@@ -696,6 +713,7 @@ WorkerReplicationRequestFS::execute () {
                          ptr != end; ++ptr) cs += *ptr;
 
                     // Keep updating this stats while copying the files
+                    _file2descr[*_fileItr].endTransferTime = PerformanceUtils::now();
                     updateInfo ();
 
                     // Keep copying the same file
@@ -734,15 +752,15 @@ WorkerReplicationRequestFS::execute () {
             releaseResources();
             return true;
         }
-
-        // Keep updating this stats after finishing to copy each file
-        updateInfo ();
-
         // Flush and close the current file
 
         std::fflush(_tmpFilePtr);
         std::fclose(_tmpFilePtr);
         _tmpFilePtr = 0;
+
+        // Keep updating this stats after finishing to copy each file
+        _file2descr[*_fileItr].endTransferTime = PerformanceUtils::now();
+        updateInfo ();
 
         // Move the iterator to the name of the next file to be copied
         ++_fileItr;
@@ -805,7 +823,9 @@ WorkerReplicationRequestFS::openFiles () {
         return true;
     }
     std::rewind(_tmpFilePtr);
-    
+
+    _file2descr[*_fileItr].beginTransferTime = PerformanceUtils::now();
+
     return false;
 }
 
@@ -868,7 +888,9 @@ WorkerReplicationRequestFS::updateInfo () {
             ReplicaInfo::FileInfo ({
                 file,
                 _file2descr[file].outSizeBytes,
-                std::to_string(_file2descr[file].cs)
+                std::to_string(_file2descr[file].cs),
+                _file2descr[file].beginTransferTime,
+                _file2descr[file].endTransferTime
             })
         );
         totalInSizeBytes  += _file2descr[file].inSizeBytes;
@@ -880,19 +902,18 @@ WorkerReplicationRequestFS::updateInfo () {
             ReplicaInfo::Status::INCOMPLETE;
 
     // Fill in the info on the chunk before finishing the operation
+
+    LOCK_GUARD;     // to guarantee a consistent snapshot of that data structure
+                    // if other threads will be requesting its copy while it'll be being
+                    // updated below.
+
     _replicaInfo = ReplicaInfo (
         status,
         worker(),
         database(),
         chunk(),
         fileInfoCollection);
-
-    // the perentage of the total amount of data moved
-    float const progress = 100.0 * (totalOutSizeBytes / totalInSizeBytes);
-    _replicationInfo = ReplicaCreateInfo(progress);
 }
-
-
 
 void
 WorkerReplicationRequestFS::releaseResources() {

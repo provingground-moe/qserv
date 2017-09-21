@@ -59,6 +59,9 @@ void setInfoImpl (const lsst::qserv::replica_core::ReplicaInfo &ri,
         fileInfo->set_name(fi.name);
         fileInfo->set_size(fi.size);
         fileInfo->set_cs  (fi.cs);
+        fileInfo->set_cs  (fi.cs);
+        fileInfo->set_begin_transfer_time(fi.beginTransferTime);
+        fileInfo->set_end_transfer_time  (fi.endTransferTime);
     }  
 }
 }  // namespace
@@ -120,7 +123,9 @@ ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {
             FileInfo({
                 fileInfo.name(),
                 fileInfo.size(),
-                fileInfo.cs()
+                fileInfo.cs(),
+                fileInfo.begin_transfer_time(),
+                fileInfo.end_transfer_time()
             })
         );
     }
@@ -167,10 +172,18 @@ ReplicaInfo::setInfo (lsst::qserv::proto::ReplicationReplicaInfo *info) const {
 
 std::ostream&
 operator<< (std::ostream& os, const ReplicaInfo::FileInfo &fi) {
+    static float const MB =  1024.0*1024.0;
+    static float const millisec_per_sec = 1000.0;
+    float const sizeMB  = fi.size / MB;
+    float const seconds = (fi.endTransferTime - fi.beginTransferTime) / millisec_per_sec;
+    
     os  << "FileInfo"
         << " name: " << fi.name
         << " size: " << fi.size
-        << " cs: "   << fi.cs;
+        << " cs: "   << fi.cs
+        << " beginTransferTime: " << fi.beginTransferTime
+        << " endTransferTime: "   << fi.endTransferTime
+        << " MB/s: " << (fi.endTransferTime ? sizeMB / seconds : 0.0);
     return os;
 }
 
