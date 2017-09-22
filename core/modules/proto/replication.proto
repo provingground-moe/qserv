@@ -267,11 +267,14 @@ message ReplicationFileInfo {
     // The following parameters are set in the relevant contexts only.
     // Otherwise they'll be set to some default value)
   
-    /// When the file migration started
+    /// When the file migration started (where applies)
     optional uint64 begin_transfer_time = 4 [default = 0];
 
-    /// When the file migration finished
+    /// When the file migration finished (where applies)
     optional uint64 end_transfer_time = 5 [default = 0];
+
+    /// The size of an input file (where applies)
+    optional uint64 in_size = 6 [default = 0] ;
 }
 
 message ReplicationReplicaInfo {

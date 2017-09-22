@@ -56,12 +56,13 @@ void setInfoImpl (const lsst::qserv::replica_core::ReplicaInfo &ri,
     info->set_chunk   (ri.chunk   ());
     for (const auto &fi: ri.fileInfo()) {
         lsst::qserv::proto::ReplicationFileInfo *fileInfo = info->add_file_info_many();
-        fileInfo->set_name(fi.name);
-        fileInfo->set_size(fi.size);
-        fileInfo->set_cs  (fi.cs);
-        fileInfo->set_cs  (fi.cs);
-        fileInfo->set_begin_transfer_time(fi.beginTransferTime);
-        fileInfo->set_end_transfer_time  (fi.endTransferTime);
+        fileInfo->set_name                (fi.name);
+        fileInfo->set_size                (fi.size);
+        fileInfo->set_cs                  (fi.cs);
+        fileInfo->set_cs                  (fi.cs);
+        fileInfo->set_begin_transfer_time (fi.beginTransferTime);
+        fileInfo->set_end_transfer_time   (fi.endTransferTime);
+        fileInfo->set_in_size             (fi.inSize);
     }  
 }
 }  // namespace
@@ -125,7 +126,8 @@ ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {
                 fileInfo.size(),
                 fileInfo.cs(),
                 fileInfo.begin_transfer_time(),
-                fileInfo.end_transfer_time()
+                fileInfo.end_transfer_time(),
+                fileInfo.in_size()
             })
         );
     }
@@ -176,14 +178,18 @@ operator<< (std::ostream& os, const ReplicaInfo::FileInfo &fi) {
     static float const millisec_per_sec = 1000.0;
     float const sizeMB  = fi.size / MB;
     float const seconds = (fi.endTransferTime - fi.beginTransferTime) / millisec_per_sec;
-    
+    float const completedPercent = fi.inSize ? 100.0 * fi.size / fi.inSize : 0.0;
+
     os  << "FileInfo"
         << " name: " << fi.name
         << " size: " << fi.size
+        << " inSize: " << fi.inSize
         << " cs: "   << fi.cs
         << " beginTransferTime: " << fi.beginTransferTime
         << " endTransferTime: "   << fi.endTransferTime
-        << " MB/s: " << (fi.endTransferTime ? sizeMB / seconds : 0.0);
+        << " completed [%]: "     << completedPercent
+        << " xfer [MB/s]: "       << (fi.endTransferTime ? sizeMB / seconds : 0.0);
+
     return os;
 }
 

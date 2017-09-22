@@ -267,10 +267,13 @@ WorkerFindRequestPOSIX::execute () {
                                 "failed to read file size: " + path.string());
                         
                     fileInfoCollection.emplace_back (
-                        ReplicaInfo::FileInfo({
+                        ReplicaInfo::FileInfo ({
                             file,
                             size,
-                            ""  /* cs */
+                            "",     /* cs */
+                            0,      /* beginTransferTime */
+                            0,      /* endTransferTime */
+                            size    /* inSize */
                         })
                     );
                 } else {
