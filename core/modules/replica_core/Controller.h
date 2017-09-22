@@ -89,6 +89,24 @@ public:
     typedef std::shared_ptr<Controller> pointer;
 
     /**
+     * The data structure encapsulating various attributes which identity
+     * each instane of the Controller class. This information is meant to
+     * be used in the multi-Controller setups to coordinate operations
+     * betweem multiple instances and to avoid/resolve conflicts.
+     */
+    struct Identity {
+
+        /// A unique identifier of the Controller
+        std::string id;
+
+        /// The name of a hoste where it runs
+        std::string host;
+
+        /// An identifier of a process
+        pid_t pid;
+    };
+
+    /**
      * Static factory method is needed to prevent issue with the lifespan
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
@@ -105,6 +123,9 @@ public:
  
     /// Destructor
     virtual ~Controller ();
+
+    /// Return the unique identity of the instance
+    Identity const& identity () { return _identity; }
 
     /// Return the Service Provider used by the server
     ServiceProvider& serviceProvider () { return _serviceProvider; }
@@ -475,6 +496,9 @@ private:
 
 private:
 
+    /// The unique identity of the instance
+    Identity _identity;
+
     // Parameters of the object
 
     ServiceProvider &_serviceProvider;
@@ -499,6 +523,11 @@ private:
     std::shared_ptr<Messenger> _messenger;
 #endif
 };
+
+
+/// The overloaded streaming operator for Controller's identity
+std::ostream& operator << (std::ostream& os, Controller::Identity const& identity);
+
 
 }}} // namespace lsst::qserv::replica_core
 

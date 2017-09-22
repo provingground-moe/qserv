@@ -30,10 +30,6 @@
 #include <boost/bind.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include "boost/uuid/uuid.hpp"
-#include "boost/uuid/uuid_generators.hpp"
-#include "boost/uuid/uuid_io.hpp"
-
 // Qserv headers
 
 #include "lsst/log/Log.h"
@@ -45,7 +41,6 @@
 
 #define LOCK_GUARD \
 std::lock_guard<std::mutex> lock(_mtx)
-
 
 namespace {
 
@@ -88,8 +83,7 @@ Request::state2string (ExtendedState state) {
 
 std::string
 Request::generateId () {
-    boost::uuids::uuid id = boost::uuids::random_generator()();
-    return boost::uuids::to_string(id);
+    return Generators::uniqueId();
 }
 
 Request::Request (ServiceProvider         &serviceProvider,

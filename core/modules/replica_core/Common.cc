@@ -26,6 +26,9 @@
 
 // System headers
 
+#include "boost/uuid/uuid.hpp"
+#include "boost/uuid/uuid_generators.hpp"
+#include "boost/uuid/uuid_io.hpp"
 #include <stdexcept>
 
 // Qserv headers
@@ -126,6 +129,26 @@ translate (ExtendedCompletionStatus status) {
         case ExtendedCompletionStatus::EXT_STATUS_NO_SPACE:         return proto::ReplicationStatusExt::NO_SPACE;
     }
     throw std::logic_error("Common::translate(ExtendedCompletionStatus) - unhandled status: " + std::to_string(status));
+}
+
+
+////////////////////////////////////////////
+//                Generators              //
+////////////////////////////////////////////
+
+// This macro to appear witin each block which requires thread safety
+
+#define LOCK_GUARD \
+std::lock_guard<std::mutex> lock(_mtx)
+
+std::mutex
+Generators::_mtx;
+
+std::string
+Generators::uniqueId () {
+    LOCK_GUARD;
+    boost::uuids::uuid id = boost::uuids::random_generator()();
+    return boost::uuids::to_string(id);
 }
 
 

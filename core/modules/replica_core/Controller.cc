@@ -27,10 +27,13 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <sys/types.h>  // pid_t
+#include <unistd.h>     // getpid()
 
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Common.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FindAllRequest.h"
@@ -292,6 +295,11 @@ public:
 //////////////////////////  Controller  //////////////////////////
 //////////////////////////////////////////////////////////////////
 
+std::ostream&
+operator << (std::ostream& os, Controller::Identity const& identity) {
+    os << "(id: " << identity.id << ", host: " << identity.host << ", pid: " << identity.pid << ")";
+    return os;
+}
 
 Controller::pointer
 Controller::create (ServiceProvider& serviceProvider) {
@@ -300,7 +308,12 @@ Controller::create (ServiceProvider& serviceProvider) {
 }
 
 Controller::Controller (ServiceProvider& serviceProvider)
-    :   _serviceProvider (serviceProvider),
+    :   _identity ({
+            Generators::uniqueId(),
+            boost::asio::ip::host_name(),
+            getpid()
+        }),
+        _serviceProvider (serviceProvider),
         _io_service      (),
         _work     (nullptr),
         _thread   (nullptr),
@@ -309,6 +322,8 @@ Controller::Controller (ServiceProvider& serviceProvider)
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
     _messenger = Messenger::create (_serviceProvider, _io_service);
 #endif
+
+    LOGS(_log, LOG_LVL_DEBUG, "Controller  identity=" << _identity);
 }
 
 Controller::~Controller () {
