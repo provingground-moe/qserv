@@ -32,6 +32,7 @@
 
 // System headers
 
+#include <mutex>
 #include <string>
 
 // Qserv headers
@@ -81,6 +82,29 @@ ExtendedCompletionStatus translate (lsst::qserv::proto::ReplicationStatusExt sta
 
 /// Translate transient extended status into the Protobuf one
 lsst::qserv::proto::ReplicationStatusExt translate (ExtendedCompletionStatus status);
+
+/**
+ * The utility class for generating unique identifiers, etc.
+ */
+class Generators {
+public:
+    
+    // No construction, copying or destruction
+
+    Generators () = delete;
+    Generators (Generators const&) = delete;
+    Generators& operator= (Generators const&) = delete;
+
+    ~Generators () = delete;
+
+    /// Generate a unique identifier
+    static std::string uniqueId ();
+
+private:
+
+    /// For thread safety where it's required
+    static std::mutex _mtx;
+};
 
 }}} // namespace lsst::qserv::replica_core
 
