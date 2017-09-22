@@ -890,14 +890,16 @@ WorkerReplicationRequestFS::updateInfo () {
                 _file2descr[file].outSizeBytes,
                 std::to_string(_file2descr[file].cs),
                 _file2descr[file].beginTransferTime,
-                _file2descr[file].endTransferTime
+                _file2descr[file].endTransferTime,
+                _file2descr[file].inSizeBytes
             })
         );
         totalInSizeBytes  += _file2descr[file].inSizeBytes;
         totalOutSizeBytes += _file2descr[file].outSizeBytes;
     }
     ReplicaInfo::Status const status =
-        _files.size() == fileInfoCollection.size() ?
+        (_files.size()    == fileInfoCollection.size()) &&
+        (totalInSizeBytes == totalOutSizeBytes) ?
             ReplicaInfo::Status::COMPLETE :
             ReplicaInfo::Status::INCOMPLETE;
 

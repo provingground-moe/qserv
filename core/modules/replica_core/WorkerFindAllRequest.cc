@@ -223,10 +223,13 @@ WorkerFindAllRequestPOSIX::execute () {
                     unsigned const chunk = std::get<1>(parsed);
 
                     chunk2fileInfoCollection[chunk].emplace_back (
-                        ReplicaInfo::FileInfo({
+                        ReplicaInfo::FileInfo ({
                             entry.path().filename().string(),
                             size,
-                            ""  /* cs is never computed for this type of requests */
+                            "",     /* cs is never computed for this type of requests */
+                            0,      /* beginTransferTime */
+                            0,      /* endTransferTime */
+                            size    /* inSize */
                         })
                     );
                 }

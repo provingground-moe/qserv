@@ -68,11 +68,25 @@ public:
 
     /// An information entry for a file
     struct FileInfo {
+
+        /// The short name of the file
         std::string name;
-        uint64_t    size;
+
+        /// The current (or final) size of the file in bytes
+        uint64_t size;
+
+        /// The control/check sum of the file's content
         std::string cs;
-        uint64_t    beginTransferTime;
-        uint64_t    endTransferTime;
+
+        /// The time in milliseconds when the file creation began (where applies)
+        uint64_t beginTransferTime;
+
+        /// The time in milliseconds when the file creation finished or when
+        /// the last recording to th efile was made (where applies)
+        uint64_t endTransferTime;
+
+        /// The size of the input file
+        uint64_t inSize;
     };
     typedef std::vector<FileInfo> FileInfoCollection;
 
