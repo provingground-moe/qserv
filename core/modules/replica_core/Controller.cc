@@ -176,7 +176,7 @@ public:
     
         // Initiate the request
 
-        request->start ();
+        request->start (controller);
 
         return request;
     }
@@ -224,7 +224,7 @@ public:
 
         // Initiate the request
 
-        request->start ();
+        request->start (controller);
 
         return request;
     }
@@ -433,7 +433,7 @@ Controller::replicate (std::string const&                workerName,
 
     // Initiate the request
 
-    request->start ();
+    request->start (controller);
 
     return request;
 }
@@ -477,7 +477,7 @@ Controller::deleteReplica (std::string const&           workerName,
 
     // Initiate the request
 
-    request->start ();
+    request->start (controller);
 
     return request;
 }
@@ -523,7 +523,7 @@ Controller::findReplica (std::string const&         workerName,
 
     // Initiate the request
 
-    request->start ();
+    request->start (controller);
 
     return request;
 }
@@ -565,7 +565,7 @@ Controller::findAllReplicas (std::string const&            workerName,
 
     // Initiate the request
 
-    request->start ();
+    request->start (controller);
 
     return request;
 }

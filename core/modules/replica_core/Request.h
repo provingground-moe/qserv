@@ -51,6 +51,7 @@ namespace replica_core {
 
 // Forward declarations
 
+class Controller;
 class ServiceProvider;
 class WorkerInfo;
 
@@ -172,9 +173,16 @@ public:
      * Reset the state (if needed) and begin processing the request.
      *
      * This is supposed to be the first operation to be called upon a creation
-     * of the request.
+     * of the request. A caller may optionally provide a pointer to an instance
+     * of the Controller class which (if set) may be used by subclasses for saving
+     * their state in a database.
+     *
+     * NOTE: only the first call with the non-default pointer to the Controller
+     * will be considering for building an associaion with the Controller.
+     *
+     * @param controller - an optional pointer to an instance of the Controller
      */
-    void start ();
+    void start (std::shared_ptr<Controller> const& controller=nullptr);
 
     /**
      * Explicitly cancel any asynchronous operation(s) and put the object into
@@ -353,7 +361,11 @@ protected:
     boost::asio::deadline_timer _requestExpirationTimer;
 
     /// Mutex guarding internal state
-    mutable std::mutex _mtx;};
+    mutable std::mutex _mtx;
+
+    /// The optional asociation with the Controller
+    std::shared_ptr<Controller> _controller;
+};
 
 }}} // namespace lsst::qserv::replica_core
 

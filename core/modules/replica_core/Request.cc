@@ -34,6 +34,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/Configuration.h"
+#include "replica_core/Controller.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -123,13 +124,16 @@ Request::~Request () {
 }
 
 void
-Request::start () {
+Request::start (std::shared_ptr<Controller> const& controller) {
 
     LOCK_GUARD;
 
     assertState(CREATED);
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "start  _requestExpirationIvalSec: " << _requestExpirationIvalSec);
+
+    // Build an associaiton with the corresponding Controller
+    if (!_controller && controller) _controller = controller;
 
     _performance.setUpdateStart();
 
