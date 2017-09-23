@@ -38,6 +38,7 @@
 #include "replica_core/FindRequest.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/Messenger.h"
+#include "replica_core/Performance.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/ServiceProvider.h"
@@ -47,7 +48,7 @@
 // This macro to appear witin each block which requires thread safety
 
 #define LOCK_GUARD \
-std::lock_guard<std::mutex> lock(_requestPocessingMtx)
+std::lock_guard<std::mutex> lock(_mtx)
 
 namespace {
 
@@ -59,29 +60,6 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-//////////////////////////////////////////////////////////////////////
-//////////////////////////  RequestWrapper  //////////////////////////
-//////////////////////////////////////////////////////////////////////
-
-/**
- * The base class for implementing a polymorphic collection of active requests.
- */
-struct RequestWrapper {
-
-    /// The pointer type for instances of the class
-    typedef std::shared_ptr<RequestWrapper> pointer;
-
-    /// Destructor
-    virtual ~RequestWrapper() {}
-
-    /// This method will be called upon a completion of a request
-    /// to notify a subscriber on the event.
-    virtual void notify ()=0;
-
-    /// Return a pointer to the stored request object
-    virtual std::shared_ptr<Request> request () const=0;
-};
-
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////  RequestWrapperImpl  //////////////////////////
@@ -92,7 +70,7 @@ struct RequestWrapper {
  */
 template <class  T>
 struct RequestWrapperImpl
-    :   RequestWrapper {
+    :   ControllerRequestWrapper {
 
     /// The implementation of the vurtual method defined in the base class
     virtual void notify () {
@@ -103,7 +81,7 @@ struct RequestWrapperImpl
     RequestWrapperImpl(typename T::pointer const& request,
                        typename T::callback_type  onFinish)
 
-        :   RequestWrapper(),
+        :   ControllerRequestWrapper(),
 
             _request  (request),
             _onFinish (onFinish) {
@@ -254,6 +232,7 @@ public:
     /**
      * Return a collection of requests filtered by type.
      */
+    /*
     template <class REQUEST_TYPE>
     static
     std::vector<typename REQUEST_TYPE::pointer> requestsByType (Controller::pointer const& controller) {
@@ -269,10 +248,11 @@ public:
         }
         return result;
     }
-    
+    */
     /**
      * Return the number of of requests filtered by type.
      */
+    /*
     template <class REQUEST_TYPE>
     static
     size_t numRequestsByType (Controller::pointer const& controller) {
@@ -288,6 +268,7 @@ public:
         }
         return result;
     }
+    */
 };
 
 
@@ -311,13 +292,14 @@ Controller::Controller (ServiceProvider& serviceProvider)
     :   _identity ({
             Generators::uniqueId(),
             boost::asio::ip::host_name(),
-            getpid()
-        }),
+            getpid()}),
+
+        _startTime       (PerformanceUtils::now()),
         _serviceProvider (serviceProvider),
         _io_service      (),
-        _work     (nullptr),
-        _thread   (nullptr),
-        _registry () {
+        _work            (nullptr),
+        _thread          (nullptr),
+        _registry        () {
 
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
     _messenger = Messenger::create (_serviceProvider, _io_service);
@@ -841,217 +823,10 @@ Controller::drainWorkerService (std::string const&                 workerName,
         );
 }
 
-std::vector<ReplicationRequest::pointer>
-Controller::activeReplicationRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<ReplicationRequest>(shared_from_this());
-}
-
-std::vector<DeleteRequest::pointer>
-Controller::activeDeleteRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<DeleteRequest>(shared_from_this());
-}
-std::vector<FindRequest::pointer>
-Controller::activeFindRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<FindRequest>(shared_from_this());
-}
-
-std::vector<FindAllRequest::pointer>
-Controller::activeFindAllRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<FindAllRequest>(shared_from_this());
-}
-
-std::vector<StopReplicationRequest::pointer>
-Controller::activeStopReplicationRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StopReplicationRequest>(shared_from_this());       
-}
-
-std::vector<StopDeleteRequest::pointer>
-Controller::activeStopDeleteRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StopDeleteRequest>(shared_from_this());       
-}
-
-std::vector<StopFindRequest::pointer>
-Controller::activeStopFindRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StopFindRequest>(shared_from_this());       
-}
-
-std::vector<StopFindAllRequest::pointer>
-Controller::activeStopFindAllRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StopFindAllRequest>(shared_from_this());       
-}
-
-std::vector<StatusReplicationRequest::pointer>
-Controller::activeStatusReplicationRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StatusReplicationRequest>(shared_from_this());
-}
-
-std::vector<StatusDeleteRequest::pointer>
-Controller::activeStatusDeleteRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StatusDeleteRequest>(shared_from_this());
-}
-
-std::vector<StatusFindRequest::pointer>
-Controller::activeStatusFindRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StatusFindRequest>(shared_from_this());
-}
-
-std::vector<StatusFindAllRequest::pointer>
-Controller::activeStatusFindAllRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<StatusFindAllRequest>(shared_from_this());
-}
-
-std::vector<ServiceSuspendRequest::pointer>
-Controller::activeServiceSuspendRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<ServiceSuspendRequest>(shared_from_this());
-}
-
-
-std::vector<ServiceResumeRequest::pointer>
-Controller::activeServiceResumeRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<ServiceResumeRequest>(shared_from_this());
-}
-
-
-std::vector<ServiceStatusRequest::pointer>
-Controller::activeServiceStatusRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<ServiceStatusRequest>(shared_from_this());
-}
-
-std::vector<ServiceRequestsRequest::pointer>
-Controller::activeServiceRequestsRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<ServiceRequestsRequest>(shared_from_this());
-}
-
-std::vector<ServiceDrainRequest::pointer>
-Controller::activeServiceDrainRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::requestsByType<ServiceDrainRequest>(shared_from_this());
-}
-
 size_t
-Controller::numActiveRequests () {
+Controller::numActiveRequests () const {
     LOCK_GUARD;
     return _registry.size();
-}
-
-
-size_t
-Controller::numActiveReplicationRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<ReplicationRequest>(shared_from_this());
-}
-
-
-size_t
-Controller::numActiveDeleteRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<DeleteRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveFindRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<FindRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveFindAllRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<FindAllRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStopReplicationRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StopReplicationRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStopDeleteRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StopDeleteRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStopFindRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StopFindRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStopFindAllRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StopFindAllRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStatusReplicationRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StatusReplicationRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStatusDeleteRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StatusDeleteRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStatusFindRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StatusFindRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveStatusFindAllRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<StatusFindAllRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveServiceSuspendRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<ServiceSuspendRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveServiceResumeRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<ServiceResumeRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveServiceStatusRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<ServiceStatusRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveServiceRequestsRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<ServiceRequestsRequest>(shared_from_this());
-}
-
-size_t
-Controller::numActiveServiceDrainRequests () {
-    LOCK_GUARD;
-    return ControllerImpl::numRequestsByType<ServiceDrainRequest>(shared_from_this());
 }
 
 void
@@ -1069,7 +844,7 @@ Controller::finish (std::string const& id) {
     //   - it will reduce the controller API dead-time due to a prolonged
     //     execution time of of the callback function.
 
-    RequestWrapper::pointer request;
+    ControllerRequestWrapper::pointer request;
     {
         LOCK_GUARD;
         request = _registry[id];
