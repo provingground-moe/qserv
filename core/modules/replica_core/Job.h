@@ -31,6 +31,7 @@
 
 #include <memory>       // shared_ptr, enable_shared_from_this
 #include <mutex>
+#include <ostream>
 #include <string>
 
 // Qserv headers
@@ -84,7 +85,7 @@ public:
         NONE,
 
         /// The job has been fully implemented
-        SUCCEEDED,
+        SUCCESS,
 
         /// The job has failed
         FAILED,
@@ -152,11 +153,19 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      *
-     * @param controller - for launching requests
-     * @param type       - its type name
+     * @param controller     - for launching requests
+     * @param type           - its type name
+     * @param os             - an output stream for monitoring and error printouts
+     * @param progressReport - triggers periodic printout onto an output stream
+     *                         to see the overall progress of the operation
+     * @param errorReport    - trigger detailed error reporting after the completion
+     *                         of the operation
      */
     Job (Controller::pointer const& controller,
-         std::string const&         type);
+         std::string const&         type,
+         std::ostream&              os,
+         bool                       progressReport=true,
+         bool                       errorReport=false);
 
     /**
       * This method is supposed to be provided by subclasses for additional
@@ -177,7 +186,9 @@ protected:
      * NOTES: normally this condition should never been seen unless
      *        there is a problem with the application implementation
      *        or the underlying run-time system.
-     * 
+     *
+     * @param desiredState - the desired state
+     *
      * @throws std::logic_error
      */
     void assertState (State desiredState) const;
@@ -190,9 +201,12 @@ protected:
      *
      * - reporting change state in a debug stream
      * - verifying the correctness of the state transition
+     *
+     * @param state         - the new primary state
+     * @param extendedState - the new extended state
      */
     void setState (State         state,
-                   ExtendedState extendedStat);
+                   ExtendedState extendedState=ExtendedState::NONE);
     
 protected:
 
@@ -220,7 +234,7 @@ protected:
     mutable std::mutex _mtx;
     
     /// For tracking on-going requests
-    AnyRequestTracker _tracker;
+    AnyRequestTracker _requestTracker;
 };
 
 }}} // namespace lsst::qserv::replica_core

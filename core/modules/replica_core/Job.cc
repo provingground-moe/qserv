@@ -31,7 +31,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/Common.h"            // Generators::uniqueId()
-#include "replica_core/Performane.h"        // PerformanceUtils::now()
+#include "replica_core/Performance.h"       // PerformanceUtils::now()
 
 // This macro to appear witin each block which requires thread safety
 
@@ -48,9 +48,6 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-std::mutex
-Job::_mtx;
-
 std::string
 Job::state2string (State state) {
     switch (state) {
@@ -63,20 +60,23 @@ Job::state2string (State state) {
 }
 
 std::string
-Request::state2string (ExtendedState state) {
+Job::state2string (ExtendedState state) {
     switch (state) {
-        case NONE:                 return "NONE";
-        case SUCCESS:              return "SUCCESS";
+        case NONE:      return "NONE";
+        case SUCCESS:   return "SUCCESS";
         case FAILED:    return "FAILED";
         case EXPIRED:   return "EXPIRED";
         case CANCELLED: return "CANCELLED";
     }
     throw std::logic_error (
-                "incomplete implementation of method Request::state2string(ExtendedState)");
+                "incomplete implementation of method Job::state2string(ExtendedState)");
 }
 
 Job::Job (Controller::pointer const& controller,
-          std::string const&         type) {
+          std::string const&         type,
+          std::ostream&              os,
+          bool                       progressReport,
+          bool                       errorReport)
 
     :   _id         (Generators::uniqueId()),
         _controller (controller),
@@ -85,8 +85,12 @@ Job::Job (Controller::pointer const& controller,
         _state         (State::CREATED),
         _extendedState (ExtendedState::NONE),
 
-        _startTime (0),
-        _endTime   (0) {
+        _beginTime (0),
+        _endTime   (0),
+        
+        _requestTracker (os,
+                         progressReport,
+                         errorReport) {
 }
 
 Job::~Job () {
@@ -100,21 +104,23 @@ Job::context () const {
 void
 Job::start () {
 
+    LOGS(_log, LOG_LVL_DEBUG, context() << "start");
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "start");
-
+    assertState(State::CREATED);
     startImpl();
+    assertState(State::IN_PROGRESS);
 }
 
 void
 Job::cancel () {
 
+    LOGS(_log, LOG_LVL_DEBUG, context() << "cancel");
     LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "cancel");
-
+    assertState(State::IN_PROGRESS);
     cancelImpl();
+    assertState(State::FINISHED);
 }
 
 void
@@ -126,10 +132,12 @@ Job::assertState (State state) const {
 
 void
 Job::setState (State         state,
-               ExtendedState extendedStat) {
+               ExtendedState extendedState) {
+
     LOGS(_log, LOG_LVL_DEBUG, context() << "setState  state=" << state2string(state, extendedState));
-    _state        = state;
-    _extendedStat = extendedStat;
+
+    _state         = state;
+    _extendedState = extendedState;
 }
     
 }}} // namespace lsst::qserv::replica_core
