@@ -213,7 +213,8 @@ public:
                                           unsigned int                     chunk,
                                           ReplicationRequest_callback_type onFinish=nullptr,
                                           int                              priority=0,
-                                          bool                             keepTracking=true);
+                                          bool                             keepTracking=true,
+                                          std::string const&               jobId="");
 
     /**
      * Initiate a new replica deletion request.
@@ -231,7 +232,8 @@ public:
                                          unsigned int                chunk,
                                          DeleteRequest_callback_type onFinish=nullptr,
                                          int                         priority=0,
-                                         bool                        keepTracking=true);
+                                         bool                        keepTracking=true,
+                                         std::string const&          jobId="");
 
     /**
      * Initiate a new replica lookup request.
@@ -256,7 +258,8 @@ public:
                                      FindRequest_callback_type onFinish=nullptr,
                                      int                       priority=0,
                                      bool                      computeCheckSum=false,
-                                     bool                      keepTracking=true);
+                                     bool                      keepTracking=true,
+                                     std::string const&        jobId="");
 
     /**
      * Initiate a new replicas lookup request.
@@ -273,7 +276,8 @@ public:
                                         std::string const&           database,
                                         FindAllRequest_callback_type onFinish=nullptr,
                                         int                          priority=0,
-                                        bool                         keepTracking=true);
+                                        bool                         keepTracking=true,
+                                        std::string const&           jobId="");
 
     /**
      * Stop an outstanding replication request.
@@ -289,7 +293,8 @@ public:
                                         std::string const&                   workerName,
                                         std::string const&                   targetRequestId,
                                         StopReplicationRequest_callback_type onFinish=nullptr,
-                                        bool                                 keepTracking=true);
+                                        bool                                 keepTracking=true,
+                                        std::string const&                   jobId="");
 
     /**
      * Stop an outstanding replica deletion request.
@@ -305,7 +310,8 @@ public:
                                         std::string const&              workerName,
                                         std::string const&              targetRequestId,
                                         StopDeleteRequest_callback_type onFinish=nullptr,
-                                        bool                            keepTracking=true);
+                                        bool                            keepTracking=true,
+                                        std::string const&              jobId="");
 
     /**
      * Stop an outstanding replica lookup request.
@@ -321,7 +327,8 @@ public:
                                         std::string const&            workerName,
                                         std::string const&            targetRequestId,
                                         StopFindRequest_callback_type onFinish=nullptr,
-                                        bool                          keepTracking=true);
+                                        bool                          keepTracking=true,
+                                        std::string const&            jobId="");
 
     /**
      * Stop an outstanding replicas lookup request.
@@ -337,7 +344,8 @@ public:
                                         std::string const&               workerName,
                                         std::string const&               targetRequestId,
                                         StopFindAllRequest_callback_type onFinish=nullptr,
-                                        bool                             keepTracking=true);
+                                        bool                             keepTracking=true,
+                                        std::string const&               jobId="");
 
     /**
      * Check the on-going status of an outstanding replication request.
@@ -353,7 +361,8 @@ public:
                                         std::string const&                     workerName,
                                         std::string const&                     targetRequestId,
                                         StatusReplicationRequest_callback_type onFinish=nullptr,
-                                        bool                                   keepTracking=false);
+                                        bool                                   keepTracking=false,
+                                        std::string const&                     jobId="");
  
     /**
      * Check the on-going status of an outstanding replica deletion request.
@@ -369,7 +378,8 @@ public:
                                         std::string const&                workerName,
                                         std::string const&                targetRequestId,
                                         StatusDeleteRequest_callback_type onFinish=nullptr,
-                                        bool                              keepTracking=false);
+                                        bool                              keepTracking=false,
+                                        std::string const&                jobId="");
 
     /**
      * Check the on-going status of an outstanding replica lookup request.
@@ -385,7 +395,8 @@ public:
                                         std::string const&              workerName,
                                         std::string const&              targetRequestId,
                                         StatusFindRequest_callback_type onFinish=nullptr,
-                                        bool                            keepTracking=false);
+                                        bool                            keepTracking=false,
+                                        std::string const&              jobId="");
 
     /**
      * Check the on-going status of an outstanding (multiple) replicas lookup request.
@@ -401,7 +412,8 @@ public:
                                         std::string const&                 workerName,
                                         std::string const&                 targetRequestId,
                                         StatusFindAllRequest_callback_type onFinish=nullptr,
-                                        bool                               keepTracking=false);
+                                        bool                               keepTracking=false,
+                                        std::string const&                 jobId="");
 
     /**
      * Tell the worker-side service to temporarily suspend processing requests
@@ -413,7 +425,8 @@ public:
      */
     ServiceSuspendRequest_pointer suspendWorkerService (
                                         std::string const&                  workerName,
-                                        ServiceSuspendRequest_callback_type onFinish=nullptr);
+                                        ServiceSuspendRequest_callback_type onFinish=nullptr,
+                                        std::string const&                  jobId="");
 
     /**
      * Tell the worker-side service to resume processing requests
@@ -425,7 +438,8 @@ public:
      */
     ServiceResumeRequest_pointer resumeWorkerService (
                                         std::string const&                 workerName,
-                                        ServiceResumeRequest_callback_type onFinish=nullptr);
+                                        ServiceResumeRequest_callback_type onFinish=nullptr,
+                                        std::string const&                 jobId="");
     /**
      * Request the current status of the worker-side service
      *
@@ -436,7 +450,8 @@ public:
      */
     ServiceStatusRequest_pointer statusOfWorkerService (
                                         std::string const&                 workerName,
-                                        ServiceStatusRequest_callback_type onFinish=nullptr);
+                                        ServiceStatusRequest_callback_type onFinish=nullptr,
+                                        std::string const&                 jobId="");
                                                          
     /**
      * Request detailed info on which replication-related requests are known
@@ -449,7 +464,8 @@ public:
      */
     ServiceRequestsRequest_pointer requestsOfWorkerService (
                                         std::string const&                   workerName,
-                                        ServiceRequestsRequest_callback_type onFinish=nullptr);
+                                        ServiceRequestsRequest_callback_type onFinish=nullptr,
+                                        std::string const&                   jobId="");
 
     /**
      * Cancel all queue or being processed replica-related requsts known
@@ -462,7 +478,8 @@ public:
      */
     ServiceDrainRequest_pointer drainWorkerService (
                                         std::string const&                workerName,
-                                        ServiceDrainRequest_callback_type onFinish=nullptr);
+                                        ServiceDrainRequest_callback_type onFinish=nullptr,
+                                        std::string const&                jobId="");
                                                          
     /**
      * Return requests of a specific type

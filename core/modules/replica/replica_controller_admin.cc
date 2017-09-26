@@ -6,9 +6,9 @@
 
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
-#include "replica/RequestTracker.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
+#include "replica_core/RequestTracker.h"
 #include "replica_core/ServiceManagementRequest.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -49,9 +49,9 @@ bool test () {
         //            be executed within the Contoller's thread. Watch for proper
         //            synchronization when inspecting/updating shared variables.
 
-        r::CommonRequestTracker<rc::ServiceManagementRequestBase> tracker (std::cout,
-                                                                           progressReport,
-                                                                           errorReport);
+        rc::CommonRequestTracker<rc::ServiceManagementRequestBase> tracker (std::cout,
+                                                                            progressReport,
+                                                                            errorReport);
         for (auto const& worker: config.workers())
 
             if (operation == "STATUS")

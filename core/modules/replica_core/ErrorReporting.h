@@ -41,7 +41,7 @@
 
 namespace lsst {
 namespace qserv {
-namespace replica {
+namespace replica_core {
 
 /**
  * Print a report on a state of requests
@@ -70,6 +70,6 @@ void reportRequestState (COLLECTION const& requests,
         << std::endl;
 }
 
-}}} // namespace lsst::qserv::replica
+}}} // namespace lsst::qserv::replica_core
 
 #endif // LSST_QSERV_REPLICA_ERROR_REPORTING_H

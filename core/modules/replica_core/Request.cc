@@ -82,11 +82,6 @@ Request::state2string (ExtendedState state) {
     throw std::logic_error("incomplete implementation of method Request::state2string(ExtendedState)");
 }
 
-std::string
-Request::generateId () {
-    return Generators::uniqueId();
-}
-
 Request::Request (ServiceProvider         &serviceProvider,
                   boost::asio::io_service &io_service,
                   const std::string       &type,
@@ -97,7 +92,7 @@ Request::Request (ServiceProvider         &serviceProvider,
     :   _serviceProvider (serviceProvider),
 
         _type   (type),
-        _id     (generateId()),
+        _id     (Generators::uniqueId()),
         _worker (worker),
 
         _priority     (priority),
@@ -124,7 +119,8 @@ Request::~Request () {
 }
 
 void
-Request::start (std::shared_ptr<Controller> const& controller) {
+Request::start (std::shared_ptr<Controller> const& controller,
+                std::string const&                 jobId) {
 
     LOCK_GUARD;
 
@@ -132,9 +128,14 @@ Request::start (std::shared_ptr<Controller> const& controller) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "start  _requestExpirationIvalSec: " << _requestExpirationIvalSec);
 
-    // Build an associaiton with the corresponding Controller
-    if (!_controller && controller) _controller = controller;
+    // Build optional associaitons with the corresponding Controller and the job
+    //
+    // NOTE: this is done only once, the first time a non-trivial value
+    // of each parameter is presented to the method.
 
+    if (!_controller    &&  controller)    _controller = controller;
+    if ( _jobId.empty() && !jobId.empty()) _jobId      = jobId;
+    
     _performance.setUpdateStart();
 
     if (_requestExpirationIvalSec) {

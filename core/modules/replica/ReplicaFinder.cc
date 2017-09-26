@@ -42,7 +42,7 @@ ReplicaFinder::ReplicaFinder (replica_core::Controller::pointer const& controlle
                               std::ostream&                            os,
                               bool                                     progressReport,
                               bool                                     errorReport)
-    :   CommonRequestTracker<replica_core::FindAllRequest> (
+    :   replica_core::CommonRequestTracker<replica_core::FindAllRequest> (
             os,
             progressReport,
             errorReport) {
