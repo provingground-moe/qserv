@@ -25,7 +25,9 @@
 /// RequestTracker.h declares:
 ///
 /// class RequestTrackerBase
-/// class RequestTracker
+/// class CommonRequestTracker
+/// class AnyRequestTracker
+///
 /// (see individual class documentation for more information)
 
 // System headers
@@ -37,14 +39,14 @@
 
 // Qserv headers
 
-#include "replica/ErrorReporting.h"
+#include "replica_core/ErrorReporting.h"
 #include "replica_core/Request.h"
 
 // This header declarations
 
 namespace lsst {
 namespace qserv {
-namespace replica {
+namespace replica_core {
 
 /**
  * The base class implements a type-independent foundation for the common
@@ -55,7 +57,7 @@ class RequestTrackerBase {
 
 public:
 
-    // Default construction and copy semantics are proxibited
+    // Default construction and copy semantics are prohibited
 
     RequestTrackerBase () = delete;
     RequestTrackerBase (RequestTrackerBase const&) = delete;
@@ -127,7 +129,7 @@ class CommonRequestTracker
 
 public:
 
-    // Default construction and copy semantics are proxibited
+    // Default construction and copy semantics are prohibited
 
     CommonRequestTracker () = delete;
     CommonRequestTracker (CommonRequestTracker const&) = delete;
@@ -154,12 +156,12 @@ public:
     ~CommonRequestTracker () override {
     }
 
-    /// Th ecallback function to be registered with each request
+    /// The callback function to be registered with each request
     /// injected into the tracker.
 
     void onFinish (typename T::pointer ptr) {
         RequestTrackerBase::_numFinished++;
-        if (ptr->extendedState() == replica_core::Request::ExtendedState::SUCCESS)
+        if (ptr->extendedState() == Request::ExtendedState::SUCCESS)
             RequestTrackerBase::_numSuccess++;
     }
 
@@ -180,7 +182,7 @@ protected:
      * @see RequestTrackerBase::printErrorReport
      */
     void printErrorReport (std::ostream& os) const override {
-        replica::reportRequestState (requests, os);
+        replica_core::reportRequestState (requests, os);
     }
 
 public:
@@ -189,6 +191,63 @@ public:
     std::list<typename T::pointer> requests;
 };
 
-}}} // namespace lsst::qserv::replica
+
+/**
+ * The class implements a type-aware request tracker for a collection of
+ * heterogenious requests.
+ */
+class AnyRequestTracker
+    :   public RequestTrackerBase {
+
+public:
+
+    // Default construction and copy semantics are prohibited
+
+    AnyRequestTracker () = delete;
+    AnyRequestTracker (AnyRequestTracker const&) = delete;
+    AnyRequestTracker& operator= (AnyRequestTracker const&) = delete;
+
+    /**
+     * The constructor sets up tracking options.
+     *
+     * @param os             - an output stream for monitoring and error printouts
+     * @param progressReport - triggers periodic printout onto an output stream
+     *                         to see the overall progress of the operation
+     * @param errorReport    - trigger detailed error reporting after the completion
+     *                         of the operation
+     */
+    explicit AnyRequestTracker (std::ostream& os,
+                                bool          progressReport=true,
+                                bool          errorReport=false);
+
+    /// Destructor
+    ~AnyRequestTracker () override;
+
+    /// The callback function to be registered with each request
+    /// injected into the tracker.
+    void onFinish (Request::pointer const& ptr);
+
+    /**
+     * Add a request to be tracked. Note that in order to be tracked
+     * requests needs to be constructed with the above specified function
+     */
+    void add (Request::pointer const& ptr);
+
+protected:
+    
+    /**
+     * Implement the corresponding method defined in the base class.
+     *
+     * @see RequestTrackerBase::printErrorReport
+     */
+    void printErrorReport (std::ostream& os) const override;
+
+public:
+    
+    /// All requests launched
+    std::list<Request::pointer> requests;
+};
+
+}}} // namespace lsst::qserv::replica_core
 
 #endif // LSST_QSERV_REPLICA_REQUEST_TRACKER_H

@@ -11,10 +11,10 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica/ReplicaFinder.h"
-#include "replica/RequestTracker.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/ReplicaInfo.h"
+#include "replica_core/RequestTracker.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -88,9 +88,9 @@ bool test () {
         //       an account other chunks. Ideally, it neees to be a two-pass
         //       scan.
 
-        r::CommonRequestTracker<rc::DeleteRequest> tracker (std::cout,
-                                                            progressReport,
-                                                            errorReport);
+        rc::CommonRequestTracker<rc::DeleteRequest> tracker (std::cout,
+                                                             progressReport,
+                                                             errorReport);
  
         for (auto &entry: chunk2workers) {
 

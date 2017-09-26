@@ -12,10 +12,10 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica/ReplicaFinder.h"
-#include "replica/RequestTracker.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/ReplicaInfo.h"
+#include "replica_core/RequestTracker.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -90,9 +90,9 @@ bool test () {
         // Check which chunks are under-represented. Then find a least loaded
         // worker and launch a replication request.
 
-        r::CommonRequestTracker<rc::ReplicationRequest> tracker (std::cout,
-                                                                 progressReport,
-                                                                 errorReport);
+        rc::CommonRequestTracker<rc::ReplicationRequest> tracker (std::cout,
+                                                                  progressReport,
+                                                                  errorReport);
 
         // This counter will be used for optimization purposes as the upper limit for
         // the number of chunks per worker in the load balancing algorithm below.

@@ -22,7 +22,7 @@
 
 // Class header
 
-#include "replica/RequestTracker.h"
+#include "replica_core/RequestTracker.h"
 
 // System headers
 
@@ -32,7 +32,12 @@
 
 namespace lsst {
 namespace qserv {
-namespace replica {
+namespace replica_core {
+
+
+///////////////////////////////////////////
+//          RequestTrackerBase           //
+///////////////////////////////////////////
 
 RequestTrackerBase::RequestTrackerBase (std::ostream& os,
                                         bool          progressReport,
@@ -75,4 +80,39 @@ RequestTrackerBase::track () const {
 RequestTrackerBase::~RequestTrackerBase () {
 }
 
-}}} // namespace lsst::qserv::replica
+
+//////////////////////////////////////////
+//          AnyRequestTracker           //
+//////////////////////////////////////////
+
+
+AnyRequestTracker::AnyRequestTracker (std::ostream& os,
+                                      bool          progressReport,
+                                      bool          errorReport)
+    :   RequestTrackerBase (os,
+                            progressReport,
+                            errorReport) {
+}
+
+AnyRequestTracker::~AnyRequestTracker () {
+}
+
+void
+AnyRequestTracker::onFinish (Request::pointer const& ptr) {
+    RequestTrackerBase::_numFinished++;
+    if (ptr->extendedState() == Request::ExtendedState::SUCCESS)
+        RequestTrackerBase::_numSuccess++;
+}
+
+void
+AnyRequestTracker::add (Request::pointer const& ptr) {
+    RequestTrackerBase::_numLaunched++;
+    requests.push_back(ptr);
+}
+
+void
+AnyRequestTracker::printErrorReport (std::ostream& os) const {
+    replica_core::reportRequestState (requests, os);
+}
+
+}}} // namespace lsst::qserv::replica_core

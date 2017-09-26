@@ -36,9 +36,9 @@
 
 // Qserv headers
 
-#include "replica/RequestTracker.h"
 #include "replica_core/Controller.h"
 #include "replica_core/FindAllRequest.h"
+#include "replica_core/RequestTracker.h"
 
 // This header declarations
 
@@ -55,7 +55,7 @@ namespace replica {
  *       be initited via the Controller.
  */
 class ReplicaFinder
-    :   public CommonRequestTracker<replica_core::FindAllRequest> {
+    :   public replica_core::CommonRequestTracker<replica_core::FindAllRequest> {
 
 public:
 

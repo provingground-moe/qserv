@@ -181,8 +181,11 @@ public:
      * will be considering for building an associaion with the Controller.
      *
      * @param controller - an optional pointer to an instance of the Controller
+     * @param jobId      - an optional identifier of a job specifying a context
+     *                     in which a request will be executed.
      */
-    void start (std::shared_ptr<Controller> const& controller=nullptr);
+    void start (std::shared_ptr<Controller> const& controller=nullptr,
+                std::string const&                 jobId="");
 
     /**
      * Explicitly cancel any asynchronous operation(s) and put the object into
@@ -209,13 +212,6 @@ protected:
     std::shared_ptr<T> shared_from_base () {
         return std::static_pointer_cast<T>(shared_from_this());
     }
-
-    /**
-     * Generate a unique identifier of a request which can also be persisted.
-     *
-     * @return an identifier
-     */
-    static std::string generateId ();
 
     /**
      * Construct the request with the pointer to the services provider.
@@ -363,8 +359,11 @@ protected:
     /// Mutex guarding internal state
     mutable std::mutex _mtx;
 
-    /// The optional asociation with the Controller
+    /// The optional association with the Controller
     std::shared_ptr<Controller> _controller;
+
+    /// The job context of a request
+    std::string _jobId;
 };
 
 }}} // namespace lsst::qserv::replica_core
