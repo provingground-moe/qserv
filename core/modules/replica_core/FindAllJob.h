@@ -1,0 +1,203 @@
+/*
+ * LSST Data Management System
+ * Copyright 2017 LSST Corporation.
+ *
+ * This product includes software developed by the
+ * LSST Project (http://www.lsst.org/).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the LSST License Statement and
+ * the GNU General Public License along with this program.  If not,
+ * see <http://www.lsstcorp.org/LegalNotices/>.
+ */
+#ifndef LSST_QSERV_REPLICA_CORE_FIND_ALL_JOB_H
+#define LSST_QSERV_REPLICA_CORE_FIND_ALL_JOB_H
+
+/// FindAllJob.h declares:
+///
+/// struct FindAllJobResult
+/// class  FindAllJob
+///
+/// (see individual class documentation for more information)
+
+// System headers
+
+#include <atomic>
+#include <functional>   // std::function
+#include <list>
+#include <map>
+#include <string>
+
+// Qserv headers
+
+#include "replica_core/Job.h"
+#include "replica_core/FindAllRequest.h"
+#include "replica_core/ReplicaInfo.h"
+
+// Forward declarations
+
+// This header declarations
+
+namespace lsst {
+namespace qserv {
+namespace replica_core {
+
+/**
+ * The structure FindAllJobResult represents a combined result received
+ * from worker services upon a completion of the job.
+ */
+struct FindAllJobResult {
+
+    /// Results reported by workers upon the successfull completion
+    /// of the corresponidng requests
+    std::list<ReplicaInfoCollection> replicas;
+
+    /// Per-worker flags indicating if the corresponidng replica retreival
+    /// request succeeded.
+    std::map<std::string, bool> workers;
+};
+
+/**
+  * Class FindAllJob represents a tool which will find all replicas
+  * of all chunks on all worker nodes.
+  */
+class FindAllJob
+    :   public Job  {
+
+public:
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<FindAllJob> pointer;
+
+    /// The function type for notifications on the completon of the request
+    typedef std::function<void(pointer)> callback_type;
+
+    /**
+     * Static factory method is needed to prevent issue with the lifespan
+     * and memory management of instances created otherwise (as values or via
+     * low-level pointers).
+     *
+     * @param database       - the name of a database
+     * @param controller     - for launching requests
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param progressReport - triggers periodic printout into the log stream
+     *                         to see the overall progress of the operation
+     * @param errorReport    - trigger detailed error reporting after the completion
+     *                         of the operation
+     */
+    static pointer create (std::string const&         database,
+                           Controller::pointer const& controller,
+                           callback_type              onFinish,
+                           bool                       progressReport=true,
+                           bool                       errorReport=false);
+
+    // Default construction and copy semantics are prohibited
+
+    FindAllJob () = delete;
+    FindAllJob (FindAllJob const&) = delete;
+    FindAllJob& operator= (FindAllJob const&) = delete;
+
+    /// Destructor
+    ~FindAllJob () override;
+
+    /// Return the name of a database defining a scope of the operation
+    std::string const& database () const { return _database; }
+
+    /**
+     * Rreturn the result of the operation.
+     *
+     * IMPORTANT NOTES:
+     * - the method should be inviked only after the job has finished (primary
+     *   status is set to Job::Status::FINISHED). Otherwise exception
+     *   std::logic_error will be thrown
+     * 
+     * - the result will be extracted from requests which have successfully
+     *   finished. Please, verify the primary and extended status of the object
+     *   to ensure that all requests have finished.
+     *
+     * @return the data structure to be filled upon the completin of the job.
+     *
+     * @throws std::logic_error - if the job dodn't finished at a time
+     *                            when the method was called
+     */
+    FindAllJobResult const& getReplicaData () const;
+
+protected:
+
+    /**
+     * Construct the job with the pointer to the services provider.
+     *
+     * @param database       - the name of a database
+     * @param controller     - for launching requests
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param progressReport - triggers periodic printout into the log stream
+     *                         to see the overall progress of the operation
+     * @param errorReport    - trigger detailed error reporting after the completion
+     *                         of the operation
+     */
+    FindAllJob (std::string const&         database,
+                Controller::pointer const& controller,
+                callback_type              onFinish,
+                bool                       progressReport,
+                bool                       errorReport);
+
+    /**
+      * Implement the corresponding method of the base class.
+      *
+      * @see Job::startImpl()
+      */
+    void startImpl () override;
+
+    /**
+      * Implement the corresponding method of the base class.
+      *
+      * @see Job::startImpl()
+      */
+    void cancelImpl () override;
+    
+    /**
+     * The calback function to be invoked on a completion of each request.
+     *
+     * @param request - a pointer to a request
+     */
+    void onRequestFinish (FindAllRequest::pointer request);
+
+protected:
+
+    /// The name of the database
+    std::string _database;
+
+    /// Client-defined function to be called upon the completion of the job
+    callback_type _onFinish;
+
+    /**
+     * A collection of requests implementing the operation
+     *
+     * IMPORTANT: 
+     */
+    std::list<FindAllRequest::pointer> _requests;
+
+    // The counter of requests which will be updated. They need to be atomic
+    // to avoid race condition between the onFinish() callbacks executed within
+    // the Controller's thread and this thread.
+
+    std::atomic<size_t> _numLaunched;   ///< the total number of requests launched
+    std::atomic<size_t> _numFinished;   ///< the total number of finished requests
+    std::atomic<size_t> _numSuccess;    ///< the number of successfully completed requests
+
+    /// The result of the operation (gets updated as requests are finishing)
+    FindAllJobResult _replicaData;
+};
+
+}}} // namespace lsst::qserv::replica_core
+
+#endif // LSST_QSERV_REPLICA_CORE_FIND_ALL_JOB_H

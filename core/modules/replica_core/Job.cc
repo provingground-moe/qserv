@@ -82,15 +82,14 @@ Job::Job (Controller::pointer const& controller,
         _controller (controller),
         _type       (type),
 
+        _progressReport (progressReport),
+        _errorReport    (errorReport),
+
         _state         (State::CREATED),
         _extendedState (ExtendedState::NONE),
 
         _beginTime (0),
-        _endTime   (0),
-        
-        _requestTracker (os,
-                         progressReport,
-                         errorReport) {
+        _endTime   (0) {
 }
 
 Job::~Job () {
