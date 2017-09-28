@@ -169,6 +169,9 @@ public:
     /// Return the performance info
     const Performance& performance () const { return _performance; }
 
+    /// Return the Controller (if set)
+    std::shared_ptr<Controller> const& controller () const { return _controller; }
+
     /**
      * Reset the state (if needed) and begin processing the request.
      *

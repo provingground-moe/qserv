@@ -50,6 +50,9 @@ RequestTrackerBase::RequestTrackerBase (std::ostream& os,
         _errorReport   (errorReport) {
 }
 
+RequestTrackerBase::~RequestTrackerBase () {
+}
+
 void
 RequestTrackerBase::track () const {
 
@@ -77,7 +80,51 @@ RequestTrackerBase::track () const {
         printErrorReport (_os);
 }
 
-RequestTrackerBase::~RequestTrackerBase () {
+void
+RequestTrackerBase::cancel (bool propagateToServers) {
+    
+    auto onFinish = nullptr;
+    bool keepTracking = false;
+
+    for (auto const& ptr: getRequests())
+        if (ptr->status() != Request::Status::FINISHED) {
+            ptr->cancel();
+            if (propagateToServers && auto controller = ptr->controller()) {
+                if (ptr->type()  == "REPLICA_CREATE") {
+                    controller->stopReplication (
+                                    ptr->worker(), ptr->id(),
+                                    onFinish, keepTracking);
+                } else if (ptr->type()  == "REPLICA_DELETE") {
+                    controller->stopReplicaDelete (
+                                    ptr->worker(), ptr->id(),
+                                    onFinish, keepTracking);
+                } else if (ptr->type()  == "REPLICA_FIND") {
+                    controller->stopReplicaFind (
+                                    ptr->worker(), ptr->id(),
+                                    onFinish, keepTracking);
+                } else if (ptr->type()  == "REPLICA_FIND_ALL") {
+                    controller->stopReplicaFindAll (
+                                    ptr->worker(), ptr->id(),
+                                    onFinish, keepTracking);
+                }
+            }
+        }
+}
+
+void
+RequestTrackerBase::reset () {
+    const size_t numOutstanding = RequestTrackerBase::_numLaunched -
+                                  RequestTrackerBase::_numFinished;
+    if (numOutstanding)
+        throw std::logic_error (
+                "RequestTrackerBase::reset  the operation is not allowed due to " +
+                std::to_string(numOutstanding) + " outstanding requests");
+
+    resetImpl();
+
+    RequestTrackerBase::_numLaunched = 0;
+    RequestTrackerBase::_numFinished = 0;
+    RequestTrackerBase::_numSuccess  = 0;
 }
 
 
@@ -113,6 +160,16 @@ AnyRequestTracker::add (Request::pointer const& ptr) {
 void
 AnyRequestTracker::printErrorReport (std::ostream& os) const {
     replica_core::reportRequestState (requests, os);
+}
+
+std::list<Request::pointer>
+AnyRequestTracker::getRequests () const {
+    return requests;
+}
+
+void
+AnyRequestTracker::resetImpl () {
+    requests.clear();
 }
 
 }}} // namespace lsst::qserv::replica_core

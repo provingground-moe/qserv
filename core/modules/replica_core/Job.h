@@ -37,7 +37,6 @@
 // Qserv headers
 
 #include "replica_core/Controller.h"
-#include "replica_core/RequestTracker.h"
 
 // Forward declarations
 
@@ -155,15 +154,13 @@ protected:
      *
      * @param controller     - for launching requests
      * @param type           - its type name
-     * @param os             - an output stream for monitoring and error printouts
-     * @param progressReport - triggers periodic printout onto an output stream
+     * @param progressReport - triggers periodic printout into the log stream
      *                         to see the overall progress of the operation
      * @param errorReport    - trigger detailed error reporting after the completion
      *                         of the operation
      */
     Job (Controller::pointer const& controller,
          std::string const&         type,
-         std::ostream&              os,
          bool                       progressReport=true,
          bool                       errorReport=false);
 
@@ -219,6 +216,12 @@ protected:
     /// The type of the job
     std::string _type;
 
+    /// The flag for periodic monitoring and reporting the job progress
+    bool _progressReport;
+    
+    /// The flag for detailed error report on failed requests
+    bool _errorReport;
+
     /// Primary state of the job
     State _state;
 
@@ -232,9 +235,6 @@ protected:
 
     /// Mutex guarding internal state
     mutable std::mutex _mtx;
-    
-    /// For tracking on-going requests
-    AnyRequestTracker _requestTracker;
 };
 
 }}} // namespace lsst::qserv::replica_core

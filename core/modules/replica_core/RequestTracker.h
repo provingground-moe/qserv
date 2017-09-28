@@ -34,6 +34,7 @@
 
 #include <atomic>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <list>
 
@@ -75,6 +76,28 @@ public:
      */
     void track () const;
 
+    /**
+     * Cancel all outstanding requests
+     *
+     * ATTENTION: by default this operation will *NOT* contact worker
+     * services to stop on-going or queued requests unless the optional
+     * flag 'propagateToServers' is set to 'true'.
+     *
+     * @param propagateToServers - propagate operation to servers (depends
+     *                             on a request type as not all requests
+     *                             can be canceled)
+     */
+    void cancel (bool propagateToServers=false);
+
+    /**
+     * The method will reset the tracket to the initial (empty) state. Please,
+     * make sure there are no outstanding requests which may be still executing.
+     *
+     * @throws std::logic_error - if there is at least one outstanding
+     *                            requests.
+     */
+    void reset ();
+
 protected:
 
     /**
@@ -97,6 +120,21 @@ protected:
      * @param os - an output stream for the printout
      */
     virtual void printErrorReport (std::ostream& os) const=0;
+
+    /**
+     * The method to be implemented by a subclass is supposed to return all
+     * requests which are known to the subclass.
+     */
+    virtual std::list<Request::pointer> getRequests () const=0;
+
+    /**
+     * The method to be implemented by a subclass is supposed to clear
+     * a collection of all requests known to the subclass.
+     *
+     * NOTE: It's guaranteed that the base class's counters will stay
+     * intact when this method is called.
+     */
+    virtual void resetImpl ()=0;
 
 protected:
 
@@ -156,9 +194,10 @@ public:
     ~CommonRequestTracker () override {
     }
 
-    /// The callback function to be registered with each request
-    /// injected into the tracker.
-
+    /**
+     * The callback function to be registered with each request
+     * injected into the tracker.
+     */
     void onFinish (typename T::pointer ptr) {
         RequestTrackerBase::_numFinished++;
         if (ptr->extendedState() == Request::ExtendedState::SUCCESS)
@@ -183,6 +222,26 @@ protected:
      */
     void printErrorReport (std::ostream& os) const override {
         replica_core::reportRequestState (requests, os);
+    }
+
+    /**
+     * Implement the corresponding method defined in the base class.
+     *
+     * @see RequestTrackerBase::getRequests
+     */
+    std::list<Request::pointer> getRequests () const override {
+        std::list<Request::pointer> result;
+        for (auto const& ptr: requests) result.push_back(ptr);
+        return result;
+    }
+
+    /**
+     * Implement the corresponding method defined in the base class.
+     *
+     * @see RequestTrackerBase::resetImpl
+     */
+    void resetImpl () override {
+        requests.clear();
     }
 
 public:
@@ -241,6 +300,20 @@ protected:
      * @see RequestTrackerBase::printErrorReport
      */
     void printErrorReport (std::ostream& os) const override;
+
+    /**
+     * Implement the corresponding method defined in the base class.
+     *
+     * @see RequestTrackerBase::getRequests
+     */
+    std::list<Request::pointer> getRequests () const override;
+
+    /**
+     * Implement the corresponding method defined in the base class.
+     *
+     * @see RequestTrackerBase::resetImpl
+     */
+    void resetImpl () override;
 
 public:
     

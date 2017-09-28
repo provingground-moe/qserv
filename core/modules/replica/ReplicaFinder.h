@@ -67,8 +67,9 @@ public:
 
     /**
      * The constructor is a blocking operation which will launch the requests
-     * and wait untill they're complete. Exceptions may be throw in case
-     * of errors. When the contructor unblocks
+     * and wait until they're complete. Exceptions may be thrown in case
+     * of errors. When the contructor unblocks a list of requests in the base class
+     * should be inspected to see what's been found.
      *
      * @param controller     - a reference to the Controller for launching requests
      * @param database       - the name of a database
