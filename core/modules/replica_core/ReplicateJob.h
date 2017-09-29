@@ -24,7 +24,9 @@
 
 /// ReplicateJob.h declares:
 ///
-/// class ReplicateJob
+/// struct ReplicateJobResult
+/// class  ReplicateJob
+///
 /// (see individual class documentation for more information)
 
 // System headers
@@ -34,6 +36,9 @@
 // Qserv headers
 
 #include "replica_core/Job.h"
+#include "replica_core/FindAllJob.h"
+#include "replica_core/ReplicaInfo.h"
+#include "replica_core/ReplicationRequest.h"
 
 // Forward declarations
 
@@ -42,6 +47,21 @@
 namespace lsst {
 namespace qserv {
 namespace replica_core {
+
+/**
+ * The structure ReplicateJobResult represents a combined result received
+ * from worker services upon a completion of the job.
+ */
+struct ReplicateJobResult {
+
+    /// Results reported by workers upon the successfull completion
+    /// of the corresponidng requests
+    std::list<ReplicaInfo> replicas;
+
+    /// Per-worker flags indicating if the corresponidng replica retreival
+    /// request succeeded.
+    std::map<std::string, bool> workers;
+};
 
 /**
   * Class ReplicateJob represents a tool which will increase the minimum
@@ -55,24 +75,27 @@ public:
     /// The pointer type for instances of the class
     typedef std::shared_ptr<ReplicateJob> pointer;
 
+    /// The function type for notifications on the completon of the request
+    typedef std::function<void(pointer)> callback_type;
+
     /**
      * Static factory method is needed to prevent issue with the lifespan
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param numReplicas    - the minimum number of replicas for each chunk
-     * @param database       - the name of a database
-     * @param controller     - for launching requests
-     * @param progressReport - triggers periodic printout into the log stream
-     *                         to see the overall progress of the operation
-     * @param errorReport    - trigger detailed error reporting after the completion
-     *                         of the operation
+     * @param numReplicas - the minimum number of replicas for each chunk
+     * @param database    - the name of a database
+     * @param controller  - for launching requests
+     * @param onFinish    - a callback function to be called upon a completion of the job
+     * @param bestEffort  - the flag (if set) allowing to proceed with the replication effort
+     *                      when some workers fail to report their cunk disposition.
+     *                      ATTENTION: do *NOT* use this in production!
      */
     static pointer create (unsigned int               numReplicas,
                            std::string const&         database,
                            Controller::pointer const& controller,
-                           bool                       progressReport=true,
-                           bool                       errorReport=false);
+                           callback_type              onFinish,
+                           bool                       bestEffort=false);
 
     // Default construction and copy semantics are prohibited
 
@@ -88,26 +111,54 @@ public:
     unsigned int numReplicas () const { return _numReplicas; }
 
     /// Return the name of a database defining a scope of the operation
-    std::string const& database () const { _database; }
+    std::string const& database () const { return _database; }
+
+    /**
+     * Return the result of the operation.
+     *
+     * IMPORTANT NOTES:
+     * - the method should be invoked only after the job has finished (primary
+     *   status is set to Job::Status::FINISHED). Otherwise exception
+     *   std::logic_error will be thrown
+     * 
+     * - the result will be extracted from requests which have successfully
+     *   finished. Please, verify the primary and extended status of the object
+     *   to ensure that all requests have finished.
+     *
+     * @return the data structure to be filled upon the completin of the job.
+     *
+     * @throws std::logic_error - if the job dodn't finished at a time
+     *                            when the method was called
+     */
+    ReplicateJobResult const& getReplicaData () const;
+
+    /**
+      * Implement the corresponding method of the base class.
+      *
+      * @see Job::track()
+      */
+    void track (bool          progressReport,
+                bool          errorReport,
+                std::ostream& os) const override;
 
 protected:
 
     /**
      * Construct the job with the pointer to the services provider.
      *
-     * @param numReplicas    - the minimum number of replicas for each chunk
-     * @param database       - the name of a database
-     * @param controller     - for launching requests
-     * @param progressReport - triggers periodic printout into the log stream
-     *                         to see the overall progress of the operation
-     * @param errorReport    - trigger detailed error reporting after the completion
-     *                         of the operation
+     * @param numReplicas - the minimum number of replicas for each chunk
+     * @param database    - the name of a database
+     * @param controller  - for launching requests
+     * @param onFinish    - a callback function to be called upon a completion of the job
+     * @param bestEffort  - the flag (if set) allowing to proceed with the replication effort
+     *                      when some workers fail to report their cunk disposition.
+     *                      ATTENTION: do *NOT* use this in production!
      */
     ReplicateJob (unsigned int               numReplicas,
                   std::string const&         database,
                   Controller::pointer const& controller,
-                  bool                       progressReport,
-                  bool                       errorReport);
+                  callback_type              onFinish,
+                  bool                       bestEffort);
 
     /**
       * Implement the corresponding method of the base class.
@@ -122,7 +173,27 @@ protected:
       * @see Job::startImpl()
       */
     void cancelImpl () override;
-    
+
+    /**
+      * Implement the corresponding method of the base class.
+      *
+      * @see Job::notify()
+      */
+    void notify () override;
+
+    /**
+     * The calback function to be invoked on a completion of the precursor job
+     * which harverst chunk dispsition accross all relevant worker nodes.
+     */
+    void onPrecursorJobFinish ();
+
+    /**
+     * The calback function to be invoked on a completion of each request.
+     *
+     * @param request - a pointer to a request
+     */
+    void onRequestFinish (ReplicationRequest::pointer request);
+
 protected:
 
     /// The minimum number of replicas for each chunk
@@ -130,6 +201,31 @@ protected:
 
     /// The name of the database
     std::string _database;
+
+    /// Client-defined function to be called upon the completion of the job
+    callback_type _onFinish;
+
+    /// The flag (if set) allowing to proceed with the replication effort even after
+    /// not getting response on chunk disposition from all workers.
+    bool _bestEffort;
+
+    /// The chained job to be completed first in order to figure out
+    /// replica disposition.
+    FindAllJob::pointer _findAllJob;
+
+    /// A collection of requests implementing the operation
+    std::list<ReplicationRequest::pointer> _requests;
+
+    // The counter of requests which will be updated. They need to be atomic
+    // to avoid race condition between the onFinish() callbacks executed within
+    // the Controller's thread and this thread.
+
+    std::atomic<size_t> _numLaunched;   ///< the total number of requests launched
+    std::atomic<size_t> _numFinished;   ///< the total number of finished requests
+    std::atomic<size_t> _numSuccess;    ///< the number of successfully completed requests
+
+    /// The result of the operation (gets updated as requests are finishing)
+    ReplicateJobResult _replicaData;
 };
 
 }}} // namespace lsst::qserv::replica_core

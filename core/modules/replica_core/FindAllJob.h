@@ -86,19 +86,13 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param database       - the name of a database
-     * @param controller     - for launching requests
-     * @param onFinish       - a callback function to be called upon a completion of the job
-     * @param progressReport - triggers periodic printout into the log stream
-     *                         to see the overall progress of the operation
-     * @param errorReport    - trigger detailed error reporting after the completion
-     *                         of the operation
+     * @param database   - the name of a database
+     * @param controller - for launching requests
+     * @param onFinish   - a callback function to be called upon a completion of the job
      */
     static pointer create (std::string const&         database,
                            Controller::pointer const& controller,
-                           callback_type              onFinish,
-                           bool                       progressReport=true,
-                           bool                       errorReport=false);
+                           callback_type              onFinish);
 
     // Default construction and copy semantics are prohibited
 
@@ -113,10 +107,10 @@ public:
     std::string const& database () const { return _database; }
 
     /**
-     * Rreturn the result of the operation.
+     * Return the result of the operation.
      *
      * IMPORTANT NOTES:
-     * - the method should be inviked only after the job has finished (primary
+     * - the method should be invoked only after the job has finished (primary
      *   status is set to Job::Status::FINISHED). Otherwise exception
      *   std::logic_error will be thrown
      * 
@@ -131,24 +125,27 @@ public:
      */
     FindAllJobResult const& getReplicaData () const;
 
+    /**
+      * Implement the corresponding method of the base class.
+      *
+      * @see Job::track()
+      */
+    void track (bool          progressReport,
+                bool          errorReport,
+                std::ostream& os) const override;
+
 protected:
 
     /**
      * Construct the job with the pointer to the services provider.
      *
-     * @param database       - the name of a database
-     * @param controller     - for launching requests
-     * @param onFinish       - a callback function to be called upon a completion of the job
-     * @param progressReport - triggers periodic printout into the log stream
-     *                         to see the overall progress of the operation
-     * @param errorReport    - trigger detailed error reporting after the completion
-     *                         of the operation
+     * @param database   - the name of a database
+     * @param controller - for launching requests
+     * @param onFinish   - a callback function to be called upon a completion of the job
      */
     FindAllJob (std::string const&         database,
                 Controller::pointer const& controller,
-                callback_type              onFinish,
-                bool                       progressReport,
-                bool                       errorReport);
+                callback_type              onFinish);
 
     /**
       * Implement the corresponding method of the base class.
@@ -163,7 +160,14 @@ protected:
       * @see Job::startImpl()
       */
     void cancelImpl () override;
-    
+
+    /**
+      * Implement the corresponding method of the base class.
+      *
+      * @see Job::notify()
+      */
+    void notify () override;
+
     /**
      * The calback function to be invoked on a completion of each request.
      *
@@ -179,11 +183,7 @@ protected:
     /// Client-defined function to be called upon the completion of the job
     callback_type _onFinish;
 
-    /**
-     * A collection of requests implementing the operation
-     *
-     * IMPORTANT: 
-     */
+    /// A collection of requests implementing the operation
     std::list<FindAllRequest::pointer> _requests;
 
     // The counter of requests which will be updated. They need to be atomic
