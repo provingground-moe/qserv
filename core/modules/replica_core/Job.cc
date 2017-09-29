@@ -73,17 +73,11 @@ Job::state2string (ExtendedState state) {
 }
 
 Job::Job (Controller::pointer const& controller,
-          std::string const&         type,
-          std::ostream&              os,
-          bool                       progressReport,
-          bool                       errorReport)
+          std::string const&         type)
 
     :   _id         (Generators::uniqueId()),
         _controller (controller),
         _type       (type),
-
-        _progressReport (progressReport),
-        _errorReport    (errorReport),
 
         _state         (State::CREATED),
         _extendedState (ExtendedState::NONE),
@@ -106,20 +100,32 @@ Job::start () {
     LOGS(_log, LOG_LVL_DEBUG, context() << "start");
     LOCK_GUARD;
 
-    assertState(State::CREATED);
+    assertState(State::CREATED);    
     startImpl();
     assertState(State::IN_PROGRESS);
+
+    _beginTime = PerformanceUtils::now();
 }
 
 void
 Job::cancel () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "cancel");
-    LOCK_GUARD;
 
-    assertState(State::IN_PROGRESS);
-    cancelImpl();
-    assertState(State::FINISHED);
+    // Invoke a subclass specific cancellation sequence of actions
+    {
+        LOCK_GUARD;
+
+        assertState(State::IN_PROGRESS);
+        cancelImpl();
+        assertState(State::FINISHED);
+    }
+
+    // The callabacks are called w/o the lock guard to avoid deadlocking
+    // in case if subscribers will attempt to use the public API of this
+    // class or its subclasses.
+
+    notify();
 }
 
 void
@@ -137,6 +143,9 @@ Job::setState (State         state,
 
     _state         = state;
     _extendedState = extendedState;
+    
+    if (_state == State::FINISHED)
+        _endTime = PerformanceUtils::now();
 }
     
 }}} // namespace lsst::qserv::replica_core

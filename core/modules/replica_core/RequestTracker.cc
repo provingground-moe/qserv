@@ -29,6 +29,7 @@
 // Qserv headers
 
 #include "replica_core/BlockPost.h"
+#include "replica_core/Controller.h"
 
 namespace lsst {
 namespace qserv {
@@ -83,31 +84,49 @@ RequestTrackerBase::track () const {
 void
 RequestTrackerBase::cancel (bool propagateToServers) {
     
-    auto onFinish = nullptr;
+    auto onFinish     = nullptr;
     bool keepTracking = false;
 
     for (auto const& ptr: getRequests())
-        if (ptr->status() != Request::Status::FINISHED) {
+        if (ptr->state() != Request::State::FINISHED) {
+
             ptr->cancel();
-            if (propagateToServers && auto controller = ptr->controller()) {
-                if (ptr->type()  == "REPLICA_CREATE") {
-                    controller->stopReplication (
-                                    ptr->worker(), ptr->id(),
-                                    onFinish, keepTracking);
-                } else if (ptr->type()  == "REPLICA_DELETE") {
-                    controller->stopReplicaDelete (
-                                    ptr->worker(), ptr->id(),
-                                    onFinish, keepTracking);
-                } else if (ptr->type()  == "REPLICA_FIND") {
-                    controller->stopReplicaFind (
-                                    ptr->worker(), ptr->id(),
-                                    onFinish, keepTracking);
-                } else if (ptr->type()  == "REPLICA_FIND_ALL") {
-                    controller->stopReplicaFindAll (
-                                    ptr->worker(), ptr->id(),
-                                    onFinish, keepTracking);
+
+            if (propagateToServers)
+                if (auto controller = ptr->controller()) {
+
+                    if (ptr->type()  == "REPLICA_CREATE")
+                        controller->stopReplication (
+                            ptr->worker(),
+                            ptr->id(),
+                            onFinish,
+                            keepTracking
+                        );
+
+                    else if (ptr->type()  == "REPLICA_DELETE")
+                        controller->stopReplicaDelete (
+                            ptr->worker(),
+                            ptr->id(),
+                            onFinish,
+                            keepTracking
+                        );
+
+                    else if (ptr->type()  == "REPLICA_FIND")
+                        controller->stopReplicaFind (
+                            ptr->worker(),
+                            ptr->id(),
+                            onFinish,
+                            keepTracking
+                        );
+
+                    else if (ptr->type()  == "REPLICA_FIND_ALL")
+                        controller->stopReplicaFindAll (
+                            ptr->worker(),
+                            ptr->id(),
+                            onFinish,
+                            keepTracking
+                        );
                 }
-            }
         }
 }
 

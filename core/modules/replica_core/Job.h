@@ -103,6 +103,7 @@ public:
     static std::string state2string (State state, ExtendedState extendedState) {
         return state2string(state) + "::" +state2string(extendedState);
     }
+
     // Default construction and copy semantics are prohibited
 
     Job () = delete;
@@ -138,6 +139,25 @@ public:
      */
     void cancel ();
 
+    /**
+     * Block the calling thread while the job is being executed. Make periodic
+     * progress reports if requested. Print error reports on failed requests
+     * if reuested.
+     *
+     * NOTE: this operation will *NOT* block the request execution or request
+     *       callbacks because they'd be running in a separate thread from which
+     *       requests and jobs are launched.
+     *
+     * @param os             - an output stream for monitoring and error printouts
+     * @param progressReport - triggers periodic printout onto an output stream
+     *                         to see the overall progress of the operation
+     * @param errorReport    - trigger detailed error reporting after the completion
+     *                         of the operation
+     */
+    virtual void track (bool          progressReport,
+                        bool          errorReport,
+                        std::ostream& os) const=0;
+
     /// Return the context string for debugging and diagnostic printouts
     std::string context () const;
 
@@ -152,17 +172,11 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      *
-     * @param controller     - for launching requests
-     * @param type           - its type name
-     * @param progressReport - triggers periodic printout into the log stream
-     *                         to see the overall progress of the operation
-     * @param errorReport    - trigger detailed error reporting after the completion
-     *                         of the operation
+     * @param controller - for launching requests
+     * @param type       - its type name
      */
     Job (Controller::pointer const& controller,
-         std::string const&         type,
-         bool                       progressReport=true,
-         bool                       errorReport=false);
+         std::string const&         type);
 
     /**
       * This method is supposed to be provided by subclasses for additional
@@ -175,6 +189,13 @@ protected:
       * to finalize request processing as required by the subclass.
       */
     virtual void cancelImpl ()=0;
+
+    /**
+      * This method is supposed to be provided by subclasses
+      * to notify a caller by invoking a subclass-specific callback
+      * function registered for the completion of the job.
+      */
+    virtual void notify ()=0;
 
     /**
      * Ensure the object is in the deseride internal state. Throw an
@@ -215,12 +236,6 @@ protected:
 
     /// The type of the job
     std::string _type;
-
-    /// The flag for periodic monitoring and reporting the job progress
-    bool _progressReport;
-    
-    /// The flag for detailed error report on failed requests
-    bool _errorReport;
 
     /// Primary state of the job
     State _state;
