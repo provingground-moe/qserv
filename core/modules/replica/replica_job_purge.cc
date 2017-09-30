@@ -20,8 +20,8 @@
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
 
-/// replica_job_replicate.cc implements a command-line tool which analyzes
-/// chunk disposition in the specified databasae and (if needed) increases 
+/// replica_job_purge.cc implements a command-line tool which analyzes
+/// chunk disposition in the specified databasae and (if needed) reduces 
 /// the number of chunk replicas to the desider level.
 
 // System headers
@@ -37,7 +37,7 @@
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/ReplicaInfo.h"
-#include "replica_core/ReplicateJob.h"
+#include "replica_core/PurgeJob.h"
 #include "replica_core/ServiceProvider.h"
 
 namespace r  = lsst::qserv::replica;
@@ -75,13 +75,13 @@ bool test () {
         // Start replication
 
         auto job =
-            rc::ReplicateJob::create (
+            rc::PurgeJob::create (
                 numReplicas,
                 databaseName,
                 controller,
-                [](rc::ReplicateJob::pointer job) {
-                    // Not using the callback because the completion of
-                    // the request will be caught by the tracker below
+                [](rc::PurgeJob::pointer job) {
+                    // Not using the callback because the completion of the request
+                    // will be caught by the tracker below
                     ;
                 },
                 bestEffort
@@ -124,7 +124,7 @@ int main (int argc, const char* const argv[]) {
             "\n"
             "Parameters:\n"
             "  <database>         - the name of a database to inspect\n"
-            "  <num-replicas>     - increase the number of chunk replicas to this level\n"
+            "  <num-replicas>     - reduce the number of chunk replicas to this level\n"
             "\n"
             "Flags and options:\n"
             "  --best-effort      - allowing the operation even after not getting chunk disposition from\n"
