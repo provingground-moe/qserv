@@ -19,13 +19,13 @@
  * the GNU General Public License along with this program.  If not,
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
-#ifndef LSST_QSERV_REPLICA_CORE_REPLICATE_JOB_H
-#define LSST_QSERV_REPLICA_CORE_REPLICATE_JOB_H
+#ifndef LSST_QSERV_REPLICA_CORE_PURGE_JOB_H
+#define LSST_QSERV_REPLICA_CORE_PURGE_JOB_H
 
-/// ReplicateJob.h declares:
+/// PurgeJob.h declares:
 ///
-/// struct ReplicateJobResult
-/// class  ReplicateJob
+/// struct PurgeJobResult
+/// class  PurgeJob
 ///
 /// (see individual class documentation for more information)
 
@@ -42,7 +42,7 @@
 #include "replica_core/Job.h"
 #include "replica_core/FindAllJob.h"
 #include "replica_core/ReplicaInfo.h"
-#include "replica_core/ReplicationRequest.h"
+#include "replica_core/DeleteRequest.h"
 
 // Forward declarations
 
@@ -53,14 +53,14 @@ namespace qserv {
 namespace replica_core {
 
 /**
- * The structure ReplicateJobResult represents a combined result received
+ * The structure PurgeJobResult represents a combined result received
  * from worker services upon a completion of the job.
  */
-struct ReplicateJobResult {
+struct PurgeJobResult {
 
     /// Results reported by workers upon the successfull completion
     /// of the corresponidng requests
-    std::list<ReplicaInfo> replicas;
+    std::list<ReplicaDeleteInfo> replicas;
 
     /// Per-worker flags indicating if the corresponidng replica retreival
     /// request succeeded.
@@ -68,16 +68,16 @@ struct ReplicateJobResult {
 };
 
 /**
-  * Class ReplicateJob represents a tool which will increase the minimum
+  * Class PurgeJob represents a tool which will increase the minimum
   * number of each chunk's replica up to the requested level.
   */
-class ReplicateJob
+class PurgeJob
     :   public Job  {
 
 public:
 
     /// The pointer type for instances of the class
-    typedef std::shared_ptr<ReplicateJob> pointer;
+    typedef std::shared_ptr<PurgeJob> pointer;
 
     /// The function type for notifications on the completon of the request
     typedef std::function<void(pointer)> callback_type;
@@ -87,7 +87,7 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param numReplicas - the minimum number of replicas for each chunk
+     * @param numReplicas - the maximum number of replicas allowed for each chunk
      * @param database    - the name of a database
      * @param controller  - for launching requests
      * @param onFinish    - a callback function to be called upon a completion of the job
@@ -103,14 +103,14 @@ public:
 
     // Default construction and copy semantics are prohibited
 
-    ReplicateJob () = delete;
-    ReplicateJob (ReplicateJob const&) = delete;
-    ReplicateJob& operator= (ReplicateJob const&) = delete;
+    PurgeJob () = delete;
+    PurgeJob (PurgeJob const&) = delete;
+    PurgeJob& operator= (PurgeJob const&) = delete;
 
     /// Destructor
-    ~ReplicateJob () override;
+    ~PurgeJob () override;
 
-    /// Return the minimum number of each chunk's replicas to be reached when
+    /// Return the maximum number of each chunk's replicas to be reached when
     /// the job successfully finishes.
     unsigned int numReplicas () const { return _numReplicas; }
 
@@ -134,7 +134,7 @@ public:
      * @throws std::logic_error - if the job dodn't finished at a time
      *                            when the method was called
      */
-    ReplicateJobResult const& getReplicaData () const;
+    PurgeJobResult const& getReplicaData () const;
 
     /**
       * Implement the corresponding method of the base class.
@@ -158,11 +158,11 @@ protected:
      *                      when some workers fail to report their cunk disposition.
      *                      ATTENTION: do *NOT* use this in production!
      */
-    ReplicateJob (unsigned int               numReplicas,
-                  std::string const&         database,
-                  Controller::pointer const& controller,
-                  callback_type              onFinish,
-                  bool                       bestEffort);
+    PurgeJob (unsigned int               numReplicas,
+              std::string const&         database,
+              Controller::pointer const& controller,
+              callback_type              onFinish,
+              bool                       bestEffort);
 
     /**
       * Implement the corresponding method of the base class.
@@ -196,7 +196,7 @@ protected:
      *
      * @param request - a pointer to a request
      */
-    void onRequestFinish (ReplicationRequest::pointer request);
+    void onRequestFinish (DeleteRequest::pointer request);
 
 protected:
 
@@ -218,7 +218,7 @@ protected:
     FindAllJob::pointer _findAllJob;
 
     /// A collection of requests implementing the operation
-    std::list<ReplicationRequest::pointer> _requests;
+    std::list<DeleteRequest::pointer> _requests;
 
     // The counter of requests which will be updated. They need to be atomic
     // to avoid race condition between the onFinish() callbacks executed within
@@ -229,9 +229,9 @@ protected:
     std::atomic<size_t> _numSuccess;    ///< the number of successfully completed requests
 
     /// The result of the operation (gets updated as requests are finishing)
-    ReplicateJobResult _replicaData;
+    PurgeJobResult _replicaData;
 };
 
 }}} // namespace lsst::qserv::replica_core
 
-#endif // LSST_QSERV_REPLICA_CORE_REPLICATE_JOB_H
+#endif // LSST_QSERV_REPLICA_CORE_PURGE_JOB_H
