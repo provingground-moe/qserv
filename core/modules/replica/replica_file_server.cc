@@ -6,7 +6,7 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/Configuration.h"
+#include "replica_core/ConfigurationFile.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/FileServer.h"
 
@@ -29,8 +29,8 @@ std::string configFileName;
 void service () {
     
     try {
-        rc::Configuration   config   {configFileName};
-        rc::ServiceProvider provider {config};
+        rc::ConfigurationFile config   {configFileName};
+        rc::ServiceProvider   provider {config};
 
         rc::FileServer::pointer server =
             rc::FileServer::create (provider, workerName);
