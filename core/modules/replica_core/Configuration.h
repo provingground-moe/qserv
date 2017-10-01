@@ -83,54 +83,45 @@ struct DatabaseInfo {
 };
 
 /**
-  * Class Configuration provides configuration services for all servers.
-  * 
-  * The implementation of this class relies upon the basic parser
-  * of the INI-style configuration files. In addition to the basic parser,
-  * this class also:
-  * 
-  *   - enforces a specific schema of the INI file
-  *   - ensures all required parameters are found in the file
-  *   - sets default values for the optional parameters
-  *   - caches parameters in memory
+  * Class Configuration is a base class for a family of concrete classes
+  * providing configuration services for the components of the Replication
+  * system.
   */
 class Configuration {
 
 public:
 
-    // Default construction and copy semantics are proxibited
+    // Copy semantics is prohibited
 
-    Configuration () = delete;
     Configuration (Configuration const&) = delete;
-    Configuration & operator= (Configuration const&) = delete;
-
-    /**
-     * Construct the object
-     *
-     * The configuration can be used by controller or worker services.
-     *
-     * @param configFile - the name of a configuraiton file
-     */
-    explicit Configuration (const std::string &configFile);
+    Configuration& operator= (Configuration const&) = delete;
 
     /// Destructor
     virtual ~Configuration();
-    
+
+    /**
+     * Return the original (minus security-related info) path to the configuration
+     * source.
+     */
+    virtual std::string configUrl () const=0;
+
+
     // ------------------------------------------------------------------------
     // -- Common configuration parameters of both the controller and workers --
     // ------------------------------------------------------------------------
 
     /// The names of known workers
-    const std::vector<std::string>& workers () const { return _workers; }
+    std::vector<std::string> const& workers () const { return _workers; }
 
     /// The names of known databases
-    const std::vector<std::string>& databases () const { return _databases; }
+    std::vector<std::string> const& databases () const { return _databases; }
 
     /// The maximum size of the request buffers in bytes
     size_t requestBufferSizeBytes () const { return _requestBufferSizeBytes; }
 
     /// A timeout in seconds for the network retry operations
     unsigned int retryTimeoutSec () const { return _retryTimeoutSec; }
+
 
     // --------------------------------------------------------
     // -- Configuration parameters of the controller service --
@@ -144,7 +135,7 @@ public:
 
     unsigned int controllerRequestTimeoutSec () const { return _controllerRequestTimeoutSec; }
 
-    
+
     // ---------------------------------------------------
     // -- Configuration parameters related to databases --
     // ---------------------------------------------------
@@ -154,7 +145,7 @@ public:
      *
      * @param name - the name of a database
      */
-    bool isKnownDatabase (const std::string &name) const;
+    bool isKnownDatabase (std::string const& name) const;
 
     /**
      * Return parameters of the specified database
@@ -164,7 +155,8 @@ public:
      *
      * @param name - the name of a database
      */
-    const DatabaseInfo& databaseInfo (const std::string &name) const;
+    DatabaseInfo const& databaseInfo (std::string const& name) const;
+
 
     // -----------------------------------------------------
     // -- Configuration parameters of the worker services --
@@ -175,7 +167,7 @@ public:
      *
      * @param name - the name of a worker
      */
-    bool isKnownWorker (const std::string &name) const;
+    bool isKnownWorker (std::string const& name) const;
 
     /**
      * Return parameters of the specified worker
@@ -185,10 +177,10 @@ public:
      *
      * @param name - the name of a worker
      */
-    const WorkerInfo& workerInfo (const std::string &name) const;
+    WorkerInfo const& workerInfo (std::string const& name) const;
 
     /// Return the name of the default technology for implementing requests
-    const std::string& workerTechnology () const { return _workerTechnology; }
+    std::string const& workerTechnology () const { return _workerTechnology; }
 
     /// The number of request processing threads in each worker service
     size_t workerNumProcessingThreads () const { return _workerNumProcessingThreads; }
@@ -199,23 +191,37 @@ public:
     /// Return the buffer size for the file I/O operations
     size_t workerFsBufferSizeBytes () const { return _workerFsBufferSizeBytes; }
 
-private:
+protected:
+
+    // Default values of some parameters are used by both the default constructor
+    // of this class as well as by subclasses when initializing the configuration
+    // object.
+
+    static const size_t       defaultRequestBufferSizeBytes;
+    static const unsigned int defaultRetryTimeoutSec;
+    static const uint16_t     defaultControllerHttpPort;
+    static const size_t       defaultControllerHttpThreads;
+    static const unsigned int defaultControllerRequestTimeoutSec;
+    static const std::string  defaultWorkerTechnology;
+    static const size_t       defaultWorkerNumProcessingThreads;
+    static const size_t       defaultWorkerNumFsProcessingThreads;
+    static const size_t       defaultWorkerFsBufferSizeBytes;
+    static const std::string  defaultWorkerSvcHost;
+    static const uint16_t     defaultWorkerSvcPort;
+    static const uint16_t     defaultWorkerFsPort;
+    static const std::string  defaultWorkerXrootdHost;
+    static const uint16_t     defaultWorkerXrootdPort;
+    static const std::string  defaultDataDir;
 
     /**
-     * Analyze the configuration and initialize the cache of parameters.
+     * Construct the object
      *
-     * The method will throw one of these exceptions:
-     *
-     *   std::runtime_error
-     *      the configuration is not consistent with expectations of the application
+     * The constructor will initialize the configuration parameters with
+     * some default states, some of which are probably meaninless.
      */
-    void loadConfiguration ();
+    Configuration ();
 
-private:
-
-    // Parameters of the object
-
-    const std::string _configFile;
+protected:
 
     // Cached values of the parameters
 

@@ -7,7 +7,7 @@
 
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
-#include "replica_core/Configuration.h"
+#include "replica_core/ConfigurationFile.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/FileClient.h"
 
@@ -39,8 +39,8 @@ int run () {
   
     std::FILE* fp = 0;
     try {
-        rc::Configuration   config   {configFileName};
-        rc::ServiceProvider provider {config};
+        rc::ConfigurationFile config   {configFileName};
+        rc::ServiceProvider   provider {config};
 
         if (rc::FileClient::pointer file =
             rc::FileClient::open (provider, workerName, databaseName, inFileName)) {

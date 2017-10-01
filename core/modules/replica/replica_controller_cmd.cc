@@ -8,7 +8,7 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/Configuration.h"
+#include "replica_core/ConfigurationFile.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FindAllRequest.h"
@@ -70,8 +70,8 @@ bool test () {
         ///////////////////////////////////////////////////////////////////////
         // Start the controller in its own thread before injecting any requests
 
-        rc::Configuration   config  {configFileName};
-        rc::ServiceProvider provider{config};
+        rc::ConfigurationFile config  {configFileName};
+        rc::ServiceProvider   provider{config};
 
         rc::Controller::pointer controller = rc::Controller::create(provider);
 

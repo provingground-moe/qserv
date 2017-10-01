@@ -5,7 +5,7 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/Configuration.h"
+#include "replica_core/ConfigurationFile.h"
 #include "replica_core/FileServer.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerRequestFactory.h"
@@ -81,7 +81,7 @@ void runAllWorkers (rc::ServiceProvider      &provider,
 void run () {
     
     try {
-        rc::Configuration        config         {configFileName};
+        rc::ConfigurationFile    config         {configFileName};
         rc::ServiceProvider      serviceProvider{config};
         rc::WorkerRequestFactory requestFactory {serviceProvider};
 
