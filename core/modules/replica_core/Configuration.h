@@ -214,6 +214,15 @@ protected:
     static const std::string  defaultDataDir;
 
     /**
+     * Inplace translation of the the data directory string by finding an optional
+     * placeholder '{worker}' and replacing it with the name of the specified worker.
+     *
+     * @param dataDir    - the string to be translated
+     * @param workerName - the actual name of a worker for replacing the placeholder
+     */
+    static void translateDataDir (std::string&       dataDir,
+                                  std::string const& workerName);
+    /**
      * Construct the object
      *
      * The constructor will initialize the configuration parameters with

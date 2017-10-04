@@ -52,6 +52,20 @@ uint16_t     const Configuration::defaultWorkerXrootdPort            {1094};
 std::string  const Configuration::defaultDataDir                     {"{worker}"};
 
 
+void
+Configuration::translateDataDir (std::string&       dataDir,
+                                 std::string const& workerName) {
+
+    std::string::size_type const leftPos = dataDir.find('{');
+    if (leftPos == std::string::npos) return;
+
+    std::string::size_type const  rightPos = dataDir.find('}');
+    if (rightPos == std::string::npos) return;
+
+    if (dataDir.substr (leftPos, rightPos - leftPos + 1) == "{worker}")
+        dataDir.replace(leftPos, rightPos - leftPos + 1, workerName);
+}
+
 Configuration::Configuration ()
     :   _workers                      (),
         _requestBufferSizeBytes       (defaultRequestBufferSizeBytes),
