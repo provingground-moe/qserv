@@ -54,26 +54,6 @@ void parseKeyVal (lsst::qserv::util::ConfigStore &configStore,
     val = str.empty() ? defaultVal : boost::lexical_cast<T>(str);        
 }
 
-/**
- * Inplace translation of the the data directory string by finding an optional
- * placeholder '{worker}' and replacing it with the name of the specified worker.
- *
- * @param dataDir    - the string to be translated
- * @param workerName - the actual name of a worker for replacing the placeholder
- */
-void translateDataDir(std::string&       dataDir,
-                      std::string const& workerName) {
-
-    std::string::size_type const leftPos = dataDir.find('{');
-    if (leftPos == std::string::npos) return;
-
-    std::string::size_type const  rightPos = dataDir.find('}');
-    if (rightPos == std::string::npos) return;
-
-    if (dataDir.substr (leftPos, rightPos - leftPos + 1) == "{worker}")
-        dataDir.replace(leftPos, rightPos - leftPos + 1, workerName);
-}
-
 }  // namespace
 
 namespace lsst {
@@ -156,7 +136,7 @@ ConfigurationFile::loadConfiguration () {
         ::parseKeyVal(configStore, section+".xrootd_port", _workerInfo[name].xrootdPort, commonWorkerXrootdPort);
 
         ::parseKeyVal(configStore, section+".data_dir",    _workerInfo[name].dataDir,    commonDataDir);
-        ::translateDataDir(_workerInfo[name].dataDir, name);
+        Configuration::translateDataDir(_workerInfo[name].dataDir, name);
     }
     
     // Parse mandatory database-specific configuraton sections

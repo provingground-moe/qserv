@@ -100,7 +100,7 @@ struct ControllerRequestWrapper {
   *   in the configuration.
   */
 class Controller
-    :   public std::enable_shared_from_this<Controller>  {
+    :   public std::enable_shared_from_this<Controller> {
 
 public:
 
