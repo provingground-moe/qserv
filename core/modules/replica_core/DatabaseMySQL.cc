@@ -228,8 +228,7 @@ Connection::Connection (ConnectionParams const& connectionParams,
         _res    (nullptr),
         _fields (nullptr),
 
-        _numFields (0),
-        _numRows   (0) {
+        _numFields (0) {
 }
 
 
@@ -304,7 +303,6 @@ Connection::execute (std::string const& query) {
     _res       = nullptr;
     _fields    = nullptr;
     _numFields = 0;
-    _numRows   = 0;
 
     _columnNames.clear();
 
@@ -326,14 +324,14 @@ Connection::execute (std::string const& query) {
 
     if (mysql_field_count (_mysql)) {
 
-        _res = mysql_store_result (_mysql);
+        // unbuffered read
+        _res = mysql_use_result (_mysql);
         if (!_res)
-            throw Error ("Connection::execute()  mysql_store_result failed, error: " +
+            throw Error ("Connection::execute()  mysql_use_result failed, error: " +
                          std::string(mysql_error(_mysql)));
 
         _fields    = mysql_fetch_fields (_res);
         _numFields = mysql_num_fields   (_res);
-        _numRows   = mysql_num_rows     (_res);
 
         for (size_t i = 0; i < _numFields; i++) {
             _columnNames.push_back(std::string(_fields[i].name));
@@ -343,11 +341,6 @@ Connection::execute (std::string const& query) {
 bool
 Connection::hasResult () const {
     return _mysql && _res;
-}
-
-size_t
-Connection::numRows () const {
-    return _numRows;
 }
 
 std::vector<std::string> const&
@@ -361,17 +354,13 @@ Connection::next (Row& row) {
 
     assertQueryContext ();
 
-    // Check if the result set is empty or there are no more rows
-    // in the set to process.
-    if (!_numRows) return false;
-    --_numRows;
-
     _row = mysql_fetch_row (_res);
-    if (!_row)
+    if (!_row) {
+        if (!mysql_errno(_mysql)) return false;
         throw Error ("Connection::next()  mysql_fetch_row failed, error: " +
                      std::string(mysql_error(_mysql)) +
                      ", query: '" + _lastQuery + "'");
-
+    }
     size_t const* lengths = mysql_fetch_lengths (_res);
 
     // Transfer the data pointers for each field and their lengths into
