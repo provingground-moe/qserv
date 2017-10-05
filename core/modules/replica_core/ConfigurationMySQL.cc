@@ -46,7 +46,7 @@ std::string
 ConfigurationMySQL::configUrl () const {
     return  "mysql:host=" + _connectionParams.host +
             ",port="      + std::to_string(_connectionParams.port) +
-            ",db="        + _connectionParams.db +
+            ",database="  + _connectionParams.database +
             ",user="      + _connectionParams.user +
             ",password=*****";
 }
