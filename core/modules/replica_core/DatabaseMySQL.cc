@@ -45,26 +45,22 @@ char const* stringOrNull (std::string const& str) {
 using Row              = lsst::qserv::replica_core::database::mysql::Row;
 using InvalidTypeError = lsst::qserv::replica_core::database::mysql::InvalidTypeError;
 
-class RowImpl {
-
-public:
-
-    template <class T>
-    static bool getNumber (Row const&         row,
-                           std::string const& columnName,
-                           T&                 value) {
-        try {
-            Row::Cell const& cell = row.getDataCell (columnName);
-            if (cell.first) {
-                value = boost::lexical_cast<uint64_t>(cell.first, cell.second);
-                return true;
-            }
-            return false;
-        } catch (boost::bad_lexical_cast const& ex) {
-            throw InvalidTypeError ("RowImpl::getNumber<T>()  type conversion failed");
+template <typename K, class T>
+static bool getNumber (Row const& row,
+                       K          key,
+                       T&         value) {
+    try {
+        Row::Cell const& cell = row.getDataCell (key);
+        if (cell.first) {
+            value = boost::lexical_cast<uint64_t>(cell.first, cell.second);
+            return true;
         }
+        return false;
+    } catch (boost::bad_lexical_cast const& ex) {
+        throw InvalidTypeError ("DatabaseMySQL::getNumber<K,T>()  type conversion failed");
     }
-};
+}
+
 
 }   // namespace
 
@@ -89,10 +85,10 @@ ConnectionParams::toString () const {
 
 std::ostream& operator<< (std::ostream& os, ConnectionParams const& params) {
     os  << "DatabaseMySQL::ConnectionParams "
-        << "(host=" << params.host
-        << " port=" << params.port
-        << " db="   << params.db
-        << " user=" << params.user
+        << "(host="     << params.host
+        << " port="     << params.port
+        << " database=" << params.database
+        << " user="     << params.user
         << " password=*****)";
     return os;
 }
@@ -107,15 +103,17 @@ Row::Row ()
 }
 
 Row::Row (Row const& rhs) {
-    _isValid = rhs._isValid;
-    _cells   = rhs._cells;
+    _isValid    = rhs._isValid;
+    _name2index = rhs._name2index;
+    _index2cell = rhs._index2cell;   
 }
 
 Row&
 Row::operator= (Row const& rhs) {
     if (this != &rhs) {
-        _isValid = rhs._isValid;
-        _cells   = rhs._cells;   
+        _isValid    = rhs._isValid;
+        _name2index = rhs._name2index;   
+        _index2cell = rhs._index2cell;   
     }
     return *this;
 }
@@ -128,7 +126,19 @@ size_t
 Row::numColumns () const {
     if (!_isValid)
         throw std::logic_error (":Row::numColumns()  the object is not valid");
-    return  _cells.size();
+    return  _index2cell.size();
+}
+
+bool
+Row::get (size_t       columnIdx,
+          std::string& value) const {
+
+    Cell const& cell = getDataCell (columnIdx);
+    if (cell.first) {
+        value = std::string(cell.first);
+        return true;
+    }
+    return false;
 }
 
 bool
@@ -137,75 +147,59 @@ Row::get (std::string const& columnName,
 
     Cell const& cell = getDataCell (columnName);
     if (cell.first) {
-        value = std::string(cell.first, cell.second);
+        value = std::string(cell.first);
         return true;
     }
     return false;
 }
 
+bool Row::get (size_t columnIdx, uint64_t& value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, uint32_t& value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, uint16_t& value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, uint8_t&  value) const { return ::getNumber (*this, columnIdx, value); }
 
-bool
-Row::get (std::string const& columnName, uint64_t& value) const {
-    return ::RowImpl::getNumber<uint64_t> (*this, columnName, value);
+bool Row::get (std::string const& columnName, uint64_t& value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, uint32_t& value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, uint16_t& value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, uint8_t&  value) const { return ::getNumber (*this, columnName, value); }
+
+bool Row::get (size_t columnIdx, int64_t& value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, int32_t& value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, int16_t& value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, int8_t&  value) const { return ::getNumber (*this, columnIdx, value); }
+
+bool Row::get (std::string const& columnName, int64_t& value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, int32_t& value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, int16_t& value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, int8_t&  value) const { return ::getNumber (*this, columnName, value); }
+
+bool Row::get (size_t columnIdx, float&  value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, double& value) const { return ::getNumber (*this, columnIdx, value); }
+
+bool Row::get (std::string const& columnName, float&  value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, double& value) const { return ::getNumber (*this, columnName, value); }
+
+
+Row::Cell const&
+Row::getDataCell (size_t columnIdx) const {
+    if (!_isValid)
+        throw std::logic_error ("Row::getDataCell()  the object is not valid");
+
+    if (columnIdx >= _index2cell.size())
+        throw std::invalid_argument ("Row::getDataCell()  the column index '" + std::to_string(columnIdx) + "'is not in the result set");
+    
+    return _index2cell.at(columnIdx);
 }
-
-bool
-Row::get (std::string const& columnName, uint32_t& value) const {
-    return ::RowImpl::getNumber<uint32_t> (*this, columnName, value);
-}
-
-bool
-Row::get (std::string const& columnName, uint16_t& value) const {
-    return ::RowImpl::getNumber<uint16_t> (*this, columnName, value);
-}
-
-bool
-Row::get (std::string const& columnName, uint8_t& value) const {
-    return ::RowImpl::getNumber<uint8_t> (*this, columnName, value);
-}
-
-
-bool
-Row::get (std::string const& columnName, int64_t& value) const {
-    return ::RowImpl::getNumber<int64_t> (*this, columnName, value);
-}
-
-bool
-Row::get (std::string const& columnName, int32_t& value) const {
-    return ::RowImpl::getNumber<int32_t> (*this, columnName, value);
-}
-
-bool
-Row::get (std::string const& columnName, int16_t& value) const {
-    return ::RowImpl::getNumber<int16_t> (*this, columnName, value);
-}
-
-bool
-Row::get (std::string const& columnName, int8_t& value) const {
-    return ::RowImpl::getNumber<int8_t> (*this, columnName, value);
-}
-
-bool
-Row::get (std::string const& columnName, float& value) const {
-    return ::RowImpl::getNumber<float> (*this, columnName, value);
-}
-
-bool
-Row::get (std::string const& columnName, double& value) const {
-    return ::RowImpl::getNumber<double> (*this, columnName, value);
-}
-
-
 
 Row::Cell const&
 Row::getDataCell (std::string const& columnName) const {
     if (!_isValid)
         throw std::logic_error ("Row::getDataCell()  the object is not valid");
 
-    if (!_cells.count(columnName))
+    if (!_name2index.count(columnName))
         throw std::invalid_argument ("Row::getDataCell()  the column '" + columnName + "'is not in the result set");
     
-    return _cells.at(columnName);
+    return _index2cell.at(_name2index.at(columnName));
 }
 
 
@@ -214,12 +208,12 @@ Row::getDataCell (std::string const& columnName) const {
 ///////////////////////////////////////////////
 
 Connection::pointer
-Connection::connect (ConnectionParams const& connectionParams,
-                     bool                    autoReconnect) {
+Connection::open (ConnectionParams const& connectionParams,
+                  bool                    autoReconnect) {
 
     Connection::pointer ptr (new Connection(connectionParams,
                                             autoReconnect));
-    ptr->connectImpl();
+    ptr->connect();
     return ptr;
 }
 
@@ -297,8 +291,6 @@ Connection::rollback () {
 void
 Connection::execute (std::string const& query) {
 
-    assertTransaction (true);
-
     if (query.empty())
         throw std::invalid_argument (
                 "Connection::execute()  empty query string passed into the object");
@@ -307,11 +299,15 @@ Connection::execute (std::string const& query) {
     // the new  query.
 
     _lastQuery = query;
+
+    if (_res) mysql_free_result (_res) ;
     _res       = nullptr;
     _fields    = nullptr;
     _numFields = 0;
     _numRows   = 0;
-     
+
+    _columnNames.clear();
+
     if (mysql_real_query (_mysql,
                           _lastQuery.c_str(),
                           _lastQuery.size())) {
@@ -326,24 +322,38 @@ Connection::execute (std::string const& query) {
         }
     }
     
-    // Fetch result set if any
+    // Fetch result set for queries which return the one
 
-    _res = mysql_store_result (_mysql);
-    if (!_res)
-        throw Error ("Connection::execute()  mysql_store_result failed, error: " +
-                     std::string(mysql_error(_mysql)) +
-                     ", query: '" + _lastQuery + "'");
+    if (mysql_field_count (_mysql)) {
 
-    _fields    = mysql_fetch_fields (_res);
-    _numFields = mysql_num_fields   (_res);
-    _numRows   = mysql_num_rows     (_res);
+        _res = mysql_store_result (_mysql);
+        if (!_res)
+            throw Error ("Connection::execute()  mysql_store_result failed, error: " +
+                         std::string(mysql_error(_mysql)));
+
+        _fields    = mysql_fetch_fields (_res);
+        _numFields = mysql_num_fields   (_res);
+        _numRows   = mysql_num_rows     (_res);
+
+        for (size_t i = 0; i < _numFields; i++) {
+            _columnNames.push_back(std::string(_fields[i].name));
+        }
+    }
 }
-
+bool
+Connection::hasResult () const {
+    return _mysql && _res;
+}
 
 size_t
 Connection::numRows () const {
-    assertQueryContext ();
     return _numRows;
+}
+
+std::vector<std::string> const&
+Connection::columnNames () const {
+    assertQueryContext ();
+    return _columnNames;
 }
 
 bool
@@ -368,20 +378,20 @@ Connection::next (Row& row) {
     // the provided Row object.
 
     row._isValid = true;
-    for (size_t i = 0; i < _numFields; i++)
-        row._cells[_fields[i].name] =
-            Row::Cell{_row   [i],
-                      lengths[i]};
-
+    row._index2cell.reserve (_numFields);
+    for (size_t i = 0; i < _numFields; i++) {
+        row._name2index[_fields[i].name] = i;
+        row._index2cell.emplace_back (Row::Cell {_row[i], lengths[i]});
+    }
     return true;
 }
 
 void
-Connection::connectImpl () {
+Connection::connect () {
 
     // Prepare the connection object
     if (!(_mysql = mysql_init (_mysql)))
-        throw Error("Connection::connectImpl()  mysql_init failed");
+        throw Error("Connection::connect()  mysql_init failed");
     
     // Allow automatic reconnect if requested
     if (_autoReconnect) {
@@ -395,17 +405,17 @@ Connection::connectImpl () {
         ::stringOrNull (_connectionParams.host),
         ::stringOrNull (_connectionParams.user),
         ::stringOrNull (_connectionParams.password),
-        ::stringOrNull (_connectionParams.db),
+        ::stringOrNull (_connectionParams.database),
         _connectionParams.port,
         0,  /* no defaulkt UNIX socket */
         0)) /* no default client flag */
-        throw Error ("Connection::connectImpl()  mysql_real_connect() failed, error: " +
+        throw Error ("Connection::connect()  mysql_real_connect() failed, error: " +
                      std::string(mysql_error(_mysql)));
 
     // Set session attributes
     if (mysql_query (_mysql, "SET SESSION SQL_MODE='ANSI'") ||
         mysql_query (_mysql, "SET SESSION AUTOCOMMIT=0"))
-        throw Error ("Connection::connectImpl()  mysql_query() failed, error: " +
+        throw Error ("Connection::connect()  mysql_query() failed, error: " +
                      std::string(mysql_error(_mysql)));
 }
 

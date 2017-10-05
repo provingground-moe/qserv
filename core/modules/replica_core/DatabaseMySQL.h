@@ -36,6 +36,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 // Qserv headers
 
@@ -101,7 +102,7 @@ struct ConnectionParams {
     uint16_t port;
 
     /// The name of a database to be set upon the connection
-    std::string db;
+    std::string database;
 
     /// The name of a database user
     std::string user;
@@ -182,9 +183,16 @@ public:
     //
     // @see class Row
 
+    bool get (size_t columnIdx, std::string& value) const;
+
     bool get (std::string const& columnName, std::string& value) const;
 
     // Unsigned integer types
+
+    bool get (size_t columnIdx, uint64_t& value) const;
+    bool get (size_t columnIdx, uint32_t& value) const;
+    bool get (size_t columnIdx, uint16_t& value) const;
+    bool get (size_t columnIdx, uint8_t&  value) const;
 
     bool get (std::string const& columnName, uint64_t& value) const;
     bool get (std::string const& columnName, uint32_t& value) const;
@@ -193,6 +201,11 @@ public:
 
     // Signed integer types
 
+    bool get (size_t columnIdx, int64_t& value) const;
+    bool get (size_t columnIdx, int32_t& value) const;
+    bool get (size_t columnIdx, int16_t& value) const;
+    bool get (size_t columnIdx, int8_t&  value) const;
+
     bool get (std::string const& columnName, int64_t& value) const;
     bool get (std::string const& columnName, int32_t& value) const;
     bool get (std::string const& columnName, int16_t& value) const;
@@ -200,11 +213,21 @@ public:
 
     // Floating point types
 
+    bool get (size_t columnIdx, float&  value) const;
+    bool get (size_t columnIdx, double& value) const;
+
     bool get (std::string const& columnName, float&  value) const;
     bool get (std::string const& columnName, double& value) const;
 
     /**
-     * Return a reference to the data cell of the column
+     * Return a reference to the data cell for the column
+     *
+     * @param columnIdx - the index of a column
+     */
+    Cell const& getDataCell (size_t columnIdx) const;
+
+    /**
+     * Return a reference to the data cell for the column
      *
      * @param columnName - the name of a column
      */
@@ -215,8 +238,11 @@ private:
     /// The status of the object
     bool _isValid;
 
-    /// Mapping column names to the raw data cells
-    std::map<std::string, Cell> _cells;
+    /// Mapping column names to the indexes
+    std::map<std::string, size_t> _name2index;
+
+    /// Mapping column indexes to the raw data cells
+    std::vector<Cell> _index2cell;
 };
 
 /**
@@ -245,8 +271,8 @@ public:
      * @return a valid object if the connection attempt succeeded
      * @throws Error - if the connection failed
      */
-    static pointer connect (ConnectionParams const& connectionParams,
-                            bool                    autoReconnect=true);
+    static pointer open (ConnectionParams const& connectionParams,
+                         bool                    autoReconnect=true);
 
     // Default construction and copy semantics are prohibited
 
@@ -265,6 +291,11 @@ public:
       * @return the processed string
       */
     std::string escape (std::string const& str) const;
+
+    /**
+     * Return the status of the transaction
+     */
+    bool inTransaction () const { return _inTransaction; }
 
     /**
      * Start the transaction
@@ -298,15 +329,34 @@ public:
     void execute (std::string const& query);
 
     /**
+     * Returns 'true' if the last successfull query returned a result set
+     * (even though it may be empty)
+     */
+    bool hasResult () const;
+
+    /**
      * Return the number of unprocessed rows left in the result set.
      *
-     * ATTENTION: this counter gets decremented each time a successful
-     * call to method next() is made.
+     * NOTES:
+     * - queries which produce no result set will always have this number set to 0
+     * - this counter gets decremented each time a successful call to method
+     *   next() is made.
      *
      * @throws std::logic_error - if no SQL statement has ever been executed, or
      *                            if the last query failed.
      */
     size_t numRows () const;
+
+    /**
+     * Return the names of the columns from the current result set.
+     *
+     * NOTE: the columns are returned exactly in the same order they were
+     *       requested in the corresponding query.
+     *
+     * @throws std::logic_error - if no SQL statement has ever been executed, or
+     *                            if the last query failed.
+     */
+    std::vector<std::string> const& columnNames () const;
 
     /**
      * Move the iterator to the next (first) row of the current result set
@@ -354,7 +404,7 @@ private:
      *
      * @throws Error - if the connection is not possible
      */
-    void connectImpl ();
+    void connect ();
 
     /**
      * The method is to ensure that the transaction is in teh desired state.
@@ -395,6 +445,8 @@ private:
 
     size_t _numFields;
     size_t _numRows;    // NOTE: gets decremended each time method next() is called
+
+    std::vector<std::string> _columnNames;
 
     // Get updated after fetching each row of the result set
 
