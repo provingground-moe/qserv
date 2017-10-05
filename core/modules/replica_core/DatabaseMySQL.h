@@ -335,19 +335,6 @@ public:
     bool hasResult () const;
 
     /**
-     * Return the number of unprocessed rows left in the result set.
-     *
-     * NOTES:
-     * - queries which produce no result set will always have this number set to 0
-     * - this counter gets decremented each time a successful call to method
-     *   next() is made.
-     *
-     * @throws std::logic_error - if no SQL statement has ever been executed, or
-     *                            if the last query failed.
-     */
-    size_t numRows () const;
-
-    /**
      * Return the names of the columns from the current result set.
      *
      * NOTE: the columns are returned exactly in the same order they were
@@ -444,7 +431,6 @@ private:
     MYSQL_FIELD* _fields;
 
     size_t _numFields;
-    size_t _numRows;    // NOTE: gets decremended each time method next() is called
 
     std::vector<std::string> _columnNames;
 

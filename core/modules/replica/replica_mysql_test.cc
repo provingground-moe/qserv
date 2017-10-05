@@ -160,8 +160,7 @@ void query (database::Connection::pointer const conn) {
         if (!noTransaction) conn->begin();
         {
             conn->execute (query);
-            std::cout   << "hasResult: " << (conn->hasResult() ? "true" : "false") << "\n"
-                        << "numRows:   " << conn->numRows() << std::endl;
+            std::cout << "hasResult: " << (conn->hasResult() ? "true" : "false") << std::endl;
 
             if (!noResultSet && conn->hasResult()) {
                 std::cout << "Columns:   ";
