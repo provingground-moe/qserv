@@ -135,6 +135,9 @@ public:
      */
     static uint64_t compute_cs (std::string const& fileName,
                                 size_t             recordSizeBytes=DEFAULT_RECORD_SIZE_BYTES);
+
+    /// Get the user account uner which the current process runs
+    static std::string getEffectiveUser ();
 };
 
 

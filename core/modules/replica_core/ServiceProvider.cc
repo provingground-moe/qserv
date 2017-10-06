@@ -39,7 +39,8 @@ namespace replica_core {
 
 
 ServiceProvider::ServiceProvider (Configuration& configuration)
-    :   _configuration(configuration) {
+    :   _configuration    (configuration),
+        _databaseServices (DatabaseServices::create (configuration)) {
 }
 
 void

@@ -91,6 +91,13 @@ ConfigurationFile::loadConfiguration () {
     ::parseKeyVal(configStore, "common.request_buf_size_bytes",     _requestBufferSizeBytes,       defaultRequestBufferSizeBytes);
     ::parseKeyVal(configStore, "common.request_retry_interval_sec", _retryTimeoutSec,              defaultRetryTimeoutSec);
 
+    ::parseKeyVal(configStore, "common.database_technology", _databaseTechnology, defaultDatabaseTechnology);
+    ::parseKeyVal(configStore, "common.database_host",       _databaseHost,       defaultDatabaseHost);
+    ::parseKeyVal(configStore, "common.database_port",       _databasePort,       defaultDatabasePort);
+    ::parseKeyVal(configStore, "common.database_user",       _databaseUser,       defaultDatabaseUser);
+    ::parseKeyVal(configStore, "common.database_password",   _databasePassword,   defaultDatabasePassword);
+    ::parseKeyVal(configStore, "common.database_name",       _databaseName,       defaultDatabaseName);
+
     ::parseKeyVal(configStore, "controller.http_server_port",       _controllerHttpPort,           defaultControllerHttpPort);
     ::parseKeyVal(configStore, "controller.http_server_threads",    _controllerHttpThreads,        defaultControllerHttpThreads);
     ::parseKeyVal(configStore, "controller.request_timeout_sec",    _controllerRequestTimeoutSec,  defaultControllerRequestTimeoutSec);

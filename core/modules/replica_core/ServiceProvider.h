@@ -34,6 +34,8 @@
 
 // Qserv headers
 
+#include "replica_core/DatabaseServices.h"
+
 // Forward declarations
 
 // This header declarations
@@ -70,6 +72,11 @@ public:
     Configuration& config () const { return _configuration; }
 
     /**
+     * Return a reference to the database services
+     */
+    DatabaseServices::pointer const& databaseServices () const { return _databaseServices; }
+
+    /**
      * Make sure this worker is known in the configuration. Throws exception
      * std::invalid_argument otherwise.
      * 
@@ -96,6 +103,9 @@ private:
 
     /// Configuration manager
     Configuration& _configuration;
+    
+    /// Database services
+    DatabaseServices::pointer _databaseServices;
 };
 
 }}} // namespace lsst::qserv::replica_core

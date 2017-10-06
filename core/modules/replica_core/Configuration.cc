@@ -21,6 +21,7 @@
  */
 
 // Class header
+
 #include "replica_core/Configuration.h"
 
 // System headers
@@ -28,6 +29,8 @@
 #include <stdexcept>
 
 // Qserv headers
+
+#include "replica_core/FileUtils.h"
 
 namespace lsst {
 namespace qserv {
@@ -50,7 +53,12 @@ uint16_t     const Configuration::defaultWorkerFsPort                {50001};
 std::string  const Configuration::defaultWorkerXrootdHost            {"localhost"};
 uint16_t     const Configuration::defaultWorkerXrootdPort            {1094};
 std::string  const Configuration::defaultDataDir                     {"{worker}"};
-
+std::string  const Configuration::defaultDatabaseTechnology          {"mysql"};
+std::string  const Configuration::defaultDatabaseHost                {"localhost"};
+uint16_t     const Configuration::defaultDatabasePort                {3306};
+std::string  const Configuration::defaultDatabaseUser                {FileUtils::getEffectiveUser()};
+std::string  const Configuration::defaultDatabasePassword            {""};
+std::string  const Configuration::defaultDatabaseName                {"replica"};
 
 void
 Configuration::translateDataDir (std::string&       dataDir,
@@ -76,7 +84,13 @@ Configuration::Configuration ()
         _workerTechnology             (defaultWorkerTechnology),
         _workerNumProcessingThreads   (defaultWorkerNumProcessingThreads),
         _workerNumFsProcessingThreads (defaultWorkerNumFsProcessingThreads),
-        _workerFsBufferSizeBytes      (defaultWorkerFsBufferSizeBytes) {
+        _workerFsBufferSizeBytes      (defaultWorkerFsBufferSizeBytes),
+        _databaseTechnology           (defaultDatabaseTechnology),
+        _databaseHost                 (defaultDatabaseHost),
+        _databasePort                 (defaultDatabasePort),
+        _databaseUser                 (defaultDatabaseUser),
+        _databasePassword             (defaultDatabasePassword),
+        _databaseName                 (defaultDatabaseName) {
 }
 
 Configuration::~Configuration () {
