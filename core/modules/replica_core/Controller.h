@@ -25,7 +25,9 @@
 
 /// Controller.h declares:
 ///
+/// class ControllerIdentity
 /// class Controller
+///
 /// (see individual class documentation for more information)
 
 // System headers
@@ -59,7 +61,6 @@ class Messenger;
 #endif
 class ServiceProvider;
 
-
 /**
  * The base class for implementing requests registry as a polymorphic
  * collection to store active requests. Pure virtual methods of
@@ -82,7 +83,28 @@ struct ControllerRequestWrapper {
     /// Return a pointer to the stored request object
     virtual std::shared_ptr<Request> request () const=0;
 };
-    
+
+/**
+ * The data structure encapsulating various attributes which identity
+ * each instane of the Controller class. This information is meant to
+ * be used in the multi-Controller setups to coordinate operations
+ * betweem multiple instances and to avoid/resolve conflicts.
+ */
+struct ControllerIdentity {
+
+    /// A unique identifier of the Controller
+    std::string id;
+
+    /// The name of a hoste where it runs
+    std::string host;
+
+    /// An identifier of a process
+    pid_t pid;
+};
+
+/// The overloaded streaming operator for Controller's identity
+std::ostream& operator << (std::ostream& os, ControllerIdentity const& identity);
+
 /**
   * Class Controller is used for pushing replication (etc.) requests
   * to the worker replication services. Only one instance of this class is
@@ -112,24 +134,6 @@ public:
     typedef std::shared_ptr<Controller> pointer;
 
     /**
-     * The data structure encapsulating various attributes which identity
-     * each instane of the Controller class. This information is meant to
-     * be used in the multi-Controller setups to coordinate operations
-     * betweem multiple instances and to avoid/resolve conflicts.
-     */
-    struct Identity {
-
-        /// A unique identifier of the Controller
-        std::string id;
-
-        /// The name of a hoste where it runs
-        std::string host;
-
-        /// An identifier of a process
-        pid_t pid;
-    };
-
-    /**
      * Static factory method is needed to prevent issue with the lifespan
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
@@ -148,7 +152,7 @@ public:
     virtual ~Controller ();
 
     /// Return the unique identity of the instance
-    Identity const& identity () const { return _identity; }
+    ControllerIdentity const& identity () const { return _identity; }
 
     /// The start time of the instance (milliseconds since UNIX Epoch)
     uint64_t startTime () const { return _startTime; }
@@ -539,7 +543,7 @@ private:
 private:
 
     /// The unique identity of the instance
-    Identity const _identity;
+    ControllerIdentity const _identity;
 
     /// The time (milliseconds since UNIX Epoch) when an instance of
     /// the Controller was created.
@@ -568,10 +572,6 @@ private:
     std::shared_ptr<Messenger> _messenger;
 #endif
 };
-
-
-/// The overloaded streaming operator for Controller's identity
-std::ostream& operator << (std::ostream& os, Controller::Identity const& identity);
 
 
 }}} // namespace lsst::qserv::replica_core

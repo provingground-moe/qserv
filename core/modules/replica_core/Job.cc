@@ -32,6 +32,8 @@
 #include "lsst/log/Log.h"
 #include "replica_core/Common.h"            // Generators::uniqueId()
 #include "replica_core/Performance.h"       // PerformanceUtils::now()
+#include "replica_core/ServiceProvider.h"
+
 
 // This macro to appear witin each block which requires thread safety
 
@@ -100,11 +102,13 @@ Job::start () {
     LOGS(_log, LOG_LVL_DEBUG, context() << "start");
     LOCK_GUARD;
 
-    assertState(State::CREATED);    
+    assertState(State::CREATED);
     startImpl();
     assertState(State::IN_PROGRESS);
 
     _beginTime = PerformanceUtils::now();
+
+    _controller->serviceProvider().databaseServices()->saveJobState (shared_from_this());
 }
 
 void
@@ -126,6 +130,8 @@ Job::cancel () {
     // class or its subclasses.
 
     notify();
+
+    _controller->serviceProvider().databaseServices()->saveJobState (shared_from_this());
 }
 
 void
@@ -146,6 +152,8 @@ Job::setState (State         state,
     
     if (_state == State::FINISHED)
         _endTime = PerformanceUtils::now();
+
+    _controller->serviceProvider().databaseServices()->saveJobState (shared_from_this());
 }
     
 }}} // namespace lsst::qserv::replica_core

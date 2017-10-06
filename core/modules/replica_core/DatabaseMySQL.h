@@ -101,15 +101,15 @@ struct ConnectionParams {
     /// The port number of the MySQL service
     uint16_t port;
 
-    /// The name of a database to be set upon the connection
-    std::string database;
-
     /// The name of a database user
     std::string user;
 
     /// The database password
     std::string password;
-    
+
+    /// The name of a database to be set upon the connection
+    std::string database;  
+
     /// Return a string representation of all (but the password) parameters
     std::string toString () const;
 };
@@ -179,12 +179,16 @@ public:
      */
     size_t numColumns () const;
 
+    // These methods will return 'true' if the specified field is NULL
+
+    bool isNull (size_t             columnIdx)  const;
+    bool isNull (std::string const& columnName) const;
+
     // Type-specific data extractors/converters for values at the specified column
     //
     // @see class Row
 
-    bool get (size_t columnIdx, std::string& value) const;
-
+    bool get (size_t      columnIdx,         std::string& value) const;
     bool get (std::string const& columnName, std::string& value) const;
 
     // Unsigned integer types
@@ -284,13 +288,25 @@ public:
     virtual ~Connection ();
 
     /**
-      * A fron-end to mysql_real_escape_string()
+      * A front-end to mysql_real_escape_string()
       *
       * @param str - a string to be processed
       *
       * @return the processed string
       */
     std::string escape (std::string const& str) const;
+
+    /*
+     * Return an escaped and single-quoted string ready to be used in
+     * an SQL statement.
+     */
+    std::string strVal (std::string const& str) const;
+
+    /*
+     * Return a non-escaped and back-tick-quoted string ready to be used in
+     * an SQL statement.
+     */
+    std::string strId (std::string const& str) const;
 
     /**
      * Return the status of the transaction

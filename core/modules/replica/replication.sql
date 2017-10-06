@@ -1,4 +1,4 @@
-ET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 ;
+SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 ;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 ;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL' ;
 
@@ -15,7 +15,7 @@ CREATE  TABLE IF NOT EXISTS `controller` (
   `hostname`  VARCHAR(255) NOT NULL ,
   `pid`       INT          NOT NULL ,
 
-  `create_time`  BIGINT UNSIGNED NOT NULL ,
+  `start_time`  BIGINT UNSIGNED NOT NULL ,
 
   PRIMARY KEY (`id`)
 )
@@ -36,11 +36,10 @@ CREATE  TABLE IF NOT EXISTS `job` (
                'PURGE',
                'REBALANCE',
                'DELETE_WORKER',
-               'ADD_WORKER',
-               'OTHER') NOT NULL ,
+               'ADD_WORKER') NOT NULL ,
 
-  `status`      VARCHAR(255) NOT NULL ,
-  `ext_status`  VARCHAR(255) DEFAULT '' ,
+  `state`      VARCHAR(255) NOT NULL ,
+  `ext_state`  VARCHAR(255) DEFAULT '' ,
 
   `begin_time`  BIGINT UNSIGNED NOT NULL ,
   `end_time`    BIGINT UNSIGNED NOT NULL ,

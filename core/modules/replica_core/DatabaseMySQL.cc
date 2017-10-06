@@ -45,10 +45,24 @@ char const* stringOrNull (std::string const& str) {
 using Row              = lsst::qserv::replica_core::database::mysql::Row;
 using InvalidTypeError = lsst::qserv::replica_core::database::mysql::InvalidTypeError;
 
+
+template <typename K>
+bool getAsString (Row const&   row,
+                  K            key,
+                  std::string& value) {
+
+    Row::Cell const& cell = row.getDataCell (key);
+    if (cell.first) {
+        value = std::string(cell.first);
+        return true;
+    }
+    return false;
+}
+
 template <typename K, class T>
-static bool getNumber (Row const& row,
-                       K          key,
-                       T&         value) {
+bool getAsNumber (Row const& row,
+                  K          key,
+                  T&         value) {
     try {
         Row::Cell const& cell = row.getDataCell (key);
         if (cell.first) {
@@ -57,7 +71,7 @@ static bool getNumber (Row const& row,
         }
         return false;
     } catch (boost::bad_lexical_cast const& ex) {
-        throw InvalidTypeError ("DatabaseMySQL::getNumber<K,T>()  type conversion failed");
+        throw InvalidTypeError ("DatabaseMySQL::getAsNumber<K,T>()  type conversion failed");
     }
 }
 
@@ -129,55 +143,37 @@ Row::numColumns () const {
     return  _index2cell.size();
 }
 
-bool
-Row::get (size_t       columnIdx,
-          std::string& value) const {
+bool Row::isNull (size_t              columnIdx) const { return !getDataCell (columnIdx) .first; }
+bool Row::isNull (std::string const& columnName) const { return !getDataCell (columnName).first; }
 
-    Cell const& cell = getDataCell (columnIdx);
-    if (cell.first) {
-        value = std::string(cell.first);
-        return true;
-    }
-    return false;
-}
+bool Row::get (size_t             columnIdx,  std::string& value) const { return ::getAsString (*this, columnIdx,  value); }
+bool Row::get (std::string const& columnName, std::string& value) const { return ::getAsString (*this, columnName, value); }
 
-bool
-Row::get (std::string const& columnName,
-          std::string&       value) const {
+bool Row::get (size_t columnIdx, uint64_t& value) const { return ::getAsNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, uint32_t& value) const { return ::getAsNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, uint16_t& value) const { return ::getAsNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, uint8_t&  value) const { return ::getAsNumber (*this, columnIdx, value); }
 
-    Cell const& cell = getDataCell (columnName);
-    if (cell.first) {
-        value = std::string(cell.first);
-        return true;
-    }
-    return false;
-}
+bool Row::get (std::string const& columnName, uint64_t& value) const { return ::getAsNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, uint32_t& value) const { return ::getAsNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, uint16_t& value) const { return ::getAsNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, uint8_t&  value) const { return ::getAsNumber (*this, columnName, value); }
 
-bool Row::get (size_t columnIdx, uint64_t& value) const { return ::getNumber (*this, columnIdx, value); }
-bool Row::get (size_t columnIdx, uint32_t& value) const { return ::getNumber (*this, columnIdx, value); }
-bool Row::get (size_t columnIdx, uint16_t& value) const { return ::getNumber (*this, columnIdx, value); }
-bool Row::get (size_t columnIdx, uint8_t&  value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, int64_t& value) const { return ::getAsNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, int32_t& value) const { return ::getAsNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, int16_t& value) const { return ::getAsNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, int8_t&  value) const { return ::getAsNumber (*this, columnIdx, value); }
 
-bool Row::get (std::string const& columnName, uint64_t& value) const { return ::getNumber (*this, columnName, value); }
-bool Row::get (std::string const& columnName, uint32_t& value) const { return ::getNumber (*this, columnName, value); }
-bool Row::get (std::string const& columnName, uint16_t& value) const { return ::getNumber (*this, columnName, value); }
-bool Row::get (std::string const& columnName, uint8_t&  value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, int64_t& value) const { return ::getAsNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, int32_t& value) const { return ::getAsNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, int16_t& value) const { return ::getAsNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, int8_t&  value) const { return ::getAsNumber (*this, columnName, value); }
 
-bool Row::get (size_t columnIdx, int64_t& value) const { return ::getNumber (*this, columnIdx, value); }
-bool Row::get (size_t columnIdx, int32_t& value) const { return ::getNumber (*this, columnIdx, value); }
-bool Row::get (size_t columnIdx, int16_t& value) const { return ::getNumber (*this, columnIdx, value); }
-bool Row::get (size_t columnIdx, int8_t&  value) const { return ::getNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, float&  value) const { return ::getAsNumber (*this, columnIdx, value); }
+bool Row::get (size_t columnIdx, double& value) const { return ::getAsNumber (*this, columnIdx, value); }
 
-bool Row::get (std::string const& columnName, int64_t& value) const { return ::getNumber (*this, columnName, value); }
-bool Row::get (std::string const& columnName, int32_t& value) const { return ::getNumber (*this, columnName, value); }
-bool Row::get (std::string const& columnName, int16_t& value) const { return ::getNumber (*this, columnName, value); }
-bool Row::get (std::string const& columnName, int8_t&  value) const { return ::getNumber (*this, columnName, value); }
-
-bool Row::get (size_t columnIdx, float&  value) const { return ::getNumber (*this, columnIdx, value); }
-bool Row::get (size_t columnIdx, double& value) const { return ::getNumber (*this, columnIdx, value); }
-
-bool Row::get (std::string const& columnName, float&  value) const { return ::getNumber (*this, columnName, value); }
-bool Row::get (std::string const& columnName, double& value) const { return ::getNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, float&  value) const { return ::getAsNumber (*this, columnName, value); }
+bool Row::get (std::string const& columnName, double& value) const { return ::getAsNumber (*this, columnName, value); }
 
 
 Row::Cell const&
@@ -262,6 +258,16 @@ Connection::escape (std::string const& inStr) const {
             inLen);
 
     return std::string (outStr.get(), outLen) ;
+}
+
+std::string
+Connection::strVal (std::string const& str) const {
+    return "'" + escape(str) + "'";
+}
+
+std::string
+Connection::strId (std::string const& str) const {
+    return "`" + str + "`";
 }
 
 void

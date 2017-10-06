@@ -31,16 +31,15 @@
 #include <stdexcept>
 #include <streambuf>
 #include <string>
-#include <sys/types.h>  // struct passwd
-#include <pwd.h>        // getpwuid
-#include <unistd.h>     // geteuid
 
 // Qserv headers
 
 #include "replica/CmdParser.h"
 #include "replica_core/DatabaseMySQL.h"
+#include "replica_core/FileUtils.h"
 
 namespace r        = lsst::qserv::replica;
+namespace rc       = lsst::qserv::replica_core;
 namespace database = lsst::qserv::replica_core::database::mysql;
 
 namespace {
@@ -58,10 +57,6 @@ database::ConnectionParams connectionParams;
 std::string databaseName;
 std::string fileName;
 
-/// Get the user account uner which the current process runs
-std::string getEffectiveUser () {
-    return std::string (getpwuid(geteuid())->pw_name);
-}
 
 // Run various test on transactions
 void runTransactionTest (database::Connection::pointer const&                    conn,
@@ -275,7 +270,7 @@ int main (int argc, const char* const argv[]) {
         ::noResultSet               = parser.flag               ("no-result-set");
         ::connectionParams.host     = parser.option<std::string>("host",             "localhost");
         ::connectionParams.port     = parser.option<uint16_t>   ("port",             3306);
-        ::connectionParams.user     = parser.option<std::string>("user",             getEffectiveUser());
+        ::connectionParams.user     = parser.option<std::string>("user",             rc::FileUtils::getEffectiveUser ());
         ::connectionParams.password = parser.option<std::string>("password",         "");
         ::connectionParams.database = parser.option<std::string>("default-database", "");
 

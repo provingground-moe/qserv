@@ -136,6 +136,28 @@ public:
     unsigned int controllerRequestTimeoutSec () const { return _controllerRequestTimeoutSec; }
 
 
+    // -----------------------------------------------------------
+    // -- Configuration parameters related to database services --
+    // -----------------------------------------------------------
+
+    std::string const& databaseTechnology () const { return _databaseTechnology; }
+ 
+    /// The DNS name or IP address of a machine where the database
+    /// server runs
+    std::string const& databaseHost () const { return _databaseHost; }
+
+    /// The port number of the database service
+    uint16_t databasePort () const { return _databasePort; }
+
+    /// The name of a database user
+    std::string const& databaseUser () const { return _databaseUser; }
+
+    /// The database password
+    std::string const& databasePassword () const { return _databasePassword; }
+
+    /// The name of a database to be set upon the connection
+    std::string const& databaseName () const { return _databaseName; }
+
     // ---------------------------------------------------
     // -- Configuration parameters related to databases --
     // ---------------------------------------------------
@@ -197,21 +219,27 @@ protected:
     // of this class as well as by subclasses when initializing the configuration
     // object.
 
-    static const size_t       defaultRequestBufferSizeBytes;
-    static const unsigned int defaultRetryTimeoutSec;
-    static const uint16_t     defaultControllerHttpPort;
-    static const size_t       defaultControllerHttpThreads;
-    static const unsigned int defaultControllerRequestTimeoutSec;
-    static const std::string  defaultWorkerTechnology;
-    static const size_t       defaultWorkerNumProcessingThreads;
-    static const size_t       defaultWorkerNumFsProcessingThreads;
-    static const size_t       defaultWorkerFsBufferSizeBytes;
-    static const std::string  defaultWorkerSvcHost;
-    static const uint16_t     defaultWorkerSvcPort;
-    static const uint16_t     defaultWorkerFsPort;
-    static const std::string  defaultWorkerXrootdHost;
-    static const uint16_t     defaultWorkerXrootdPort;
-    static const std::string  defaultDataDir;
+    static size_t       const defaultRequestBufferSizeBytes;
+    static unsigned int const defaultRetryTimeoutSec;
+    static uint16_t     const defaultControllerHttpPort;
+    static size_t       const defaultControllerHttpThreads;
+    static unsigned int const defaultControllerRequestTimeoutSec;
+    static std::string  const defaultWorkerTechnology;
+    static size_t       const defaultWorkerNumProcessingThreads;
+    static size_t       const defaultWorkerNumFsProcessingThreads;
+    static size_t       const defaultWorkerFsBufferSizeBytes;
+    static std::string  const defaultWorkerSvcHost;
+    static uint16_t     const defaultWorkerSvcPort;
+    static uint16_t     const defaultWorkerFsPort;
+    static std::string  const defaultWorkerXrootdHost;
+    static uint16_t     const defaultWorkerXrootdPort;
+    static std::string  const defaultDataDir;
+    static std::string  const defaultDatabaseTechnology;
+    static std::string  const defaultDatabaseHost;
+    static uint16_t     const defaultDatabasePort;
+    static std::string  const defaultDatabaseUser;
+    static std::string  const defaultDatabasePassword;
+    static std::string  const defaultDatabaseName;
 
     /**
      * Inplace translation of the the data directory string by finding an optional
@@ -252,6 +280,26 @@ protected:
     
     std::map<std::string, DatabaseInfo> _databaseInfo;
     std::map<std::string, WorkerInfo>   _workerInfo;
+
+    // Database-specific parameters
+    
+    std::string _databaseTechnology;
+
+    /// The DNS name or IP address of a machine where the database
+    /// server runs
+    std::string _databaseHost;
+
+    /// The port number of the database service
+    uint16_t _databasePort;
+
+    /// The name of a database user
+    std::string _databaseUser;
+
+    /// The database password
+    std::string _databasePassword;
+
+    /// The name of a database to be set upon the connection
+    std::string _databaseName; 
 };
 
 }}} // namespace lsst::qserv::replica_core

@@ -129,6 +129,18 @@ public:
     ExtendedState extendedState () const { return _extendedState; }
 
     /**
+     * Return a start time (milliseconds since UNIX Epoch) or 0 before method start()
+     * is called to actually begin wexecuting the job.
+     */
+    uint64_t beginTime () const { return _beginTime; }
+
+    /**
+     * Return the end time (milliseconds since UNIX Epoch) or 0 before job
+     * is finished.
+     */
+    uint64_t endTime () const { return _endTime; }
+
+    /**
      * Reset the state (if needed) and begin processing the job.
      */
     void start ();

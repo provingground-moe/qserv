@@ -31,8 +31,12 @@
 #include <cstring>
 #include <cstdio>
 #include <stdexcept>
+#include <sys/types.h>  // struct passwd
+#include <pwd.h>        // getpwuid
+#include <unistd.h>     // geteuid
 
 // Qserv headers
+
 #include "replica_core/Configuration.h"
 
 
@@ -190,6 +194,11 @@ FileUtils::compute_cs (const std::string &fileName,
     delete [] buf;
 
     return cs;
+}
+
+std::string
+FileUtils::getEffectiveUser () {
+    return std::string (getpwuid(geteuid())->pw_name);
 }
 
 

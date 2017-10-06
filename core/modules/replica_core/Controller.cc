@@ -233,20 +233,23 @@ public:
 };
 
 
+//////////////////////////////////////////////////////////////////////////
+//////////////////////////  ControllerIdentity  //////////////////////////
+//////////////////////////////////////////////////////////////////////////
+
+std::ostream&
+operator << (std::ostream& os, ControllerIdentity const& identity) {
+    os << "ControllerIdentity (id: " << identity.id << ", host: " << identity.host << ", pid: " << identity.pid << ")";
+    return os;
+}
+
 //////////////////////////////////////////////////////////////////
 //////////////////////////  Controller  //////////////////////////
 //////////////////////////////////////////////////////////////////
 
-std::ostream&
-operator << (std::ostream& os, Controller::Identity const& identity) {
-    os << "(id: " << identity.id << ", host: " << identity.host << ", pid: " << identity.pid << ")";
-    return os;
-}
-
 Controller::pointer
 Controller::create (ServiceProvider& serviceProvider) {
-    return Controller::pointer (
-        new Controller(serviceProvider));
+    return Controller::pointer(new Controller(serviceProvider));
 }
 
 Controller::Controller (ServiceProvider& serviceProvider)
@@ -267,6 +270,8 @@ Controller::Controller (ServiceProvider& serviceProvider)
 #endif
 
     LOGS(_log, LOG_LVL_DEBUG, "Controller  identity=" << _identity);
+
+    serviceProvider.databaseServices()->saveControllerState (_identity, _startTime);
 }
 
 Controller::~Controller () {
