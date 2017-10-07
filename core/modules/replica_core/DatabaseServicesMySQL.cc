@@ -64,7 +64,7 @@ DatabaseServicesMySQL::DatabaseServicesMySQL (Configuration& configuration)
     params.password = configuration.databasePassword ();
     params.database = configuration.databaseName     ();
 
-    _connection = database::mysql::Connection::open (params);
+    _conn = database::mysql::Connection::open (params);
 }
 
 DatabaseServicesMySQL::~DatabaseServicesMySQL () {
@@ -74,63 +74,89 @@ void
 DatabaseServicesMySQL::saveControllerState (ControllerIdentity const& identity,
                                             uint64_t                  startTime) {
 
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServicesMySQL::saveControllerState");
+    static std::string const context = "DatabaseServicesMySQL::saveControllerState  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context);
 
     LOCK_GUARD;
 
-    std::string const query =
-        "INSERT INTO `controller` VALUES ("
-        "'"   + _connection->escape (identity.id) +
-        "','" + _connection->escape (identity.host) +
-        "',"  +      std::to_string (identity.pid) +
-        ","   +      std::to_string (startTime) +
-        ")";
+    try {
+        _conn->begin ();
+        _conn->execute (
+            _conn->sqlInsertQuery (
+                "controller",
+                identity.id,
+                identity.host,
+                identity.pid,
+                startTime));
+        _conn->commit ();
 
-    _connection->begin   ();
-    _connection->execute (query);
-    _connection->commit  ();
-
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServicesMySQL::saveControllerState  ** DONE **");
+    } catch (database::mysql::DuplicateKeyError const&) {
+        _conn->rollback ();
+        throw std::logic_error (
+                context + "the controller state is already "
+                "in the database");
+    }
+    LOGS(_log, LOG_LVL_DEBUG, context + "** DONE **");
 }
 
 void
 DatabaseServicesMySQL::saveJobState (Job_pointer const& job) {
 
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServicesMySQL::saveJobState");
+    static std::string const context = "DatabaseServicesMySQL::saveJobState  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context);
 
     LOCK_GUARD;
 
-    // Prepare two SQL statements for any jobs
+    // The algorithm will first try the INSERT query. If a row with the same
+    // primary key (Job id) already exists in the table then the UPDATE
+    // query will be executed.
+    
+    try {
+        std::string const jobInsertQuery =
+            _conn->sqlInsertQuery (
+                "job",
+                job->id(),
+                job->controller()->identity().id,
+                job->type(),
+                Job::state2string (job->state()),
+                Job::state2string (job->extendedState()),
+                                   job->beginTime(),
+                                   job->endTime());
+        _conn->begin   ();
+        _conn->execute (jobInsertQuery);
+        _conn->commit  ();
 
-    std::string const jobTable = _connection->strId ("job");
+    } catch (database::mysql::DuplicateKeyError const&) {
 
-    std::string insertQuery;
-    {
-        std::ostringstream ss;
-        ss  << "INSERT INTO " << _connection->strId ("job") << " VALUES ( "
-            << _connection->strVal                    (job->id())                        << ","
-            << _connection->strVal                    (job->controller()->identity().id) << ","
-            << _connection->strVal                    (job->type())                      << ","
-            << _connection->strVal (Job::state2string (job->state()))                    << ","
-            << _connection->strVal (Job::state2string (job->extendedState()))            << ","
-            <<                                         job->beginTime()                  << ","
-            <<                                         job->endTime()                    << " )";
-        insertQuery = ss.str();
+        try {
+            std::string const jobUpdateQuery =
+                _conn->sqlSimpleUpdateQuery (
+                    "job",
+                    _conn->sqlEqual ("id",
+                                     job->id()),
+        
+                    std::make_pair ("state",      Job::state2string (job->state())),
+                    std::make_pair ("ext_state",  Job::state2string (job->extendedState())),
+                    std::make_pair ("begin_time",                    job->beginTime()),
+                    std::make_pair ("end_time",                      job->endTime()));
+
+            _conn->rollback ();
+            _conn->begin    ();
+            _conn->execute  (jobUpdateQuery);
+            _conn->commit   ();
+
+        } catch (database::mysql::Error const& ex) {
+            throw std::runtime_error (
+                    context + "failed to save state into the database, exception: " + ex.what());
+        }
     }
-    std::string updateQuery;
-    {
-        std::ostringstream ss;
-        ss  << "UPDATE " << _connection->strId ("job")
-            << " SET "   << _connection->strId ("state")      << " = " << _connection->strVal (Job::state2string (job->state()))         << ","
-            <<              _connection->strId ("ext_state")  << " = " << _connection->strVal (Job::state2string (job->extendedState())) << ","
-            <<              _connection->strId ("begin_time") << " = " <<                                         job->beginTime()       << ","
-            <<              _connection->strId ("end_time")   << " = " <<                                         job->endTime()         
-            << " WHERE " << _connection->strId ("id")         << " = " << _connection->strVal                    (job->id());
-        updateQuery = ss.str();
-    }
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServicesMySQL::saveJobState  insertQuery: " << insertQuery);
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServicesMySQL::saveJobState  updateQuery: " << updateQuery);
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServicesMySQL::saveJobState  ** DONE **");
+
+    // TODO: Add Job-specific query generation for the second set
+    // of tables.
+
+    LOGS(_log, LOG_LVL_DEBUG, context + "** DONE **");
 }
 
 
