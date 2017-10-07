@@ -90,7 +90,7 @@ public:
 protected:
 
     /// Databse connection
-    database::mysql::Connection::pointer _connection;
+    database::mysql::Connection::pointer _conn;
 };
 
 }}} // namespace lsst::qserv::replica_core

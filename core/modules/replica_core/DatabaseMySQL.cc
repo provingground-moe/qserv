@@ -21,6 +21,7 @@
  */
 
 // Class header
+
 #include "replica_core/DatabaseMySQL.h"
 
 // System headers
@@ -31,7 +32,11 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
+
 namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.DatabaseMySQL");
 
 /**
  * The function is used to comply with the MySQL convention for
@@ -138,8 +143,8 @@ Row::~Row () {
 
 size_t
 Row::numColumns () const {
-    if (!_isValid)
-        throw std::logic_error (":Row::numColumns()  the object is not valid");
+    static std::string const context = "Row::numColumns()  ";
+    if (!_isValid) throw std::logic_error (context + "the object is not valid");
     return  _index2cell.size();
 }
 
@@ -178,22 +183,29 @@ bool Row::get (std::string const& columnName, double& value) const { return ::ge
 
 Row::Cell const&
 Row::getDataCell (size_t columnIdx) const {
-    if (!_isValid)
-        throw std::logic_error ("Row::getDataCell()  the object is not valid");
+
+    static std::string const context = "Row::getDataCell()  ";
+
+    if (!_isValid) throw std::logic_error (context + "the object is not valid");
 
     if (columnIdx >= _index2cell.size())
-        throw std::invalid_argument ("Row::getDataCell()  the column index '" + std::to_string(columnIdx) + "'is not in the result set");
+        throw std::invalid_argument (
+                context + "the column index '" + std::to_string(columnIdx) +
+                "'is not in the result set");
     
     return _index2cell.at(columnIdx);
 }
 
 Row::Cell const&
 Row::getDataCell (std::string const& columnName) const {
-    if (!_isValid)
-        throw std::logic_error ("Row::getDataCell()  the object is not valid");
+
+    static std::string const context = "Row::getDataCell()  ";
+
+    if (!_isValid) throw std::logic_error (context + "the object is not valid");
 
     if (!_name2index.count(columnName))
-        throw std::invalid_argument ("Row::getDataCell()  the column '" + columnName + "'is not in the result set");
+        throw std::invalid_argument (
+                context + "the column '" + columnName + "'is not in the result set");
     
     return _index2cell.at(_name2index.at(columnName));
 }
@@ -235,8 +247,9 @@ Connection::~Connection () {
 std::string
 Connection::escape (std::string const& inStr) const {
 
-    if (!_mysql)
-        throw Error ("Connection::escape()  not connected to the MySQL service");
+    static std::string const context = "Connection::escape()  ";
+
+    if (!_mysql) throw Error (context + "not connected to the MySQL service");
 
     size_t const inLen = inStr.length ();
 
@@ -258,16 +271,6 @@ Connection::escape (std::string const& inStr) const {
             inLen);
 
     return std::string (outStr.get(), outLen) ;
-}
-
-std::string
-Connection::strVal (std::string const& str) const {
-    return "'" + escape(str) + "'";
-}
-
-std::string
-Connection::strId (std::string const& str) const {
-    return "`" + str + "`";
 }
 
 void
@@ -296,9 +299,13 @@ Connection::rollback () {
 void
 Connection::execute (std::string const& query) {
 
+    static std::string const context = "Connection::execute()  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context + query);
+
     if (query.empty())
         throw std::invalid_argument (
-                "Connection::execute()  empty query string passed into the object");
+                context + "empty query string passed into the object");
 
     // Reset/initialize the query context before attempting to execute
     // the new  query.
@@ -317,12 +324,12 @@ Connection::execute (std::string const& query) {
                           _lastQuery.size())) {
 
         std::string const msg =
-            "Connection::execute()  query: '" + _lastQuery + "', error: " +
+            context + "query: '" + _lastQuery + "', error: " +
             std::string(mysql_error(_mysql));
 
         switch (mysql_errno(_mysql)) {
-            case ER_DUP_KEY: throw DuplicateKeyError (msg);
-            default:         throw Error             (msg);
+            case ER_DUP_ENTRY: throw DuplicateKeyError (msg);
+            default:           throw Error             (msg);
         }
     }
     
@@ -333,7 +340,7 @@ Connection::execute (std::string const& query) {
         // unbuffered read
         _res = mysql_use_result (_mysql);
         if (!_res)
-            throw Error ("Connection::execute()  mysql_use_result failed, error: " +
+            throw Error (context + "mysql_use_result failed, error: " +
                          std::string(mysql_error(_mysql)));
 
         _fields    = mysql_fetch_fields (_res);
@@ -358,12 +365,14 @@ Connection::columnNames () const {
 bool
 Connection::next (Row& row) {
 
+    static std::string const context = "Connection::next()  ";
+
     assertQueryContext ();
 
     _row = mysql_fetch_row (_res);
     if (!_row) {
         if (!mysql_errno(_mysql)) return false;
-        throw Error ("Connection::next()  mysql_fetch_row failed, error: " +
+        throw Error (context + "mysql_fetch_row failed, error: " +
                      std::string(mysql_error(_mysql)) +
                      ", query: '" + _lastQuery + "'");
     }
@@ -384,9 +393,11 @@ Connection::next (Row& row) {
 void
 Connection::connect () {
 
+    static std::string const context = "Connection::connect()  ";
+
     // Prepare the connection object
     if (!(_mysql = mysql_init (_mysql)))
-        throw Error("Connection::connect()  mysql_init failed");
+        throw Error(context + "mysql_init failed");
     
     // Allow automatic reconnect if requested
     if (_autoReconnect) {
@@ -402,29 +413,35 @@ Connection::connect () {
         ::stringOrNull (_connectionParams.password),
         ::stringOrNull (_connectionParams.database),
         _connectionParams.port,
-        0,  /* no defaulkt UNIX socket */
+        0,  /* no default UNIX socket */
         0)) /* no default client flag */
-        throw Error ("Connection::connect()  mysql_real_connect() failed, error: " +
+        throw Error (context + "mysql_real_connect() failed, error: " +
                      std::string(mysql_error(_mysql)));
 
     // Set session attributes
     if (mysql_query (_mysql, "SET SESSION SQL_MODE='ANSI'") ||
         mysql_query (_mysql, "SET SESSION AUTOCOMMIT=0"))
-        throw Error ("Connection::connect()  mysql_query() failed, error: " +
+        throw Error (context + "mysql_query() failed, error: " +
                      std::string(mysql_error(_mysql)));
 }
 
 void
 Connection::assertQueryContext () const {
-    if (!_mysql) throw Error ("Connection::assertQueryContext()  not connected to the MySQL service");
-    if (!_res)   throw Error ("Connection::assertQueryContext()  no prior query made");
+
+    static std::string const context = "Connection::assertQueryContext()  ";
+
+    if (!_mysql) throw Error (context + "not connected to the MySQL service");
+    if (!_res)   throw Error (context + "no prior query made");
 }
 
 void
 Connection::assertTransaction (bool inTransaction) const {
+
+    static std::string const context = "Connection::assertTransaction()  ";
+
     if (inTransaction != _inTransaction)
         throw std::logic_error (
-                "Connection::assertTransaction()  the transaction is" +
+                context + "the transaction is" +
                 std::string( _inTransaction ? " " : " not") + " active");
 }
 

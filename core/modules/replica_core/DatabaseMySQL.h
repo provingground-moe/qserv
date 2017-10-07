@@ -34,6 +34,7 @@
 #include <memory>       // shared_ptr, enable_shared_from_this
 #include <mysql/mysql.h>
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -296,17 +297,200 @@ public:
       */
     std::string escape (std::string const& str) const;
 
-    /*
-     * Return an escaped and single-quoted string ready to be used in
-     * an SQL statement.
-     */
-    std::string strVal (std::string const& str) const;
+    // -------------------------------------------------
+    // Helper methods for simplifying query preparation
+    // -------------------------------------------------
+    
+    template <typename T>
+    T           sqlValue (T const&           val) const { return val; }
+    std::string sqlValue (std::string const& val) const { return "'" + escape (val) + "'"; }
+    std::string sqlValue (char const*        val) const { return sqlValue (std::string(val)); }
 
-    /*
-     * Return a non-escaped and back-tick-quoted string ready to be used in
-     * an SQL statement.
+    // Generator: ([value [, value [, ... ]]])
+    // Where values of the string types will be surrounded with single quotes
+
+    /// The end of variadic recursion
+    void sqlValues (std::string& sql) const { sql += ")"; }
+
+    /// The next step in the variadic recursion when at least one value is
+    /// still available
+    template <typename T,
+              typename ...Targs>
+    void sqlValues (std::string& sql,
+                    T            val,
+                    Targs...     Fargs) const {
+
+        bool const last = sizeof...(Fargs) - 1 < 0;
+        std::ostringstream ss;
+        ss << (sql.empty() ? "(" : (last ? "" : ",")) << sqlValue (val);
+        sql += ss.str();
+
+        // Recursively keep drilling down the list of arguments with one
+        // argument less
+        sqlValues (sql, Fargs...);
+    }
+    
+    /**
+     * Turn values of variadic argumenst into a valid SQL representing a set of
+     * values to be insert into a table row. Values of string types 'std::string const&'
+     * and 'char const*' will be also escaped and surrounded by single quote.
+     *
+     * For example, the following call:
+     *   @code
+     *     sqlPackValues ("st'r", std::string("c"), 123, 24.5);
+     *   @code
+     * will produce the following output:
+     *   @code
+     *     ('st\'r','c',123,24.5)
+     *   @code
      */
-    std::string strId (std::string const& str) const;
+    template <typename...Targs>
+    std::string sqlPackValues (Targs... Fargs) const {
+        std::string sql;
+        sqlValues (sql, Fargs...);
+        return sql;
+    }
+
+    /**
+     * Generate an SQL statement for inserting a single row into the specified
+     * table based on a variadic list of values to be inserted. The method allows
+     * any number of arguments and any types of argument values. rguments of
+     * types 'std::sting' and 'char*' will be additionally escaped and surrounded by
+     * single quotes as required by the SQL standard.
+     *
+     * @param tableName - the name of a table
+     * @param Fargs     - the variadic list of values to be inserted
+     */
+    template <typename...Targs>
+    std::string sqlInsertQuery (std::string const& tableName,
+                                Targs...           Fargs) const {
+        std::ostringstream qs;
+        qs  << "INSERT INTO " << sqlId (tableName) << " "
+            << "VALUES "      << sqlPackValues (Fargs...);
+        return qs.str();
+    }
+
+    // ----------------------------------------------------------------------
+    // Generator: [`column` = value [, `column` = value [, ... ]]]
+    // Where values of the string types will be surrounded with single quotes
+
+    /// Return a non-escaped and back-tick-quoted string which is meant
+    /// to be an SQL identifier.
+    std::string sqlId (std::string const& str) const { return "`" + str + "`"; }
+
+    /**
+     * Return:
+     *
+     *   `col` = <value>
+     *
+     * Where:
+     * - the column name will be surrounded by back ticks
+     * - values of string types will be escped and surrounded by single quotes
+     */
+    template <typename T>
+    std::string sqlEqual (std::string const& col,
+                          T const&           val) const {
+        std::ostringstream ss;
+        ss << sqlId (col) << "=" << sqlValue (val);
+        return ss.str();
+    }
+
+    /// The base (the final function) to be called
+    void sqlPackPair (std::string&) const {}
+
+    /// Recursive variadic function (overloaded for column names gived as std::string)
+    template <typename T, typename...Targs>
+    void sqlPackPair (std::string&             sql,
+                      std::pair<std::string,T> colVal,
+                      Targs...                 Fargs) const {
+    
+        std::string const& col = colVal.first;
+        T const&           val = colVal.second;
+    
+        std::ostringstream ss;
+        ss << (sql.empty() ? "" : (sizeof...(Fargs) - 1 < 0 ? "" : ",")) << sqlEqual (col, val);
+        sql += ss.str();
+        sqlPackPair (sql, Fargs...);
+    }
+    
+
+    /// Recursive variadic function (overloaded for column names gived as char const*)
+    template <typename T, typename...Targs>
+    void sqlPackPair (std::string&             sql,
+                      std::pair<char const*,T> colVal,
+                      Targs...                 Fargs) const {
+    
+        std::string const  col = colVal.first;
+        T const&           val = colVal.second;
+    
+        std::ostringstream ss;
+        ss << (sql.empty() ? "" : (sizeof...(Fargs) - 1 < 0 ? "" : ",")) << sqlEqual (col, val);
+        sql += ss.str();
+        sqlPackPair (sql, Fargs...);
+    }
+    
+    /**
+     * Pack pairs of column names and their new values into a string which can be
+     * further used to form SQL statements of the following kind:
+     *
+     *   UPDATE <table> SET <packed-pairs>
+     *
+     * NOTES:
+     * - The method allows any number of arguments and any types of value types.
+     * - Values types 'std::sting' and 'char*' will be additionally escaped and
+     *   surrounded by single quotes as required by the SQL standard.
+     * - The column names will be surrounded with back-tick quotes.
+     *
+     * For example, the following call:
+     *   @code
+     *     sqlPackPairs (
+     *       std::make_pair ("col1", "st'r"),
+     *       std::make_pair ("col2", std::string("c")),
+     *       std:;make_pair ("col3", 123));
+     *   @code
+     * will produce the following output:
+     *   @code
+     *     `col1`='st\'r',`col2`="c",`col3`=123
+     *   @code
+     *
+     * @param tableName      - the name of a table
+     * @param whereCondition - the optional condition for selecting rows to be updated 
+     * @param Fargs          - the variadic list of values to be inserted
+     */
+    template <typename...Targs>
+    std::string sqlPackPairs (Targs... Fargs) const {
+        std::string sql;
+        sqlPackPair (sql, Fargs...);
+        return sql;
+    }
+    
+    /**
+     * Generate an SQL statement for updating select values of table rows
+     * where the optional condition is met. Fields to be updated and their new
+     * values are passed into the method as variadic list of std::pair objects.
+     *
+     *   UPDATE <table> SET <packed-pairs> [WHERE <condition>]
+     * 
+     * NOTES:
+     * - The method allows any number of arguments and any types of value types.
+     * - Values types 'std::sting' and 'char*' will be additionally escaped and
+     *   surrounded by single quotes as required by the SQL standard.
+     * - The column names will be surrounded with back-tick quotes.
+     *
+     * @param tableName      - the name of a table
+     * @param whereCondition - the optional condition for selecting rows to be updated 
+     * @param Fargs          - the variadic list of values to be inserted
+     */
+    template <typename...Targs>
+    std::string sqlSimpleUpdateQuery (std::string const& tableName,
+                                      std::string const& condition,
+                                      Targs...           Fargs) const {
+        std::ostringstream qs;
+        qs  << "UPDATE " << sqlId (tableName)       << " "
+            << "SET "    << sqlPackPairs (Fargs...) << " "
+            << (condition.empty() ? "" : "WHERE " + condition);
+        return qs.str();
+    }
 
     /**
      * Return the status of the transaction
