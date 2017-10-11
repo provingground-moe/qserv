@@ -36,7 +36,7 @@
 
 // Qserv headers
 
-#include "replica_core/ReplicaDeleteInfo.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/WorkerRequest.h"
 
 // Forward declarations
@@ -46,7 +46,6 @@
 namespace lsst {
 namespace qserv {
 namespace replica_core {
-
 
 /**
   * Class WorkerDeleteRequest represents a context and a state of replica deletion
@@ -90,7 +89,7 @@ public:
     unsigned int       chunk    () const { return _chunk; }
 
     /// Return extended status of the request
-    const ReplicaDeleteInfo& deleteInfo () const { return _deleteInfo; }
+    const ReplicaInfo& replicaInfo () const { return _replicaInfo; }
 
     /**
      * This method implements the virtual method of the base class
@@ -118,7 +117,7 @@ protected:
     unsigned int _chunk;
 
     /// Extended status of the replica deletion request
-    ReplicaDeleteInfo _deleteInfo;
+    ReplicaInfo _replicaInfo;
 };
 
 

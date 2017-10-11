@@ -35,6 +35,7 @@
 #include "lsst/log/Log.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
+#include "replica_core/DatabaseServices.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -152,6 +153,16 @@ Request::start (std::shared_ptr<Controller> const& controller,
 
     // Let a subclass to proceed with its own sequence of actions
     startImpl();
+
+    _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
+}
+
+std::string const&
+Request::jobId () const {
+    if (_state == State::CREATED)
+        throw std::logic_error (
+            "the Job Id is not available because the request has not started yet");
+    return _jobId;
 }
 
 void
@@ -203,6 +214,8 @@ Request::finish (ExtendedState extendedState) {
     // callback on the completion of the operation.
     _performance.setUpdateFinish();
 
+    _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
+
     // This will invoke user-defined notifiers (if any)
     notify();
 }
@@ -233,6 +246,8 @@ Request::setState (State         state,
 
     _state         = state;
     _extendedState = extendedState;
+
+    _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
 }
     
 }}} // namespace lsst::qserv::replica_core

@@ -390,7 +390,7 @@ DeleteRequestC::analyze (proto::ReplicationResponseDelete const& message) {
     // Always extract extended data regardless of the completion status
     // reported by the worker service.
 
-    _responseData = ReplicaDeleteInfo(&(message.delete_info()));
+    _responseData = ReplicaInfo(&(message.replica_info()));
 
     switch (message.status()) {
  
@@ -624,7 +624,7 @@ DeleteRequestM::analyze (bool                                                 su
         // Always extract extended data regardless of the completion status
         // reported by the worker service.
     
-        _responseData = ReplicaDeleteInfo(&(message.delete_info()));
+        _responseData = ReplicaInfo(&(message.replica_info()));
     
         switch (message.status()) {
      

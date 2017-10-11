@@ -66,7 +66,6 @@
 #include "proto/replication.pb.h"
 #include "replica_core/Common.h"
 #include "replica_core/Messenger.h"
-#include "replica_core/ReplicaDeleteInfo.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/RequestConnection.h"
 #include "replica_core/RequestMessenger.h"
@@ -85,7 +84,7 @@ namespace replica_core {
 
 struct StatusReplicationRequestPolicy {
 
-    static const char* requestTypeName () { return "STATUS::REPLICA_CREATE"; } 
+    static const char* requestTypeName () { return "REQUEST_STATUS:REPLICA_CREATE"; } 
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_CREATE; }
@@ -100,22 +99,22 @@ struct StatusReplicationRequestPolicy {
 
 struct StatusDeleteRequestPolicy {
 
-    static const char* requestTypeName () { return "STATUS::REPLICA_DELETE"; }
+    static const char* requestTypeName () { return "REQUEST_STATUS:REPLICA_DELETE"; }
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }
 
     using responseMessageType = lsst::qserv::proto::ReplicationResponseDelete;
-    using responseDataType    = ReplicaDeleteInfo;
+    using responseDataType    = ReplicaInfo;
 
     static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
-        data = responseDataType(&(msg.delete_info()));
+        data = responseDataType(&(msg.replica_info()));
     }
 };
 
 struct StatusFindRequestPolicy {
 
-    static const char* requestTypeName () { return "STATUS::REPLICA_FIND"; }
+    static const char* requestTypeName () { return "REQUEST_STATUS:REPLICA_FIND"; }
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND; }
@@ -130,7 +129,7 @@ struct StatusFindRequestPolicy {
 
 struct StatusFindAllRequestPolicy {
 
-    static const char* requestTypeName () { return "STATUS::REPLICA_FIND_ALL"; }
+    static const char* requestTypeName () { return "REQUEST_STATUS:REPLICA_FIND_ALL"; }
 
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL; }

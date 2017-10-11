@@ -185,12 +185,17 @@ CREATE  TABLE IF NOT EXISTS `request` (
   `name` ENUM ('REPLICA_CREATE',
                'REPLICA_DELETE') NOT NULL ,
 
-  `begin_time`  BIGINT UNSIGNED NOT NULL ,
-  `end_time`    BIGINT UNSIGNED NOT NULL ,
 
   `status`         VARCHAR(255) NOT NULL ,
   `ext_status`     VARCHAR(255) DEFAULT '' ,
   `server_status`  VARCHAR(255) DEFAULT '' ,
+
+  `c_create_time`   BIGINT UNSIGNED NOT NULL ,
+  `c_start_time`    BIGINT UNSIGNED NOT NULL ,
+  `w_receive_time`  BIGINT UNSIGNED NOT NULL ,
+  `w_start_time`    BIGINT UNSIGNED NOT NULL ,
+  `w_finish_time`   BIGINT UNSIGNED NOT NULL ,
+  `c_finish_time`   BIGINT UNSIGNED NOT NULL ,
 
   PRIMARY KEY (`id`) ,
 

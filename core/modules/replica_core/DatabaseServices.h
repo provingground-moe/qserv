@@ -48,6 +48,7 @@ namespace replica_core {
 class Configuration;
 struct ControllerIdentity;
 class Job;
+class Request;
 
 /**
   * Class DatabaseServices is a high-level interface to the database services
@@ -67,6 +68,9 @@ public:
 
     /// Forward declaration for the smart reference to Job objects
     typedef std::shared_ptr<Job> Job_pointer;
+
+    /// Forward declaration for the smart reference to Request objects
+    typedef std::shared_ptr<Request> Request_pointer;
 
     /**
      * The factory method for instamtiating a proper service object based
@@ -96,12 +100,12 @@ public:
      *
      * @throws std::logic_error - if this Contoller's state is already found in a database
      */
-    virtual void saveControllerState (ControllerIdentity const& identity,
-                                      uint64_t                  startTime);
+    virtual void saveState (ControllerIdentity const& identity,
+                            uint64_t                  startTime);
 
     /**
-     * Save the state of the Job. This operation can be called many times for a particular
-     * instance of the Job.
+     * Save the state of the Job. This operation can be called many times for
+     * a particular instance of the Job.
      *
      * NOTE: The method will convert a pointer of the base class Job into
      * the final type to avoid type prolifiration through this interface.
@@ -110,7 +114,20 @@ public:
      *
      * @throw std::invalid_argument - if the actual job type won't match the expected one
      */
-    virtual void saveJobState (Job_pointer const& job);
+    virtual void saveState (Job_pointer const& job);
+
+    /**
+     * Save the state of the Request. This operation can be called many times for
+     * a particular instance of the Request.
+     *
+     * NOTE: The method will convert a pointer of the base class Request into
+     * the final type to avoid type prolifiration through this interface.
+     *
+     * @param request - a pointer to a Request object
+     *
+     * @throw std::invalid_argument - if the actual request type won't match the expected one
+     */
+    virtual void saveState (Request_pointer const& request);
 
 protected:
 

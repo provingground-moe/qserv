@@ -273,30 +273,33 @@ Connection::escape (std::string const& inStr) const {
     return std::string (outStr.get(), outLen) ;
 }
 
-void
+Connection::pointer
 Connection::begin () {
     assertTransaction (false);
     execute ("BEGIN");
     _inTransaction = true;
+    return shared_from_this();
 }
 
 
-void
+Connection::pointer
 Connection::commit () {
     assertTransaction (true);
     execute ("COMMIT");
     _inTransaction = false;
+    return shared_from_this();
 }
 
 
-void
+Connection::pointer
 Connection::rollback () {
     assertTransaction (true);
     execute ("ROLLBACK");
     _inTransaction = false;
+    return shared_from_this();
 }
 
-void
+Connection::pointer
 Connection::execute (std::string const& query) {
 
     static std::string const context = "Connection::execute()  ";
@@ -350,7 +353,9 @@ Connection::execute (std::string const& query) {
             _columnNames.push_back(std::string(_fields[i].name));
         }
     }
+    return shared_from_this();
 }
+
 bool
 Connection::hasResult () const {
     return _mysql && _res;
