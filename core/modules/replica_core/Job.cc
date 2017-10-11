@@ -108,7 +108,7 @@ Job::start () {
 
     _beginTime = PerformanceUtils::now();
 
-    _controller->serviceProvider().databaseServices()->saveJobState (shared_from_this());
+    _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
 }
 
 void
@@ -131,7 +131,7 @@ Job::cancel () {
 
     notify();
 
-    _controller->serviceProvider().databaseServices()->saveJobState (shared_from_this());
+    _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
 }
 
 void
@@ -153,7 +153,7 @@ Job::setState (State         state,
     if (_state == State::FINISHED)
         _endTime = PerformanceUtils::now();
 
-    _controller->serviceProvider().databaseServices()->saveJobState (shared_from_this());
+    _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
 }
     
 }}} // namespace lsst::qserv::replica_core

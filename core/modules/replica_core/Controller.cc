@@ -271,7 +271,7 @@ Controller::Controller (ServiceProvider& serviceProvider)
 
     LOGS(_log, LOG_LVL_DEBUG, "Controller  identity=" << _identity);
 
-    serviceProvider.databaseServices()->saveControllerState (_identity, _startTime);
+    serviceProvider.databaseServices()->saveState (_identity, _startTime);
 }
 
 Controller::~Controller () {

@@ -121,19 +121,19 @@ public:
      * @param fileInfo - a collection of info on each file of the chunk
      */
     ReplicaInfo (Status                    status,
-                 const std::string        &worker,
-                 const std::string        &database,
+                 std::string const&        worker,
+                 std::string const&        database,
                  unsigned int              chunk,
-                 const FileInfoCollection &fileInfo);
+                 FileInfoCollection const& fileInfo);
 
     /// Construct from a protobuf object
-    explicit ReplicaInfo (const lsst::qserv::proto::ReplicationReplicaInfo *info);
+    explicit ReplicaInfo (lsst::qserv::proto::ReplicationReplicaInfo const* info);
 
     /// Copy constructor
-    ReplicaInfo (ReplicaInfo const &ri);
+    ReplicaInfo (ReplicaInfo const& ri);
 
     /// Assignment operator
-    ReplicaInfo& operator= (ReplicaInfo const &ri);
+    ReplicaInfo& operator= (ReplicaInfo const& ri);
 
     /// Destructor
     ~ReplicaInfo ();
@@ -142,12 +142,12 @@ public:
 
     Status status () const { return _status; }
 
-    const std::string& worker   () const { return _worker; }
-    const std::string& database () const { return _database; }
+    std::string const& worker   () const { return _worker; }
+    std::string const& database () const { return _database; }
 
     unsigned int chunk () const { return _chunk; }
 
-    const FileInfoCollection& fileInfo () const { return _fileInfo; }
+    FileInfoCollection const& fileInfo () const { return _fileInfo; }
 
     /**
      * Return a protobuf object
@@ -155,12 +155,12 @@ public:
      * OWNERSHIP TRANSFER NOTE: this method allocates a new object and
      * returns a pointer along with its ownership.
      */
-    lsst::qserv::proto::ReplicationReplicaInfo *info () const;
+    lsst::qserv::proto::ReplicationReplicaInfo* info () const;
 
     /**
      * Initialize a protobuf object from the object's state
      */
-    void setInfo (lsst::qserv::proto::ReplicationReplicaInfo *info) const;
+    void setInfo (lsst::qserv::proto::ReplicationReplicaInfo* info) const;
 
 private:
 
@@ -178,7 +178,7 @@ private:
 
 
 /// Overloaded streaming operator for type ReplicaInfo
-std::ostream& operator<< (std::ostream &os, const ReplicaInfo &ri);
+std::ostream& operator<< (std::ostream& os, ReplicaInfo const& ri);
 
 
 /// The collection type for transient representations
@@ -186,7 +186,7 @@ typedef std::vector<ReplicaInfo> ReplicaInfoCollection;
 
 
 /// Overloaded streaming operator for type ReplicaInfoCollection
-std::ostream& operator<< (std::ostream &os, const ReplicaInfoCollection &ric);
+std::ostream& operator<< (std::ostream& os, ReplicaInfoCollection const& ric);
 
 
 }}} // namespace lsst::qserv::replica_core

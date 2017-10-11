@@ -50,7 +50,7 @@
 
 #include "proto/replication.pb.h"
 #include "replica_core/Common.h"
-#include "replica_core/ReplicaDeleteInfo.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/RequestConnection.h"
 #include "replica_core/RequestMessenger.h"
 
@@ -100,7 +100,7 @@ public:
 
     /// Return request-specific extended data reported upon a successfull
     /// completion of the request
-    ReplicaDeleteInfo const& responseData () const { return _responseData; }
+    ReplicaInfo const& responseData () const { return _responseData; }
 
     /**
      * Create a new request with specified parameters.
@@ -206,7 +206,7 @@ private:
     callback_type _onFinish;
 
     /// Extended informationon on a status of the operation
-    ReplicaDeleteInfo _responseData;
+    ReplicaInfo _responseData;
 };
 
 
@@ -245,7 +245,7 @@ public:
 
     /// Return request-specific extended data reported upon a successfull
     /// completion of the request
-    ReplicaDeleteInfo const& responseData () const { return _responseData; }
+    ReplicaInfo const& responseData () const { return _responseData; }
 
     /**
      * Create a new request with specified parameters.
@@ -335,7 +335,7 @@ private:
     callback_type _onFinish;
 
     /// Extended informationon on a status of the operation
-    ReplicaDeleteInfo _responseData;
+    ReplicaInfo _responseData;
 };
 
 

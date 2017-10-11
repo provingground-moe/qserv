@@ -33,6 +33,7 @@
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/DatabaseServicesMySQL.h"
+#include "replica_core/Job.h"
 
 
 namespace {
@@ -76,15 +77,20 @@ DatabaseServices::~DatabaseServices () {
 }
 
 void
-DatabaseServices::saveControllerState (ControllerIdentity const& identity,
-                                       uint64_t                  startTime) {
+DatabaseServices::saveState (ControllerIdentity const& identity,
+                             uint64_t                  startTime) {
 
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::saveControllerState");
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::saveState[Controller]");
 }
 
 void
-DatabaseServices::saveJobState (Job_pointer const& job) {
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::saveJobState");
+DatabaseServices::saveState (Job_pointer const& job) {
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::saveState[Job::" << job->type() << "]");
+}
+
+void
+DatabaseServices::saveState (Request_pointer const& request) {
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::saveState[Request::" << request->type() << "]");
 }
 
 }}} // namespace lsst::qserv::replica_core

@@ -191,6 +191,13 @@ public:
                 std::string const&                 jobId="");
 
     /**
+     * Return an identifier if the owning job (if the request has started)
+     *
+     * @throws std::logic_error - if the request hasn't started
+     */
+    std::string const& jobId () const;
+
+    /**
      * Explicitly cancel any asynchronous operation(s) and put the object into
      * the FINISHED::CANCELLED state. This operation is very similar to the
      * timeout-based request expiration, except it's requested explicitly.

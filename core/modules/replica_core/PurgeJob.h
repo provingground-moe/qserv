@@ -60,7 +60,7 @@ struct PurgeJobResult {
 
     /// Results reported by workers upon the successfull completion
     /// of the corresponidng requests
-    std::list<ReplicaDeleteInfo> replicas;
+    std::list<ReplicaInfo> replicas;
 
     /// Per-worker flags indicating if the corresponidng replica retreival
     /// request succeeded.

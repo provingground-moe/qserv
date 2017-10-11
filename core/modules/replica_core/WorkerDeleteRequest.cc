@@ -87,9 +87,15 @@ WorkerDeleteRequest::WorkerDeleteRequest (ServiceProvider   &serviceProvider,
                        id,
                        priority),
 
-        _database   (database),
-        _chunk      (chunk),
-        _deleteInfo () {
+        _database (database),
+        _chunk    (chunk),
+
+        // This status will be returned in all contexts
+        _replicaInfo (ReplicaInfo::Status::NOT_FOUND,
+                      worker,
+                      database,
+                      chunk,
+                      ReplicaInfo::FileInfoCollection{}) {
 }
 
 WorkerDeleteRequest::~WorkerDeleteRequest () {
@@ -102,11 +108,7 @@ WorkerDeleteRequest::execute () {
         << "  db: "    << database()
         << "  chunk: " << chunk());
 
-    const bool complete = WorkerRequest::execute();
-    if (complete) {
-        _deleteInfo = ReplicaDeleteInfo(100.0);     // simulate 100% completed
-    }
-    return complete;
+    return WorkerRequest::execute();
 }
 
 
@@ -201,11 +203,6 @@ WorkerDeleteRequestPOSIX::execute () {
         setStatus(STATUS_FAILED, errorContext.extendedStatus);
         return true;
     }
-
-    // For now (before finalizing the progress reporting protocol) just return
-    // the perentage of the total number of files removed
- 
-    _deleteInfo = ReplicaDeleteInfo(100. * numFilesDeleted / files.size());
 
     setStatus(STATUS_SUCCEEDED);
     return true;

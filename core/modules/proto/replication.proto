@@ -313,11 +313,6 @@ message ReplicationResponseReplicate {
     optional ReplicationReplicaInfo replica_info = 5;
 }
 
-message ReplicationReplicaDeleteInfo {
-
-    /// The progress of the operation (YET TO BE REFINED)
-    required float progress = 1;
-}
 message ReplicationResponseDelete {
 
     /// The completion status of the operation
@@ -335,7 +330,7 @@ message ReplicationResponseDelete {
     optional ReplicationPerformance target_performance = 4;
     
     /// Extended information on the request
-    optional ReplicationReplicaDeleteInfo delete_info = 5;
+    optional ReplicationReplicaInfo replica_info = 5;
 }
 
 message ReplicationResponseFind {

@@ -39,8 +39,8 @@ namespace {
 
 /// State translation
 
-void setInfoImpl (const lsst::qserv::replica_core::ReplicaInfo &ri,
-                  proto::ReplicationReplicaInfo                *info) {
+void setInfoImpl ( lsst::qserv::replica_core::ReplicaInfo const& ri,
+                  proto::ReplicationReplicaInfo*                 info) {
 
     switch (ri.status()) {
         case lsst::qserv::replica_core::ReplicaInfo::Status::NOT_FOUND:  info->set_status(proto::ReplicationReplicaInfo::NOT_FOUND);  break;
@@ -48,14 +48,15 @@ void setInfoImpl (const lsst::qserv::replica_core::ReplicaInfo &ri,
         case lsst::qserv::replica_core::ReplicaInfo::Status::INCOMPLETE: info->set_status(proto::ReplicationReplicaInfo::INCOMPLETE); break;
         case lsst::qserv::replica_core::ReplicaInfo::Status::COMPLETE:   info->set_status(proto::ReplicationReplicaInfo::COMPLETE);   break;
         default:
-            throw std::logic_error("unhandled status " + lsst::qserv::replica_core::ReplicaInfo::status2string(ri.status()) +
-                                   " in ReplicaInfo::setInfoImpl()");
+            throw std::logic_error (
+                        "unhandled status " + lsst::qserv::replica_core::ReplicaInfo::status2string(ri.status()) +
+                        " in ReplicaInfo::setInfoImpl()");
     }
     info->set_worker  (ri.worker  ());
     info->set_database(ri.database());
     info->set_chunk   (ri.chunk   ());
-    for (const auto &fi: ri.fileInfo()) {
-        lsst::qserv::proto::ReplicationFileInfo *fileInfo = info->add_file_info_many();
+    for (auto const& fi: ri.fileInfo()) {
+        lsst::qserv::proto::ReplicationFileInfo* fileInfo = info->add_file_info_many();
         fileInfo->set_name                (fi.name);
         fileInfo->set_size                (fi.size);
         fileInfo->set_cs                  (fi.cs);
@@ -91,11 +92,11 @@ ReplicaInfo::ReplicaInfo ()
         _fileInfo () {
 }
 
-ReplicaInfo::ReplicaInfo (Status             status,
-                          const std::string &worker,
-                          const std::string &database,
-                          unsigned int       chunk,
-                          const ReplicaInfo::FileInfoCollection &fileInfo)
+ReplicaInfo::ReplicaInfo (Status                                 status,
+                          std::string const&                     worker,
+                          std::string const&                     database,
+                          unsigned int                           chunk,
+                          ReplicaInfo::FileInfoCollection const& fileInfo)
     :   _status   (status),
         _worker   (worker),
         _database (database),
@@ -103,7 +104,7 @@ ReplicaInfo::ReplicaInfo (Status             status,
         _fileInfo (fileInfo) {
 }
 
-ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {
+ReplicaInfo::ReplicaInfo (proto::ReplicationReplicaInfo const* info) {
 
     switch (info->status()) {
         case proto::ReplicationReplicaInfo::NOT_FOUND:  this->_status = NOT_FOUND;  break;
@@ -111,17 +112,18 @@ ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {
         case proto::ReplicationReplicaInfo::INCOMPLETE: this->_status = INCOMPLETE; break;
         case proto::ReplicationReplicaInfo::COMPLETE:   this->_status = COMPLETE;   break;
         default:
-            throw std::logic_error("unhandled status " + proto::ReplicationReplicaInfo_ReplicaStatus_Name(info->status()) +
-                                   " in ReplicaInfo::ReplicaInfo()");
+            throw std::logic_error (
+                        "unhandled status " + proto::ReplicationReplicaInfo_ReplicaStatus_Name(info->status()) +
+                        " in ReplicaInfo::ReplicaInfo()");
     }
     _worker   = info->worker();
     _database = info->database();
     _chunk    = info->chunk();
 
     for (int idx = 0; idx < info->file_info_many_size(); ++idx) {
-        const proto::ReplicationFileInfo &fileInfo = info->file_info_many(idx);
+        proto::ReplicationFileInfo const& fileInfo = info->file_info_many(idx);
         _fileInfo.emplace_back (
-            FileInfo({
+            FileInfo ({
                 fileInfo.name(),
                 fileInfo.size(),
                 fileInfo.cs(),
@@ -133,8 +135,7 @@ ReplicaInfo::ReplicaInfo (const proto::ReplicationReplicaInfo *info) {
     }
 }
 
-
-ReplicaInfo::ReplicaInfo (ReplicaInfo const &ri) {
+ReplicaInfo::ReplicaInfo (ReplicaInfo const& ri) {
     _status   = ri._status;
     _worker   = ri._worker;
     _database = ri._database;
@@ -144,7 +145,7 @@ ReplicaInfo::ReplicaInfo (ReplicaInfo const &ri) {
 
 
 ReplicaInfo&
-ReplicaInfo::operator= (ReplicaInfo const &ri) {
+ReplicaInfo::operator= (ReplicaInfo const& ri) {
     if (this != &ri) {
         _status   = ri._status;
         _worker   = ri._worker;
@@ -162,18 +163,18 @@ ReplicaInfo::~ReplicaInfo () {
 
 proto::ReplicationReplicaInfo*
 ReplicaInfo::info () const {
-    proto::ReplicationReplicaInfo *ptr = new proto::ReplicationReplicaInfo;
+    proto::ReplicationReplicaInfo* ptr = new proto::ReplicationReplicaInfo;
     ::setInfoImpl(*this, ptr);
     return ptr;
 }
 
 void
-ReplicaInfo::setInfo (lsst::qserv::proto::ReplicationReplicaInfo *info) const {
+ReplicaInfo::setInfo (lsst::qserv::proto::ReplicationReplicaInfo* info) const {
     ::setInfoImpl(*this, info);
 }
 
 std::ostream&
-operator<< (std::ostream& os, const ReplicaInfo::FileInfo &fi) {
+operator<< (std::ostream& os, ReplicaInfo::FileInfo const& fi) {
     static float const MB =  1024.0*1024.0;
     static float const millisec_per_sec = 1000.0;
     float const sizeMB  = fi.size / MB;
@@ -194,22 +195,22 @@ operator<< (std::ostream& os, const ReplicaInfo::FileInfo &fi) {
 }
 
 std::ostream&
-operator<< (std::ostream& os, const ReplicaInfo &ri) {
+operator<< (std::ostream& os, ReplicaInfo const& ri) {
     os  << "ReplicaInfo"
         << " status: " << ReplicaInfo::status2string(ri.status())
         << " worker: "   << ri.worker()
         << " database: " << ri.database()
         << " chunk: "    << ri.chunk()
         << " files: ";
-    for (const auto &fi: ri.fileInfo())
+    for (auto const& fi: ri.fileInfo())
         os << "\n   (" << fi << ")";
     return os;
 }
 
 std::ostream&
-operator<< (std::ostream &os, const ReplicaInfoCollection &ric) {
+operator<< (std::ostream &os, ReplicaInfoCollection const& ric) {
     os << "ReplicaInfoCollection";
-    for (const auto &ri : ric)
+    for (auto const& ri: ric)
         os << "\n (" << ri << ")";
     return os;
 }

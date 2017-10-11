@@ -500,33 +500,106 @@ public:
     /**
      * Start the transaction
      *
+     * @return                  - a smart pointer to self to allow chaned calles.
      * @throws std::logic_error - if the transaction was already been started
      */
-    void begin ();
+    Connection::pointer begin ();
 
     /**
      * Commit the transaction
      *
+     * @return                  - a smart pointer to self to allow chaned calles.
      * @throws std::logic_error - if the transaction was not started
      */
-    void commit ();
+    Connection::pointer commit ();
 
     /**
      * Rollback the transaction
      *
+     * @return                  - a smart pointer to self to allow chaned calles.
      * @throws std::logic_error - if the transaction was not started
      */
-    void rollback ();
+    Connection::pointer rollback ();
 
     /**
      * Execute the specified query and initialize object context to allow
      * a result set extraction.
      *
+     * @param  query                 - a query to be execured
+     * @return                       - the smart pointer to self to allow chaned calles.
      * @throws std::invalid_argument - for empty query strings
      * @throws DuplicateKeyError     - for attempts to insert rows with duplicate keys
      * @throws Error                 - for any other MySQL specific errors
      */
-    void execute (std::string const& query);
+    Connection::pointer execute (std::string const& query);
+
+    /**
+     * Execute an SQL statement for inserting a new row into a table based
+     * on a variadic list of values to be inserted. The method allows
+     * any number of arguments and any types of argument values. Arguments of
+     * types 'std::sting' and 'char*' will be additionally escaped and surrounded by
+     * single quotes as required by the SQL standard.
+     *
+     * The effect:
+     *
+     *   INSERT INTO <table> VALUES (<packed-values>)
+     * 
+     * ATTENTION: the method will *NOT* start a transaction, neither it will
+     * commit the one in the end. Transaction management is a responsibility
+     * of a caller of the method.
+     *
+     * @see Connection::sqlInsertQuery()
+     *
+     * @param tableName - the name of a table
+     * @param Fargs     - the variadic list of values to be inserted
+     * 
+     * @return - the smart pointer to self to allow chaned calles.
+     * 
+     * @throws std::invalid_argument - for empty query strings
+     * @throws DuplicateKeyError     - for attempts to insert rows with duplicate keys
+     * @throws Error                 - for any other MySQL specific errors
+     */
+    template <typename...Targs>
+    Connection::pointer executeInsertQuery (std::string const& tableName,
+                                            Targs...           Fargs) {
+
+        return execute (sqlInsertQuery (tableName,
+                                        Fargs...));
+    }
+
+    /**
+     * Execute an SQL statement for updating select values of table rows
+     * where the optional condition is met. Fields to be updated and their new
+     * values are passed into the method as variadic list of std::pair objects.
+     *
+     * The effect:
+     *
+     *   UPDATE <table> SET <packed-pairs> [WHERE <condition>]
+     *
+     * ATTENTION: the method will *NOT* start a transaction, neither it will
+     * commit the one in the end. Transaction management is a responsibility
+     * of a caller of teh method.
+     *
+     * @see Connection::sqlSimpleUpdateQuery()
+     *
+     * @param tableName      - the name of a table
+     * @param whereCondition - the optional condition for selecting rows to be updated 
+     * @param Fargs          - the variadic list of column-value pairs to be updated
+     * 
+     * @return - the smart pointer to self to allow chaned calles.
+     * 
+     * @throws std::invalid_argument - for empty query strings
+     * @throws Error                 - for any MySQL specific errors
+     */
+    template <typename...Targs>
+    Connection::pointer executeSimpleUpdateQuery (std::string const& tableName,
+                                                  std::string const& condition,
+                                                  Targs...           Fargs) {
+
+        return execute (sqlSimpleUpdateQuery (tableName,
+                                              condition,
+                                              Fargs...));
+    }
 
     /**
      * Returns 'true' if the last successfull query returned a result set

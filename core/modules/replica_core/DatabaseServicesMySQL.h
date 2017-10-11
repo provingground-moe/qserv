@@ -75,17 +75,41 @@ public:
     /**
      * Implement the corresponding method defined in the base class
      *
-     * @see DatabaseServices::saveControllerState()
+     * @see DatabaseServices::saveState()
      */
-    void saveControllerState (ControllerIdentity const& identity,
-                              uint64_t                  startTime) override;
+    void saveState (ControllerIdentity const& identity,
+                    uint64_t                  startTime) override;
 
     /**
      * Implement the corresponding method defined in the base class
      *
-     * @see DatabaseServices::saveJobState()
+     * @see DatabaseServices::saveState()
      */
-    void saveJobState (Job_pointer const& job) override;
+    void saveState (Job_pointer const& job) override;
+
+    /**
+     * Implement the corresponding method defined in the base class
+     *
+     * @see DatabaseServices::saveState()
+     */
+    virtual void saveState (Request_pointer const& request);
+
+private:
+
+    /**
+     * Update the status of replica in the corresponidng tables. ctual actions
+     * would depend on a type of the request:
+     *
+     * - the replica info (if present) will be removed for the REPLICA_CREATE and
+     *   the coresponding Status* and Stop* requests.
+     *
+     * - the replica info will be either inserted or updated (if already present
+     *   in the database) for he REPLICA_DELETE and the coresponding Status*
+     *   and Stop* requests.
+     *
+     * @param request - a request to be inspected
+     */
+    void saveReplicaInfo (Request_pointer const& request);
 
 protected:
 
