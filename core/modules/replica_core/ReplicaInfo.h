@@ -150,6 +150,24 @@ public:
     FileInfoCollection const& fileInfo () const { return _fileInfo; }
 
     /**
+     * Return the minimum start time of the file migration operations of any
+     * file associated with the replica.
+     *
+     * NOTE: the method is allowed to return 0 if the ReplicaInfo was not
+     * produced in a context of creating a new replica.
+     */
+    uint64_t beginTransferTime () const;
+
+    /**
+     * Return the maximum end time of the file migration operations of any
+     * file associated with the replica.
+     *
+     * NOTE: the method is allowed to return 0 if the ReplicaInfo was not
+     * produced in a context of creating a new replica.
+     */
+    uint64_t endTransferTime () const;
+
+    /**
      * Return a protobuf object
      *
      * OWNERSHIP TRANSFER NOTE: this method allocates a new object and

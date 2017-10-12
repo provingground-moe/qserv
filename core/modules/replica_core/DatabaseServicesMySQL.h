@@ -33,6 +33,7 @@
 
 #include "replica_core/DatabaseMySQL.h"
 #include "replica_core/DatabaseServices.h"
+#include "replica_core/ReplicaInfo.h"
 
 // Forward declarations
 
@@ -97,7 +98,7 @@ public:
 private:
 
     /**
-     * Update the status of replica in the corresponidng tables. ctual actions
+     * Update the status of replica in the corresponidng tables. Actual actions
      * would depend on a type of the request:
      *
      * - the replica info (if present) will be removed for the REPLICA_CREATE and
@@ -107,9 +108,18 @@ private:
      *   in the database) for he REPLICA_DELETE and the coresponding Status*
      *   and Stop* requests.
      *
-     * @param request - a request to be inspected
+     * @param info - a replica to be added/updated or deleted
      */
-    void saveReplicaInfo (Request_pointer const& request);
+    void saveReplicaInfo (ReplicaInfo const& info);
+
+    /**
+     * Update the status of multiple replicas
+     *
+     * @see DatabaseServiceseMySQL::saveReplicaInfo()
+     *
+     * @param infoCollection - a collection of replicas
+     */
+    void saveReplicaInfoCollection (ReplicaInfoCollection const& infoCollection);
 
 protected:
 

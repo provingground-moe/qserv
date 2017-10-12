@@ -220,9 +220,9 @@ CREATE  TABLE IF NOT EXISTS `request_replica_create` (
 
   `request_id`  VARCHAR(255) NOT NULL ,
 
-  `worker`  VARCHAR(255) NOT NULL ,
-  `db`      VARCHAR(255) NOT NULL ,
-  `chunk`   INT UNSIGNED NOT NULL ,
+  `worker`   VARCHAR(255) NOT NULL ,
+  `database` VARCHAR(255) NOT NULL ,
+  `chunk`    INT UNSIGNED NOT NULL ,
   
   `source_worker`  VARCHAR(255) NOT NULL ,
 
@@ -247,9 +247,9 @@ CREATE  TABLE IF NOT EXISTS `request_replica_delete` (
 
   `request_id`  VARCHAR(255) NOT NULL ,
 
-  `worker`  VARCHAR(255) NOT NULL ,
-  `db`      VARCHAR(255) NOT NULL ,
-  `chunk`   INT UNSIGNED NOT NULL ,
+  `worker`   VARCHAR(255) NOT NULL ,
+  `database` VARCHAR(255) NOT NULL ,
+  `chunk`    INT UNSIGNED NOT NULL ,
 
   CONSTRAINT `request_replica_delete_fk_1`
     FOREIGN KEY (`request_id` )
@@ -269,14 +269,14 @@ CREATE  TABLE IF NOT EXISTS `replica` (
 
   `id`  INT NOT NULL AUTO_INCREMENT ,
 
-  `worker`  VARCHAR(255) NOT NULL ,
-  `db`      VARCHAR(255) NOT NULL ,
-  `chunk`   INT UNSIGNED NOT NULL ,
+  `worker`   VARCHAR(255) NOT NULL ,
+  `database` VARCHAR(255) NOT NULL ,
+  `chunk`    INT UNSIGNED NOT NULL ,
 
   `create_time`  BIGINT UNSIGNED NOT NULL ,
 
   PRIMARY KEY           (`id`) ,
-  UNIQUE  KEY `replica` (`worker`,`db`,`chunk`)
+  UNIQUE  KEY `replica` (`worker`,`database`,`chunk`)
 )
 ENGINE = InnoDB;
 

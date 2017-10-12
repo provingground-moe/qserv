@@ -92,6 +92,19 @@ struct InvalidTypeError
 };
 
 /**
+ * Instances of this exception class are thrown on empty result sets
+ * by some methods when a query is supposed to return at least one row.
+ */
+struct EmptyResultSetError
+    :   Error {
+
+    /// Constructor   
+    explicit EmptyResultSetError (std::string const& what)
+        :   Error (what) {
+    }
+};
+
+/**
  * This structure encapsulates connection parameters to a MySQL server
  */
 struct ConnectionParams {
@@ -370,6 +383,10 @@ public:
         return qs.str();
     }
 
+    /// Return a string representing a built-in MySQL function for the last
+    /// insert auto-incremented identifier: LAST_INSERT_ID()
+    std::string sqlLastInsertId () const { return "LAST_INSERT_ID()"; }
+
     // ----------------------------------------------------------------------
     // Generator: [`column` = value [, `column` = value [, ... ]]]
     // Where values of the string types will be surrounded with single quotes
@@ -646,6 +663,60 @@ public:
      *          in the result set.
      */
     bool next (Row& row);
+
+    /**
+     * The convenience method is for executing a query from which a single value
+     * will be extracted (typically a PK). Please, read the notes below.
+     *
+     * NOTES:
+     * - by default the method requires a result set to have 0 or 1 rows.
+     *   If the result set has more than one row exception std::logic_error
+     *   will be thrown.
+     *
+     * - the previously mentioned requirement can be relaxed by setting
+     *   a value of the optional parameter 'noMoreThanOne' to 'false'.
+     *   In that case a value from the very first row will be extracted.
+     *
+     * - if a result set is empty the method will throw EmptyResultSetError
+     *
+     * - if the field has 'NULL' the method will return 'false'
+     *
+     * - if the conversion to a proposed type will fail the method will
+     *   throw InvalidTypeError
+     *
+     * @param query - a query to be executed
+     * @param col   - the name of a columnt from which to exctract a value
+     * @param val   - a value to be set (unless the field contains NULL)
+     * @return 'true' if the value is not NULL
+     */
+    template <typename T>
+    bool executeSingleValueSelect (std::string const& query,
+                                   std::string const& col,
+                                   T&                 val,
+                                   bool               noMoreThanOne=true) {
+        execute (query);
+        if (!hasResult ())
+            throw EmptyResultSetError (
+                "DatabaseMySQL::executeSingleValueSelect()  result set is empty");
+
+        bool isNotNull;
+        size_t numRows = 0;
+
+        Row row;
+        while (next(row)) {
+
+            // Only the very first row matters
+            if (!numRows) isNotNull = row.get<T> (col, val);
+
+            // have to read the rest of the result set to avoid problems with the MySQL
+            // protocol
+            ++numRows;
+        }
+        if ((1 == numRows) || !noMoreThanOne) return isNotNull;
+
+        throw std::logic_error (
+                "DatabaseMySQL::executeSingleValueSelect()  result set has more than 1 row");        
+    }
 
 private:
 

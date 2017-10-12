@@ -26,6 +26,7 @@
 
 // System headers
 
+#include <algorithm>
 #include <stdexcept>
 
 // Qserv headers
@@ -160,6 +161,19 @@ ReplicaInfo::operator= (ReplicaInfo const& ri) {
 ReplicaInfo::~ReplicaInfo () {
 }
 
+uint64_t
+ReplicaInfo::beginTransferTime () const {
+    uint64_t t = 0;
+    for (auto const& f: in _fileInfo) t = std::min(t, f.beginTransferTime);
+    return t;
+}
+
+uint64_t
+ReplicaInfo::endTransferTime () const {
+    uint64_t t = 0;
+    for (auto const& f: in _fileInfo) t = std::max(t, f.endTransferTime);
+    return t;
+}
 
 proto::ReplicationReplicaInfo*
 ReplicaInfo::info () const {
