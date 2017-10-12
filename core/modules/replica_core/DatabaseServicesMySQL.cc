@@ -156,8 +156,9 @@ typename T::pointer safeAssign (Job::pointer const& job) {
 /**
  * Return the replica info data from eligible requests
  *
- * @param ptr - a request to be analyzed
- * @return a reference to the ReplicaInfo collection
+ * @param request - a request to be analyzed
+ * @return        - a reference to the replica info object
+ *
  * @throw std::logic_error for unsupported requsts
  */
 ReplicaInfo const& replicaInfo (Request::pointer const& request) {
@@ -166,13 +167,59 @@ ReplicaInfo const& replicaInfo (Request::pointer const& request) {
 
     if ("REPLICA_CREATE"                == request->type()) return safeAssign<ReplicationRequest>      (request)->responseData();
     if ("REPLICA_DELETE"                == request->type()) return safeAssign<DeleteRequest>           (request)->responseData();
+    if ("REPLICA_FIND"                  == request->type()) return safeAssign<FindRequest>             (request)->responseData();
     if ("REQUEST_STATUS:REPLICA_CREATE" == request->type()) return safeAssign<StatusReplicationRequest>(request)->responseData();
     if ("REQUEST_STATUS:REPLICA_DELETE" == request->type()) return safeAssign<StatusDeleteRequest>     (request)->responseData();
+    if ("REQUEST_STATUS:REPLICA_FIND"   == request->type()) return safeAssign<StatusFindRequest>       (request)->responseData();
     if ("REQUEST_STOP:REPLICA_CREATE"   == request->type()) return safeAssign<StopReplicationRequest>  (request)->responseData();
     if ("REQUEST_STOP:REPLICA_DELETE"   == request->type()) return safeAssign<StopDeleteRequest>       (request)->responseData();
+    if ("REQUEST_STOP:REPLICA_FIND"     == request->type()) return safeAssign<StopFindRequest>         (request)->responseData();
 
     throw std::logic_error (context + "operation is not supported for request id: " +
                             request->id() + ", type: " + request->type());
+}
+
+/**
+ * Return a collection of the replica info data from eligible requests
+ *
+ * @param request - a request to be analyzed
+ * @return        - a reference to the replica info collection object
+ *
+ * @throw std::logic_error for unsupported requsts
+ */
+ReplicaInfoCollection const& replicaInfoCollection (Request::pointer const& request) {
+
+    std::string const& context = "DatabaseServicesMySQL::replicaInfoCollection  ";
+
+    if ("REPLICA_FIND_ALL"                == request->type()) return safeAssign<FindAllRequest>       (request)->responseData();
+    if ("REQUEST_STATUS:REPLICA_FIND_ALL" == request->type()) return safeAssign<StatusFindAllRequest> (request)->responseData();
+    if ("REQUEST_STOP:REPLICA_FIND_ALL"   == request->type()) return safeAssign<StopFindAllRequest>   (request)->responseData();
+
+    throw std::logic_error (context + "operation is not supported for request id: " +
+                            request->id() + ", type: " + request->type());
+}
+
+/**
+ * Update a value of a file attribute in the 'replica_file' table
+ * for the corresponding replica.
+ *
+ * @param conn      - a database connector
+ * @param replicaId - a replica of a file
+ * @param col       - the column name (teh attribue to be updated)
+ * @param val       - a new value of the attribute
+ */
+template <typename T>
+void updateFileAttr (Connection::pointer const& conn,
+                     uint64_t                   replicaId,
+                     std::string const&         file,
+                     std::string const&         col,
+                     T const&                   val) {
+    if (!val) return;
+    conn->execute (
+        "UPDATE "  + conn->sqlId    ("replica_file") +
+        "    SET " + conn->sqlEqual (col,          val) +
+        "  WHERE " + conn->sqlEqual ("replica_id", replicaId) +
+        "    AND " + conn->sqlEqual ("name",       file);
 }
 
 } /// namespace
@@ -317,8 +364,10 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
     LOCK_GUARD;
 
     // The implementation of the procedure varies quite significally depending on
-    // a family of a request. The original (target) requests are processed normally,
-    // via the usual protocol: try-insert-if-duplicate-then-update.
+    // a family of a request.
+    
+    // The original (target) requests are processed normally, via the usual
+    // protocol: try-insert-if-duplicate-then-update.
 
     if (::found_in (request->type(), {"REPLICA_CREATE",
                                       "REPLICA_DELETE"})) {
@@ -361,7 +410,7 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
                     ptr->chunk());
             }
             if (request->extendedState() == Request::ExtendedState::SUCCESS) {
-                saveReplicaInfo (request);
+                saveReplicaInfo (::replicaInfo (request));
             }
             _conn->commit ();
     
@@ -384,7 +433,7 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
                     std::make_pair  ("c_finish_time",  performance.c_finish_time));
 
                 if (request->extendedState() == Request::ExtendedState::SUCCESS) {
-                    saveReplicaInfo (request);
+                    saveReplicaInfo (::replicaInfo (request));
                 }
                 _conn->commit ();
     
@@ -437,10 +486,50 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
                     std::make_pair  ("w_finish_time",  targetPerformance.w_finish_time));
 
                 if (request->extendedState() == Request::ExtendedState::SUCCESS) {
-                    saveReplicaInfo (request);
+                    saveReplicaInfo (::replicaInfo (request));
                 }
                 _conn->commit ();
     
+            } catch (database::mysql::Error const& ex) {
+                if (_conn->inTransaction()) _conn->rollback();
+                throw std::runtime_error (context + "failed to save the state, exception: " + ex.what());
+            }
+        }
+    }
+
+    // Save, update or delete replica info according to a report stored within
+    // these requests.
+
+    if (::found_in (request->type(), {"REPLICA_FIND",
+                                      "REQUEST_STATUS:REPLICA_FIND",
+                                      "REQUEST_STOP:REPLICA_FIND"})) {
+
+        if (request->state()         == Request::State::FINISHED &&
+            request->extendedState() == Request::ExtendedState::SUCCESS) {
+            try {
+                _conn->begin ();
+                saveReplicaInfo (::replicaInfo (request));
+                _conn->commit ();
+            } catch (database::mysql::Error const& ex) {
+                if (_conn->inTransaction()) _conn->rollback();
+                throw std::runtime_error (context + "failed to save the state, exception: " + ex.what());
+            }
+        }
+    }
+
+    // Save, update or delete replica info according to a report stored within
+    // these requests.
+
+    if (::found_in (request->type(), {"REPLICA_FIND_ALL",
+                                      "REQUEST_STATUS:REPLICA_FIND_ALL",
+                                      "REQUEST_STOP:REPLICA_FIND_ALL"})) {
+
+        if (request->state()         == Request::State::FINISHED &&
+            request->extendedState() == Request::ExtendedState::SUCCESS) {
+            try {
+                _conn->begin ();
+                saveReplicaInfoCollection (::replicaInfoCollection (request));
+                _conn->commit ();
             } catch (database::mysql::Error const& ex) {
                 if (_conn->inTransaction()) _conn->rollback();
                 throw std::runtime_error (context + "failed to save the state, exception: " + ex.what());
@@ -451,38 +540,103 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
 }
 
 void
-DatabaseServicesMySQL::saveReplicaInfo (Request::pointer const& request) {
+DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
 
-    static std::string const context = "DatabaseServicesMySQL::saveReplica  ";
+    static std::string const context = "DatabaseServicesMySQL::saveReplicaInfo  ";
 
-    ReplicaInfo const& info = ::replicaInfo (request);
+    try {
 
-    // Inserting/updating replica info
+        // Try inserting if the replica is complete. Delete otherwise.
 
-    if (::found_in (request->type(), {"REPLICA_CREATE",
-                                      "REQUEST_STATUS:REPLICA_CREATE",
-                                      "REQUEST_STOP:REPLICA_CREATE"})) {
-        try {
-            
-            // Insert
+        if (info.status() == ReplicaInfo::Status::COMPLETE) {
 
-        } catch (database::mysql::DuplicateKeyError const&) {
+            _conn->executeInsertQuery (
+                "replica",
+                "NULL",                         /* the auto-incremented PK */
+                info.worker,
+                info.database,
+                info.chunk,
+                info.beginTransferTime (),
+                info.endTransferTime   ());
 
-            // Update
+            for (auto const& f: info.fileInfo()) {
+                _conn->executeInsertQuery (
+                    "replica_file",
+                    _conn->sqlLastInsertId(),   /* FK -> PK of the above insert row */
+                    f.name,
+                    f.cs,
+                    f.size
+                    f.endTransferTime);
+            }
+
+        } else {
+
+            // This query will also cascade delete the relevant file entries
+            // See details in the schema.
+            _conn->execute (
+                "DELETE FROM " + _conn->sqlId    ("replica") +
+                "  WHERE " +     _conn->sqlEqual ("worker",   info.worker) +
+                "    AND " +     _conn->sqlEqual ("database", info.database) +
+                "    AND " +     _conn->sqlEqual ("chunk",    info.chunk));
         }
-        return;
-    }
-    
-    // Delteting repica info from the database
 
-    if (::found_in (request->type(), {"REPLICA_DELETE",
-                                      "REQUEST_STATUS:REPLICA_DELETE",
-                                      "REQUEST_STOP:REPLICA_DELETE"})) {        
-        // Delete (if any)
+    } catch (database::mysql::DuplicateKeyError const&) {
 
-        return;
+        // Update the info in case if something has changed (recomputed control/check sum,
+        // changed file size, the files migrated, etc.)
+
+        // Get the PK
+        //
+        // NOTES: in theory this method may throw exceptions. Though, this shouldn't
+        //        be happening in this context. We got here because the PK in question
+        //        already exists.
+
+        uint64_t replicaId;
+        if (!_conn->executeSingleValueSelect (
+                "SELECT id FROM " + _conn->sqlId    ("replica") +
+                "  WHERE " +        _conn->sqlEqual ("worker",   info.worker) +
+                "    AND " +        _conn->sqlEqual ("database", info.database) +
+                "    AND " +        _conn->sqlEqual ("chunk",    info.chunk)),
+                "id",
+                replicaId))
+            throw std::logic_error (context + "NULL value is not allowed in this context");
+
+        uint64_t const endTransferTime = info.endTransferTime ();
+        if (endTransferTime)
+            _conn->executeSimpleUpdateQuery (
+                "replica",
+                _conn->sqlEqual ("id",          replicaId),
+                std::make_pair  ("create_time", endTransferTime));
+
+        for (auto const& f: info.fileInfo()) {
+            ::updateFileAttr (_conn, replicaId, f.name, "begin_create_time", f.beginTransferTime);
+            ::updateFileAttr (_conn, replicaId, f.name, "end_create_time",   f.endTransferTime);
+            ::updateFileAttr (_conn, replicaId, f.name, "cs",                f.cs);
+            ::updateFileAttr (_conn, replicaId, f.name, "size",              f.size);
+        }
     }
 }
 
+void
+DatabaseServicesMySQL::saveReplicaInfoCollection (ReplicaInfoCollection const& infoCollection) {
+
+    // TODO: the current implementation of the algorithm won't properly
+    // handle replicas which disappear w/o being reported by the Replication
+    // system. This may leave "dead" replica entries witin this database.
+    //
+    // This problem may have different solutions (some of them may be at a higher
+    // level than this code, for example by launching a single replica-lookup
+    // scanners to check for a presence of each replica, recompute their size,
+    // control/check sum).
+    //
+    // Another solution might be to assume that each collection passed into this
+    // carries a complete snapshot of all replicas which exist in a well defined
+    // scope (worker + database, or just worker). In that case it would be possible
+    // to cross-check all replicas exising within the database vs what's reported
+    // in the input collection and take proper actions if needed.
+
+    for (auto const& info: infoCollection)
+        saveReplicaInfo (info);
+}
 
 }}} // namespace lsst::qserv::replica_core
