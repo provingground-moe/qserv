@@ -37,6 +37,8 @@
 #include "replica_core/Controller.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindAllJob.h"
+#include "replica_core/FindAllRequest.h"
+#include "replica_core/FindRequest.h"
 #include "replica_core/PurgeJob.h"
 #include "replica_core/ReplicateJob.h"
 #include "replica_core/ReplicationRequest.h"
@@ -199,6 +201,9 @@ ReplicaInfoCollection const& replicaInfoCollection (Request::pointer const& requ
                             request->id() + ", type: " + request->type());
 }
 
+template <typename T> bool isEmpty (T const& val) { return !val; }
+template <>           bool isEmpty<std::string> (std::string const& val) { return val.empty(); }
+
 /**
  * Update a value of a file attribute in the 'replica_file' table
  * for the corresponding replica.
@@ -209,17 +214,17 @@ ReplicaInfoCollection const& replicaInfoCollection (Request::pointer const& requ
  * @param val       - a new value of the attribute
  */
 template <typename T>
-void updateFileAttr (Connection::pointer const& conn,
-                     uint64_t                   replicaId,
-                     std::string const&         file,
-                     std::string const&         col,
-                     T const&                   val) {
-    if (!val) return;
+void updateFileAttr (database::mysql::Connection::pointer const& conn,
+                     uint64_t           replicaId,
+                     std::string const& file,
+                     std::string const& col,
+                     T const&           val) {
+    if (isEmpty(val)) return;
     conn->execute (
         "UPDATE "  + conn->sqlId    ("replica_file") +
         "    SET " + conn->sqlEqual (col,          val) +
         "  WHERE " + conn->sqlEqual ("replica_id", replicaId) +
-        "    AND " + conn->sqlEqual ("name",       file);
+        "    AND " + conn->sqlEqual ("name",       file));
 }
 
 } /// namespace
@@ -253,7 +258,7 @@ void
 DatabaseServicesMySQL::saveState (ControllerIdentity const& identity,
                                   uint64_t                  startTime) {
 
-    static std::string const context = "DatabaseServicesMySQL::saveState[Controller]  ";
+    std::string const context = "DatabaseServicesMySQL::saveState[Controller]  ";
 
     LOGS(_log, LOG_LVL_DEBUG, context);
 
@@ -279,7 +284,7 @@ DatabaseServicesMySQL::saveState (ControllerIdentity const& identity,
 void
 DatabaseServicesMySQL::saveState (Job::pointer const& job) {
 
-    static std::string const context = "DatabaseServicesMySQL::saveState[Job::" + job->type() + "]  ";
+    std::string const context = "DatabaseServicesMySQL::saveState[Job::" + job->type() + "]  ";
 
     LOGS(_log, LOG_LVL_DEBUG, context);
 
@@ -357,7 +362,7 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
 void
 DatabaseServicesMySQL::saveState (Request::pointer const& request) {
 
-    static std::string const context = "DatabaseServicesMySQL::saveState[Request::" + request->type() + "]  ";
+    std::string const context = "DatabaseServicesMySQL::saveState[Request::" + request->type() + "]  ";
 
     LOGS(_log, LOG_LVL_DEBUG, context);
 
@@ -369,8 +374,18 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
     // The original (target) requests are processed normally, via the usual
     // protocol: try-insert-if-duplicate-then-update.
 
+
     if (::found_in (request->type(), {"REPLICA_CREATE",
                                       "REPLICA_DELETE"})) {
+        
+        // Requests which aren't associated with any job should
+        // be ignored.
+        try {
+            request->jobId();
+        } catch (std::logic_error const&) {
+            LOGS(_log, LOG_LVL_DEBUG, context << "ignoring the request with no job set, id=" << request->id());
+            return;
+        }
 
         Performance const& performance = request->performance ();
         try {
@@ -542,7 +557,7 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
 void
 DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
 
-    static std::string const context = "DatabaseServicesMySQL::saveReplicaInfo  ";
+    std::string const context = "DatabaseServicesMySQL::saveReplicaInfo  ";
 
     try {
 
@@ -553,19 +568,20 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
             _conn->executeInsertQuery (
                 "replica",
                 "NULL",                         /* the auto-incremented PK */
-                info.worker,
-                info.database,
-                info.chunk,
+                info.worker   (),
+                info.database (),
+                info.chunk    (),
                 info.beginTransferTime (),
                 info.endTransferTime   ());
 
             for (auto const& f: info.fileInfo()) {
                 _conn->executeInsertQuery (
                     "replica_file",
-                    _conn->sqlLastInsertId(),   /* FK -> PK of the above insert row */
+                    database::mysql::Function::LAST_INSERT_ID,  /* FK -> PK of the above insert row */
                     f.name,
                     f.cs,
-                    f.size
+                    f.size,
+                    f.beginTransferTime,
                     f.endTransferTime);
             }
 
@@ -575,9 +591,9 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
             // See details in the schema.
             _conn->execute (
                 "DELETE FROM " + _conn->sqlId    ("replica") +
-                "  WHERE " +     _conn->sqlEqual ("worker",   info.worker) +
-                "    AND " +     _conn->sqlEqual ("database", info.database) +
-                "    AND " +     _conn->sqlEqual ("chunk",    info.chunk));
+                "  WHERE " +     _conn->sqlEqual ("worker",   info.worker   ()) +
+                "    AND " +     _conn->sqlEqual ("database", info.database ()) +
+                "    AND " +     _conn->sqlEqual ("chunk",    info.chunk    ()));
         }
 
     } catch (database::mysql::DuplicateKeyError const&) {
@@ -594,19 +610,26 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
         uint64_t replicaId;
         if (!_conn->executeSingleValueSelect (
                 "SELECT id FROM " + _conn->sqlId    ("replica") +
-                "  WHERE " +        _conn->sqlEqual ("worker",   info.worker) +
-                "    AND " +        _conn->sqlEqual ("database", info.database) +
-                "    AND " +        _conn->sqlEqual ("chunk",    info.chunk)),
+                "  WHERE " +        _conn->sqlEqual ("worker",   info.worker   ()) +
+                "    AND " +        _conn->sqlEqual ("database", info.database ()) +
+                "    AND " +        _conn->sqlEqual ("chunk",    info.chunk    ()),
                 "id",
                 replicaId))
             throw std::logic_error (context + "NULL value is not allowed in this context");
+
+        uint64_t const beginTransferTime = info.beginTransferTime ();
+        if (beginTransferTime)
+            _conn->executeSimpleUpdateQuery (
+                "replica",
+                _conn->sqlEqual ("id",                replicaId),
+                std::make_pair  ("begin_create_time", beginTransferTime));
 
         uint64_t const endTransferTime = info.endTransferTime ();
         if (endTransferTime)
             _conn->executeSimpleUpdateQuery (
                 "replica",
-                _conn->sqlEqual ("id",          replicaId),
-                std::make_pair  ("create_time", endTransferTime));
+                _conn->sqlEqual ("id",              replicaId),
+                std::make_pair  ("end_create_time", endTransferTime));
 
         for (auto const& f: info.fileInfo()) {
             ::updateFileAttr (_conn, replicaId, f.name, "begin_create_time", f.beginTransferTime);

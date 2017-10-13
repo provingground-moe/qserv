@@ -164,14 +164,15 @@ ReplicaInfo::~ReplicaInfo () {
 uint64_t
 ReplicaInfo::beginTransferTime () const {
     uint64_t t = 0;
-    for (auto const& f: in _fileInfo) t = std::min(t, f.beginTransferTime);
+    for (auto const& f: _fileInfo)
+        t = t ? std::min(t, f.beginTransferTime) : f.beginTransferTime;
     return t;
 }
 
 uint64_t
 ReplicaInfo::endTransferTime () const {
     uint64_t t = 0;
-    for (auto const& f: in _fileInfo) t = std::max(t, f.endTransferTime);
+    for (auto const& f: _fileInfo) t = std::max(t, f.endTransferTime);
     return t;
 }
 

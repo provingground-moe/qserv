@@ -210,6 +210,15 @@ Row::getDataCell (std::string const& columnName) const {
     return _index2cell.at(_name2index.at(columnName));
 }
 
+/////////////////////////////////////////////
+//                Function                 //
+/////////////////////////////////////////////
+
+Function const Function::LAST_INSERT_ID {"LAST_INSERT_ID()"};
+
+Function::Function (std::string const& name_)
+    :   name (name_) {
+}
 
 ///////////////////////////////////////////////
 //                Connection                 //
