@@ -186,8 +186,8 @@ CREATE  TABLE IF NOT EXISTS `request` (
                'REPLICA_DELETE') NOT NULL ,
 
 
-  `status`         VARCHAR(255) NOT NULL ,
-  `ext_status`     VARCHAR(255) DEFAULT '' ,
+  `state`          VARCHAR(255) NOT NULL ,
+  `ext_state`      VARCHAR(255) DEFAULT '' ,
   `server_status`  VARCHAR(255) DEFAULT '' ,
 
   `c_create_time`   BIGINT UNSIGNED NOT NULL ,
@@ -273,7 +273,8 @@ CREATE  TABLE IF NOT EXISTS `replica` (
   `database` VARCHAR(255) NOT NULL ,
   `chunk`    INT UNSIGNED NOT NULL ,
 
-  `create_time`  BIGINT UNSIGNED NOT NULL ,
+  `begin_create_time`  BIGINT UNSIGNED NOT NULL ,
+  `end_create_time`    BIGINT UNSIGNED NOT NULL ,
 
   PRIMARY KEY           (`id`) ,
   UNIQUE  KEY `replica` (`worker`,`database`,`chunk`)

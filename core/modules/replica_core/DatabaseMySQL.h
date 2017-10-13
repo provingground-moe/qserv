@@ -264,6 +264,31 @@ private:
 };
 
 /**
+ * An abstraction for SQL functions which needs to be processed differently
+ * than ordinary values of string types. There won't be escape processing or
+ * extra quotes of any kind added to the function name strings.
+ */
+struct Function {
+    
+    /// The full SQL name of the function as it shoudl appear
+    /// within queries. This name will be extracted by the corresponding
+    /// query generators.
+    std::string name;
+
+    // ---------------------------------------------    
+    // Predefined functions which have no parameters
+
+    /// Return a reference onto the SQL function object
+    static Function const LAST_INSERT_ID;
+
+    // -------------------------------------
+    // For others use the normal constructor
+
+    /// The constructor
+    explicit Function (std::string const& name_);
+};
+
+/**
  * Class Connection provides the main API to the database.
  */
 class Connection
@@ -318,6 +343,7 @@ public:
     T           sqlValue (T const&           val) const { return val; }
     std::string sqlValue (std::string const& val) const { return "'" + escape (val) + "'"; }
     std::string sqlValue (char const*        val) const { return sqlValue (std::string(val)); }
+    std::string sqlValue (Function const&    val) const { return val.name; }
 
     // Generator: ([value [, value [, ... ]]])
     // Where values of the string types will be surrounded with single quotes
@@ -463,7 +489,7 @@ public:
      *     sqlPackPairs (
      *       std::make_pair ("col1", "st'r"),
      *       std::make_pair ("col2", std::string("c")),
-     *       std:;make_pair ("col3", 123));
+     *       std::make_pair ("col3", 123));
      *   @code
      * will produce the following output:
      *   @code
@@ -706,7 +732,7 @@ public:
         while (next(row)) {
 
             // Only the very first row matters
-            if (!numRows) isNotNull = row.get<T> (col, val);
+            if (!numRows) isNotNull = row.get (col, val);
 
             // have to read the rest of the result set to avoid problems with the MySQL
             // protocol
