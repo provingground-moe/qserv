@@ -31,7 +31,6 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ErrorReporting.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -125,7 +124,7 @@ FindAllJob::startImpl () {
 
     auto self = shared_from_base<FindAllJob>();
 
-    for (auto const& worker: _controller->serviceProvider().config().workers()) {
+    for (auto const& worker: _controller->serviceProvider().config()->workers()) {
         _requests.push_back (
             _controller->findAllReplicas (
                 worker,

@@ -186,58 +186,6 @@ private:
 typedef WorkerFindAllRequestPOSIX WorkerFindAllRequestFS;
 
 
-/**
-  * Class WorkerFindAllRequestX provides an actual implementation for
-  * the replicas lookup using XRootD.
-  */
-class WorkerFindAllRequestX
-    :   public WorkerFindAllRequest {
-
-public:
-
-    /// Pointer to self
-    typedef std::shared_ptr<WorkerFindAllRequestX> pointer;
-
-    /**
-     * Static factory method is needed to prevent issue with the lifespan
-     * and memory management of instances created otherwise (as values or via
-     * low-level pointers).
-     */
-    static pointer create (ServiceProvider   &serviceProvider,
-                           std::string const& worker,
-                           std::string const& id,
-                           int                priority,
-                           std::string const& database);
-
-    // Default construction and copy semantics are proxibited
-
-    WorkerFindAllRequestX () = delete;
-    WorkerFindAllRequestX (WorkerFindAllRequestX const&) = delete;
-    WorkerFindAllRequestX& operator= (WorkerFindAllRequestX const&) = delete;
-
-    /// Destructor
-    ~WorkerFindAllRequestX () override;
-
-    /**
-     * This method implements the virtual method of the base class
-     *
-     * @see WorkerRequest::execute
-     */
-    bool execute () override;
-
-private:
-
-    /**
-     * The normal constructor of the class.
-     */
-    WorkerFindAllRequestX (ServiceProvider   &serviceProvider,
-                           std::string const& worker,
-                           std::string const& id,
-                           int                priority,
-                           std::string const& database);
-};
-
-
 }}} // namespace lsst::qserv::replica_core
 
 #endif // LSST_QSERV_REPLICA_CORE_WORKERFINDALLREQUEST_H

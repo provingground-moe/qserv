@@ -31,7 +31,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/Performance.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerProcessor.h"
@@ -139,7 +138,7 @@ WorkerServerConnection::WorkerServerConnection (ServiceProvider         &service
 
         _bufferPtr (
             std::make_shared<ProtocolBuffer>(
-                serviceProvider.config().requestBufferSizeBytes()))
+                serviceProvider.config()->requestBufferSizeBytes()))
 {}
 
 WorkerServerConnection::~WorkerServerConnection () {

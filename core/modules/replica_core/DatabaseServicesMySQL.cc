@@ -33,7 +33,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindAllJob.h"
@@ -74,7 +73,7 @@ bool found_in (std::string const&              val,
 /**
  * Return 'true' if the specified state is found in a collection.
  * 
- * Typical usage:
+ * Typical use:
  * @code
  * bool yesFound = found_in (Request::ExtendedState::SUCCESS, {
  *                           Request::ExtendedState::SUCCESS,
@@ -234,7 +233,7 @@ namespace lsst {
 namespace qserv {
 namespace replica_core {
 
-DatabaseServicesMySQL::DatabaseServicesMySQL (Configuration& configuration)
+DatabaseServicesMySQL::DatabaseServicesMySQL (Configuration::pointer const& configuration)
     :   DatabaseServices (configuration) {
 
     // Pull database info from the configuration and prepare
@@ -242,11 +241,11 @@ DatabaseServicesMySQL::DatabaseServicesMySQL (Configuration& configuration)
 
     database::mysql::ConnectionParams params;
 
-    params.host     = configuration.databaseHost     ();
-    params.port     = configuration.databasePort     ();
-    params.user     = configuration.databaseUser     ();
-    params.password = configuration.databasePassword ();
-    params.database = configuration.databaseName     ();
+    params.host     = configuration->databaseHost     ();
+    params.port     = configuration->databasePort     ();
+    params.user     = configuration->databaseUser     ();
+    params.password = configuration->databasePassword ();
+    params.database = configuration->databaseName     ();
 
     _conn = database::mysql::Connection::open (params);
 }
@@ -578,6 +577,7 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
                 _conn->executeInsertQuery (
                     "replica_file",
                     database::mysql::Function::LAST_INSERT_ID,  /* FK -> PK of the above insert row */
+                 // database::mysql::Function("LAST_INSERT_ID()"),
                     f.name,
                     f.cs,
                     f.size,

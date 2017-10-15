@@ -33,7 +33,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/FileClient.h"
 #include "replica_core/FileUtils.h"
 #include "replica_core/Performance.h"
@@ -224,9 +223,9 @@ WorkerReplicationRequestPOSIX::execute () {
     //   files, checking for folders and files, renaming files, creating folders, etc.)
     //   are guarded by acquering LOCK_DATA_FOLDER where it's needed.
 
-    WorkerInfo   const& inWorkerInfo  = _serviceProvider.config().workerInfo  (sourceWorker());
-    WorkerInfo   const& outWorkerInfo = _serviceProvider.config().workerInfo  (worker());
-    DatabaseInfo const& databaseInfo  = _serviceProvider.config().databaseInfo(database());
+    WorkerInfo   const& inWorkerInfo  = _serviceProvider.config()->workerInfo  (sourceWorker());
+    WorkerInfo   const& outWorkerInfo = _serviceProvider.config()->workerInfo  (worker());
+    DatabaseInfo const& databaseInfo  = _serviceProvider.config()->databaseInfo(database());
 
     fs::path const inDir  = fs::path(inWorkerInfo.dataDir)  / database();
     fs::path const outDir = fs::path(outWorkerInfo.dataDir) / database();
@@ -460,16 +459,16 @@ WorkerReplicationRequestFS::WorkerReplicationRequestFS (
                 chunk,
                 sourceWorker),
 
-        _inWorkerInfo  (_serviceProvider.config().workerInfo  (sourceWorker)),
-        _outWorkerInfo (_serviceProvider.config().workerInfo  (worker)),
-        _databaseInfo  (_serviceProvider.config().databaseInfo(database)),
+        _inWorkerInfo  (_serviceProvider.config()->workerInfo  (sourceWorker)),
+        _outWorkerInfo (_serviceProvider.config()->workerInfo  (worker)),
+        _databaseInfo  (_serviceProvider.config()->databaseInfo(database)),
 
         _initialized   (false),
         _files         (FileUtils::partitionedFiles (_databaseInfo, chunk)),
 
         _tmpFilePtr    (nullptr),
         _buf           (0),
-        _bufSize       (serviceProvider.config().workerFsBufferSizeBytes()) {
+        _bufSize       (serviceProvider.config()->workerFsBufferSizeBytes()) {
 }
 
 WorkerReplicationRequestFS::~WorkerReplicationRequestFS () {
@@ -937,60 +936,6 @@ WorkerReplicationRequestFS::releaseResources() {
     }
 }
 
-////////////////////////////////////////////////////////////////////
-///////////////////// WorkerReplicationRequestX ////////////////////
-////////////////////////////////////////////////////////////////////
-
-WorkerReplicationRequestX::pointer
-WorkerReplicationRequestX::create (
-        ServiceProvider&   serviceProvider,
-        std::string const& worker,
-        std::string const& id,
-        int                priority,
-        std::string const& database,
-        unsigned int       chunk,
-        std::string const& sourceWorker) {
-
-    return WorkerReplicationRequestX::pointer (
-        new WorkerReplicationRequestX (
-                serviceProvider,
-                worker,
-                id,
-                priority,
-                database,
-                chunk,
-                sourceWorker));
-}
-
-WorkerReplicationRequestX::WorkerReplicationRequestX (
-        ServiceProvider&   serviceProvider,
-        std::string const& worker,
-        std::string const& id,
-        int                priority,
-        std::string const& database,
-        unsigned int       chunk,
-        std::string const& sourceWorker)
-
-    :   WorkerReplicationRequest (
-                serviceProvider,
-                worker,
-                id,
-                priority,
-                database,
-                chunk,
-                sourceWorker) {
-}
-
-WorkerReplicationRequestX::~WorkerReplicationRequestX () {
-}
-
-bool
-WorkerReplicationRequestX::execute () {
-
-    // TODO: provide the actual implementation instead of the dummy one.
-
-    return WorkerReplicationRequest::execute();
-}
 
 }}} // namespace lsst::qserv::replica_core
 

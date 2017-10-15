@@ -11,7 +11,6 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica/ReplicaFinder.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/Controller.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/RequestTracker.h"
@@ -30,7 +29,7 @@ std::string  databaseName;
 unsigned int numReplicas;
 bool         progressReport;
 bool         errorReport;
-std::string  configFileName;
+std::string  configUrl;
 
 /// Run the test
 bool test () {
@@ -42,10 +41,9 @@ bool test () {
         // Note that omFinish callbak which are activated upon a completion
         // of the requsts will be run in that Controller's thread.
 
-        rc::ConfigurationFile config  {configFileName};
-        rc::ServiceProvider   provider{config};
+        rc::ServiceProvider provider (configUrl);
 
-        rc::Controller::pointer controller = rc::Controller::create(provider);
+        rc::Controller::pointer controller = rc::Controller::create (provider);
 
         controller->run();
 
@@ -187,7 +185,7 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database> <num-replicas> [--progress-report] [--error-report] [--config=<file>]\n"
+            "  <database> <num-replicas> [--progress-report] [--error-report] [--config=<url>]\n"
             "\n"
             "Parameters:\n"
             "  <database>         - the name of a database to inspect\n"
@@ -196,14 +194,14 @@ int main (int argc, const char* const argv[]) {
             "Flags and options:\n"
             "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
             "  --error-report     - the flag triggering detailed report on failed requests\n"
-            "  --config           - the name of the configuration file.\n"
-            "                       [ DEFAULT: replication.cfg ]\n");
+            "  --config           - a configuration URL (a configuration file or a set of the database\n"
+            "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
         ::databaseName   = parser.parameter<std::string>(1);
         ::numReplicas    = parser.parameter<int>        (2);
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");
-        ::configFileName = parser.option   <std::string>("config", "replication.cfg");
+        ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");
 
     } catch (std::exception &ex) {
         return 1;

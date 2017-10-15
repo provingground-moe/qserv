@@ -32,7 +32,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/FileUtils.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -174,8 +173,8 @@ WorkerFindAllRequestPOSIX::execute () {
     LOGS(_log, LOG_LVL_DEBUG, context() << "execute"
         << "  database: " << database());
 
-    WorkerInfo   const& workerInfo    = _serviceProvider.config().workerInfo  (worker());
-    DatabaseInfo const& databaseInfo  = _serviceProvider.config().databaseInfo(database());
+    WorkerInfo   const& workerInfo    = _serviceProvider.config()->workerInfo  (worker());
+    DatabaseInfo const& databaseInfo  = _serviceProvider.config()->databaseInfo(database());
 
     // Scan the data directory to find all files which match the expected pattern(s)
     // and group them by their chunk number
@@ -266,55 +265,6 @@ WorkerFindAllRequestPOSIX::execute () {
     setStatus(STATUS_SUCCEEDED);
     return true;
 }
-
-
-////////////////////////////////////////////////////////////////
-///////////////////// WorkerFindAllRequestX ////////////////////
-////////////////////////////////////////////////////////////////
-
-WorkerFindAllRequestX::pointer
-WorkerFindAllRequestX::create (
-        ServiceProvider&   serviceProvider,
-        std::string const& worker,
-        std::string const& id,
-        int                priority,
-        std::string const& database) {
-
-    return WorkerFindAllRequestX::pointer (
-        new WorkerFindAllRequestX (
-                serviceProvider,
-                worker,
-                id,
-                priority,
-                database));
-}
-
-WorkerFindAllRequestX::WorkerFindAllRequestX (
-        ServiceProvider&   serviceProvider,
-        std::string const& worker,
-        std::string const& id,
-        int                priority,
-        std::string const& database)
-
-    :   WorkerFindAllRequest (
-            serviceProvider,
-            worker,
-            id,
-            priority,
-            database) {
-}
-
-WorkerFindAllRequestX::~WorkerFindAllRequestX () {
-}
-
-bool
-WorkerFindAllRequestX::execute () {
-
-    // TODO: provide the actual implementation instead of the dummy one.
-
-    return WorkerRequest::execute();
-}
-
 
 }}} // namespace lsst::qserv::replica_core
 

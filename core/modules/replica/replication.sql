@@ -8,7 +8,7 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL' ;
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `controller` ;
 
-CREATE  TABLE IF NOT EXISTS `controller` (
+CREATE TABLE IF NOT EXISTS `controller` (
 
   `id`  VARCHAR(255) NOT NULL ,
 
@@ -27,7 +27,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `job` ;
 
-CREATE  TABLE IF NOT EXISTS `job` (
+CREATE TABLE IF NOT EXISTS `job` (
 
   `id`             VARCHAR(255) NOT NULL ,
   `controller_id`  VARCHAR(255) NOT NULL ,
@@ -63,7 +63,7 @@ ENGINE = InnoDB;
 --
 DROP TABLE IF EXISTS `job_replicate` ;
 
-CREATE  TABLE IF NOT EXISTS `job_replicate` (
+CREATE TABLE IF NOT EXISTS `job_replicate` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
@@ -86,7 +86,7 @@ ENGINE = InnoDB;
 --
 DROP TABLE IF EXISTS `job_purge` ;
 
-CREATE  TABLE IF NOT EXISTS `job_purge` (
+CREATE TABLE IF NOT EXISTS `job_purge` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
@@ -109,7 +109,7 @@ ENGINE = InnoDB;
 --
 DROP TABLE IF EXISTS `job_rebalance` ;
 
-CREATE  TABLE IF NOT EXISTS `job_rebalance` (
+CREATE TABLE IF NOT EXISTS `job_rebalance` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
@@ -132,7 +132,7 @@ ENGINE = InnoDB;
 --
 DROP TABLE IF EXISTS `job_delete_worker` ;
 
-CREATE  TABLE IF NOT EXISTS `job_delete_worker` (
+CREATE TABLE IF NOT EXISTS `job_delete_worker` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
@@ -156,7 +156,7 @@ ENGINE = InnoDB;
 --
 DROP TABLE IF EXISTS `job_add_worker` ;
 
-CREATE  TABLE IF NOT EXISTS `job_add_worker` (
+CREATE TABLE IF NOT EXISTS `job_add_worker` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
@@ -177,7 +177,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `request` ;
 
-CREATE  TABLE IF NOT EXISTS `request` (
+CREATE TABLE IF NOT EXISTS `request` (
 
   `id`      VARCHAR(255) NOT NULL ,
   `job_id`  VARCHAR(255) NOT NULL ,
@@ -216,7 +216,7 @@ ENGINE = InnoDB;
 --
 DROP TABLE IF EXISTS `request_replica_create` ;
 
-CREATE  TABLE IF NOT EXISTS `request_replica_create` (
+CREATE TABLE IF NOT EXISTS `request_replica_create` (
 
   `request_id`  VARCHAR(255) NOT NULL ,
 
@@ -243,7 +243,7 @@ ENGINE = InnoDB;
 --
 DROP TABLE IF EXISTS `request_replica_delete` ;
 
-CREATE  TABLE IF NOT EXISTS `request_replica_delete` (
+CREATE TABLE IF NOT EXISTS `request_replica_delete` (
 
   `request_id`  VARCHAR(255) NOT NULL ,
 
@@ -265,7 +265,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `replica` ;
 
-CREATE  TABLE IF NOT EXISTS `replica` (
+CREATE TABLE IF NOT EXISTS `replica` (
 
   `id`  INT NOT NULL AUTO_INCREMENT ,
 
@@ -287,7 +287,7 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `replica_file` ;
 
-CREATE  TABLE IF NOT EXISTS `replica_file` (
+CREATE TABLE IF NOT EXISTS `replica_file` (
 
   `replica_id`  INT NOT NULL ,
 
@@ -308,6 +308,150 @@ CREATE  TABLE IF NOT EXISTS `replica_file` (
 )
 ENGINE = InnoDB;
 
+-- --------------------------------------------------------------
+-- Table `config`
+-- --------------------------------------------------------------
+--
+-- The common parameters and defaults shared by all components
+-- of the replication system. It also provides default values
+-- for some critical parameters of the worker-side services.
+
+DROP TABLE IF EXISTS `config` ;
+
+CREATE TABLE IF NOT EXISTS `config` (
+
+  `category` VARCHAR(255) NOT NULL ,
+  `param`    VARCHAR(255) NOT NULL ,
+  `value`    VARCHAR(255) NOT NULL ,
+
+  UNIQUE  KEY (`category`,`param`)
+)
+ENGINE = InnoDB;
+
+
+-- Common parameters of all types of servers
+
+INSERT INTO `config` VALUES ('common', 'request_buf_size_bytes',     '1024');
+INSERT INTO `config` VALUES ('common', 'request_retry_interval_sec', '1');
+
+-- Controller-specific parameters
+
+INSERT INTO `config` VALUES ('controller', 'http_server_port',    '80');
+INSERT INTO `config` VALUES ('controller', 'http_server_threads', '1');
+INSERT INTO `config` VALUES ('controller', 'request_timeout_sec', '600');
+
+-- Default parameters for all workers unless overwritten in worker-specific
+-- tables
+
+INSERT INTO `config` VALUES ('worker', 'technology',                 'FS');
+INSERT INTO `config` VALUES ('worker', 'svc_port',                   '50000');
+INSERT INTO `config` VALUES ('worker', 'fs_port',                    '50001');
+INSERT INTO `config` VALUES ('worker', 'num_svc_processing_threads', '10');
+INSERT INTO `config` VALUES ('worker', 'num_fs_processing_threads',  '16');
+INSERT INTO `config` VALUES ('worker', 'fs_buf_size_bytes',          '1048576');
+INSERT INTO `config` VALUES ('worker', 'data_dir',                   '/datasets/gapon/test/replication/{worker}');
+
+-- -----------------------------------------------------
+-- Table `config_worker`
+-- -----------------------------------------------------
+--
+-- Worker-specific configuration parameters and overrides
+-- of the corresponidng default values if needed
+
+DROP TABLE IF EXISTS `config_worker` ;
+
+CREATE TABLE IF NOT EXISTS `config_worker` (
+
+  `name`         VARCHAR(255)       NOT NULL ,      -- the name of the worker
+
+  `is_enabled`   BOOLEAN            NOT NULL ,      -- is enabled for replication
+  `is_read_only` BOOLEAN            NOT NULL ,      -- a subclass of 'is_enabled' which restricts use of
+                                                    -- the worker for reading replicas. No new replicas can't be
+                                                    -- placed onto this class of workers.
+
+  `svc_host`     VARCHAR(255)       NOT NULL ,      -- the host name on which the worker server runs
+  `svc_port`     SMALLINT UNSIGNED  DEFAULT NULL ,  -- override for the global default
+
+  `fs_host`      VARCHAR(255)       NOT NULL ,      -- the host name on which the built-in FileServer runs
+  `fs_port`      SMALLINT UNSIGNED  DEFAULT NULL ,  -- override for the global default
+
+  `data_dir`     VARCHAR(255)       DEFAULT NULL ,  -- a file system path to the databases
+
+  PRIMARY KEY (`name`) ,
+
+  UNIQUE  KEY (`svc_host`, `svc_port`) ,
+  UNIQUE  KEY (`fs_host`,  `fs_port`)
+)
+ENGINE = InnoDB;
+
+
+-- Preload parameters for runnig all services on the same host
+
+INSERT INTO `config_worker` VALUES ('one',   1, 0, 'lsst-dev01', '50001', 'lsst-dev01', '50101', NULL);
+INSERT INTO `config_worker` VALUES ('two',   1, 0, 'lsst-dev01', '50002', 'lsst-dev01', '50102', NULL);
+INSERT INTO `config_worker` VALUES ('three', 1, 0, 'lsst-dev01', '50003', 'lsst-dev01', '50103', NULL);
+INSERT INTO `config_worker` VALUES ('four',  1, 0, 'lsst-dev01', '50004', 'lsst-dev01', '50104', NULL);
+INSERT INTO `config_worker` VALUES ('five',  1, 0, 'lsst-dev01', '50005', 'lsst-dev01', '50105', NULL);
+INSERT INTO `config_worker` VALUES ('six',   1, 0, 'lsst-dev01', '50006', 'lsst-dev01', '50106', NULL);
+INSERT INTO `config_worker` VALUES ('seven', 1, 0, 'lsst-dev01', '50007', 'lsst-dev01', '50107', NULL);
+
+
+-- --------------------------------------------------------------
+-- Table `config_worker_ext`
+-- --------------------------------------------------------------
+--
+-- The additional parameters overriding the defaults for individual
+-- worker services.
+
+DROP TABLE IF EXISTS `config_worker_ext` ;
+
+CREATE TABLE IF NOT EXISTS `config_worker_ext` (
+
+  `worker_name`  VARCHAR(255) NOT NULL ,
+  `param`        VARCHAR(255) NOT NULL ,
+  `value`        VARCHAR(255) NOT NULL ,
+
+  UNIQUE  KEY (`worker_name`, `param`, `value`) ,
+
+  CONSTRAINT `rconfig_worker_ext_fk_1`
+    FOREIGN KEY (`worker_name` )
+    REFERENCES `config_worker` (`name` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `config_database`
+-- -----------------------------------------------------
+--
+-- Databases and tables to be managed by the system
+
+DROP TABLE IF EXISTS `config_database` ;
+
+CREATE TABLE IF NOT EXISTS `config_database` (
+
+  `database`  VARCHAR(255)  NOT NULL ,
+  `table`     VARCHAR(255)  NOT NULL ,
+
+  `is_partitioned` BOOLEAN NOT NULL ,
+
+  UNIQUE  KEY (`database`, `table`)
+)
+ENGINE = InnoDB;
+
+
+-- Preload parameters for testing purposes
+
+INSERT INTO `config_database` VALUES ('db1', 'Object',       1);
+INSERT INTO `config_database` VALUES ('db1', 'Source',       1);
+INSERT INTO `config_database` VALUES ('db1', 'ForcedSource', 1);
+INSERT INTO `config_database` VALUES ('db1', 'Filter',       0);
+INSERT INTO `config_database` VALUES ('db2', 'Main',         1);
+INSERT INTO `config_database` VALUES ('db3', 'Object',       1);
+INSERT INTO `config_database` VALUES ('db3', 'Source',       1);
+INSERT INTO `config_database` VALUES ('db3', 'ForcedSource', 1);
 
 SET SQL_MODE=@OLD_SQL_MODE ;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS ;

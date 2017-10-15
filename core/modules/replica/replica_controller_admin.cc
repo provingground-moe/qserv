@@ -6,7 +6,6 @@
 
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/Controller.h"
 #include "replica_core/RequestTracker.h"
 #include "replica_core/ServiceManagementRequest.h"
@@ -22,7 +21,7 @@ namespace {
 std::string operation;
 bool        progressReport;
 bool        errorReport;
-std::string configFileName;
+std::string configUrl;
 
 
 /// Run the test
@@ -35,10 +34,9 @@ bool test () {
         // Note that omFinish callbak which are activated upon a completion
         // of the requsts will be run in that Controller's thread.
 
-        rc::ConfigurationFile config  {configFileName};
-        rc::ServiceProvider   provider{config};
+        rc::ServiceProvider provider (configUrl);
 
-        rc::Controller::pointer controller = rc::Controller::create(provider);
+        rc::Controller::pointer controller = rc::Controller::create (provider);
 
         controller->run();
 
@@ -52,7 +50,7 @@ bool test () {
         rc::CommonRequestTracker<rc::ServiceManagementRequestBase> tracker (std::cout,
                                                                             progressReport,
                                                                             errorReport);
-        for (auto const& worker: config.workers())
+        for (auto const& worker: provider.config()->workers())
 
             if (operation == "STATUS")
                 tracker.add (
@@ -100,7 +98,7 @@ bool test () {
         std::cout
             << "\n"
             << "WORKERS:";
-        for (auto const& worker: config.workers()) {
+        for (auto const& worker: provider.config()->workers()) {
             std::cout << " " << worker;
         }
         std::cout
@@ -168,7 +166,7 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <command> [--progress-report] [--error-report] [--config=<file>]\n"
+            "  <command> [--progress-report] [--error-report] [--config=<url>]\n"
             "\n"
             "Parameters:\n"
             "  <command>   - the name of an operation. Allowed values are listed below:\n"
@@ -182,8 +180,8 @@ int main (int argc, const char* const argv[]) {
             "Flags and options:\n"
             "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
             "  --error-report     - the flag triggering detailed report on failed requests\n"
-            "  --config           - the name of the configuration file.\n"
-            "                       [ DEFAULT: replication.cfg ]\n");
+            "  --config           - a configuration URL (a configuration file or a set of the database\n"
+            "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
         ::operation = parser.parameterRestrictedBy (1, {"STATUS",
                                                         "SUSPEND",
@@ -191,9 +189,9 @@ int main (int argc, const char* const argv[]) {
                                                          "REQUESTS",
                                                          "DRAIN"});
 
-        ::progressReport = parser.flag                  ("progress-report");
-        ::errorReport    = parser.flag                  ("error-report");
-        ::configFileName = parser.option   <std::string>("config", "replication.cfg");
+        ::progressReport = parser.flag                ("progress-report");
+        ::errorReport    = parser.flag                ("error-report");
+        ::configUrl      = parser.option<std::string> ("config", "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         return 1;

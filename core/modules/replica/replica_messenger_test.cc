@@ -8,7 +8,6 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/Controller.h"
 #include "replica_core/Messenger.h"
 #include "replica_core/MessengerConnector.h"
@@ -26,8 +25,7 @@ namespace {
 std::string workerName;
 int         numIterations;
 int         cancelIter;
-std::string configFileName;
-
+std::string configUrl;
 
 /// Run the test
 bool test () {
@@ -39,10 +37,9 @@ bool test () {
         // Note that omFinish callbak which are activated upon a completion
         // of the requsts will be run in that Controller's thread.
 
-        rc::ConfigurationFile config  {configFileName};
-        rc::ServiceProvider   provider{config};
+        rc::ServiceProvider provider (configUrl);
 
-        rc::Controller::pointer controller = rc::Controller::create(provider);
+        rc::Controller::pointer controller = rc::Controller::create (provider);
 
         controller->run();
 
@@ -63,7 +60,7 @@ bool test () {
             std::string const& id{"unique-request-id-"+std::to_string(i)};
         
             std::shared_ptr<rc::ProtocolBuffer> requestBufferPtr =
-                std::make_shared<rc::ProtocolBuffer>(config.requestBufferSizeBytes());
+                std::make_shared<rc::ProtocolBuffer>(provider.config()->requestBufferSizeBytes());
  
             requestBufferPtr->resize();
     
@@ -128,7 +125,7 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <worker> [--iterations=<number>] [--cancel=<idx>] [--config=<file>]\n"
+            "  <worker> [--iterations=<number>] [--cancel=<idx>] [--config=<url>]\n"
             "\n"
             "Parameters:\n"
             "  <worker>  - the name of a worker node"
@@ -139,13 +136,13 @@ int main (int argc, const char* const argv[]) {
             "                  an earlier made request iteration (starting from 0 and before the number\n"
             "                  of iterations)\n"
             "                  [ DEFAULT: -1]\n"
-            "  --config      - the name of the configuration file.\n"
-            "                  [ DEFAULT: replication.cfg ]\n");
+            "  --config      - a configuration URL (a configuration file or a set of the database\n"
+            "                  connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
-        ::workerName     = parser.parameter<std::string>(1);
-        ::numIterations  = parser.option   <int>        ("iterations", 1);
-        ::cancelIter     = parser.option   <int>        ("cancel",    -1);
-        ::configFileName = parser.option   <std::string>("config",     "replication.cfg");
+        ::workerName    = parser.parameter<std::string>(1);
+        ::numIterations = parser.option   <int>        ("iterations", 1);
+        ::cancelIter    = parser.option   <int>        ("cancel",    -1);
+        ::configUrl     = parser.option   <std::string>("config",     "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         return 1;

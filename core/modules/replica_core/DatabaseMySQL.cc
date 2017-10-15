@@ -29,6 +29,7 @@
 #include <boost/lexical_cast.hpp>
 #include <mysql/mysqld_error.h>
 #include <sstream>
+#include <stdexcept>
 
 // Qserv headers
 
@@ -95,20 +96,69 @@ namespace mysql {
 //                ConnectionParams                 //
 /////////////////////////////////////////////////////
 
+ConnectionParams
+ConnectionParams::parse (std::string const& params,
+                         std::string const& defaultHost,
+                         uint16_t           defaultPort,
+                         std::string const& defaultUser,
+                         std::string const& defaultPassword) {
+
+    std::string const context = "ConnectionParams::parse  ";
+
+    ConnectionParams connectionParams;
+    connectionParams.host     = defaultHost;
+    connectionParams.port     = defaultPort;
+    connectionParams.user     = defaultUser;
+    connectionParams.password = defaultPassword;
+    connectionParams.database = "";
+
+    std::stringstream is (params);
+    std::string token;
+
+    while (std::getline (is, token, ',')) {
+        std::string::size_type const pos = token.find ('=');
+        if ((pos == std::string::npos) ||   /* no '=' */
+            (pos == 0) ||                   /* no parameter name before '=' */
+            (pos + 1 >= token.size()))      /* no value after '=' */
+            throw std::invalid_argument (
+                    context + "incorrect syntax of the encoded parameters string: '" +
+                    params + "'");
+
+        std::string const param = token.substr (0, pos);    /* what's before '=' */
+        std::string const val   = token.substr (pos + 1);   /* whats after '=' */
+
+        if      ("host"     == param) connectionParams.host     = val;
+        else if ("port"     == param) connectionParams.port     = (uint16_t)std::stoul (val);
+        else if ("user"     == param) connectionParams.user     = val;
+        else if ("password" == param) connectionParams.password = val;
+        else if ("database" == param) connectionParams.database = val;
+        else throw std::invalid_argument (
+                        context + "unknown parameter '" + param + "' found in the encoded parameters string: '" +
+                        params + "'");
+    }
+    if (connectionParams.database.empty())
+        throw std::invalid_argument (
+                context + "database name not found in the encoded parameters string: '" +
+                params + "'");
+
+    LOGS(_log, LOG_LVL_DEBUG, context << connectionParams);
+    
+    return connectionParams;
+}
+
 std::string
 ConnectionParams::toString () const {
     std::ostringstream ss;
-    ss << *this;
+    if (!database.empty()) ss << (ss.str().empty() ? "" : ",") << "database=" << database;
+    if (!host    .empty()) ss << (ss.str().empty() ? "" : ",") << "host="     << host;
+    if (port)              ss << (ss.str().empty() ? "" : ",") << "port="     << port;
+    if (!user    .empty()) ss << (ss.str().empty() ? "" : ",") << "user="     << user;
+    if (!password.empty()) ss << (ss.str().empty() ? "" : ",") << "password=" << "*";
     return ss.str();
 }
 
 std::ostream& operator<< (std::ostream& os, ConnectionParams const& params) {
-    os  << "DatabaseMySQL::ConnectionParams "
-        << "(host="     << params.host
-        << " port="     << params.port
-        << " database=" << params.database
-        << " user="     << params.user
-        << " password=*****)";
+    os  << "DatabaseMySQL::ConnectionParams " << "(" << params.toString() << ")";
     return os;
 }
 

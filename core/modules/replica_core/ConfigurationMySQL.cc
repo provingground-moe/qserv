@@ -25,8 +25,50 @@
 
 // System headers
 
+#include <stdexcept>
+
 // Qserv headers
 
+namespace {
+    
+using namespace lsst::qserv::replica_core;
+
+template <typename T>
+bool tryParameter (database::mysql::Row& row,
+                   std::string const&    desiredCategory,
+                   std::string const&    desiredParam,
+                   T&                    value) {
+
+    std::string category;
+    row.get ("category", category);
+    if (desiredCategory != category) return false;
+
+    std::string param;
+    row.get ("param", param);
+    if (desiredParam != param) return false;
+
+    row.get ("value", value);
+    reurn true;
+}
+
+template <typename T>
+void readMandatoryParameter (database::mysql::Row& row,
+                             std::string const&    name,
+                             T&                    value) {
+    if (!row.get (name, value))
+        throw std::runtime_error (
+                "ConfigurationMySQL::readMandatoryParameter()  the field '" + name +
+                "' is not allowed to be NULL");
+}
+
+template <typename T>
+void readOptionalParameter  (database::mysql::Row& row,
+                             std::string const&    name,
+                             T&                    value,
+                             T const&              defaultValue) {
+    if (!row.get (name, value)) value = defaultValue;
+}
+} // namespace
 
 namespace lsst {
 namespace qserv {
@@ -44,15 +86,99 @@ ConfigurationMySQL::~ConfigurationMySQL () {
 
 std::string
 ConfigurationMySQL::configUrl () const {
-    return  "mysql:host=" + _connectionParams.host +
-            ",port="      + std::to_string(_connectionParams.port) +
-            ",database="  + _connectionParams.database +
-            ",user="      + _connectionParams.user +
-            ",password=*****";
+    return  _databaseTechnology + ":" + _connectionParams.toString();
 }
 
 void
 ConfigurationMySQL::loadConfiguration () {
+
+    std::string const context = "ConfigurationMySQL::loadConfiguration  ";
+
+    // The common parameters (if any defined) of the workers will be intialize
+    // from table 'config' and be used as defaults when reading worker-specific
+    // configurations from table 'config_worker'
+    uint16_t    commonWorkerSvcPort = Configuration::defaultWorkerSvcPort;
+    uint16_t    commonWorkerFsPort  = Configuration::defaultWorkerFsPort;
+    std::string commonWorkerDataDir = Configuration::defaultDataDir;
+
+    // Open and keep a database connection for loading other parameters
+    // from there.
+    _connection = database::mysql::Connection::open (_connectionParams);
+
+    // Read the common parameters and defaults shared by all components
+    // of the replication system. The table also provides default values
+    // for some critical parameters of the worker-side services.
+    _connection->execute ("SELECT * FROM " + _connection->sqlId ("config"));
+
+    database::mysql::Row row;
+    while (_connection->next(row)) {
+        
+        ::tryParameter (row, "common", "request_buf_size_bytes",     _requestBufferSizeBytes) ||
+        ::tryParameter (row, "common", "request_retry_interval_sec", _retryTimeoutSec) ||
+
+        ::tryParameter (row, "controller", "http_server_port",    _controllerHttpPort) ||
+        ::tryParameter (row, "controller", "http_server_threads", _controllerHttpThreads) ||
+        ::tryParameter (row, "controller", "request_timeout_sec", _controllerRequestTimeoutSec) ||
+
+        ::tryParameter (row, "worker", "technology",                 _workerTechnology) ||
+        ::tryParameter (row, "worker", "num_svc_processing_threads", _workerNumProcessingThreads) ||
+        ::tryParameter (row, "worker", "num_fs_processing_threads",  _workerNumFsProcessingThreads) ||
+        ::tryParameter (row, "worker", "fs_buf_size_bytes",          _workerFsBufferSizeBytes) ||
+        ::tryParameter (row, "worker", "svc_port",                   commonWorkerSvcPort)  ||
+        ::tryParameter (row, "worker", "fs_port",                    commonWorkerFsPort) ||
+        ::tryParameter (row, "worker", "data_dir",                   commonWorkerDataDir);
+    }
+    
+    // Read worker-specific configurations and construct WorkerInfo.
+    // Use the above retreived common parameters as defaults where applies
+    _connection->execute ("SELECT * FROM " + _connection->sqlId ("config_worker"));
+
+    database::mysql::Row row;
+    while (_connection->next(row)) {
+        WorkerInfo info;
+        ::readMandatoryParameter (row, "name",         info.name);
+        ::readMandatoryParameter (row, "is_enabled",   info.isEnabled);
+        ::readMandatoryParameter (row, "is_read_only", info.isReadOnly);
+        ::readMandatoryParameter (row, "svc_host",     info.svcHost);
+        ::readOptionalParameter  (row, "svc_port",     info.svcPort, commonWorkerSvcPort);
+        ::readMandatoryParameter (row, "fs_host",      info.fsHost);
+        ::readOptionalParameter  (row, "fs_port",      info.fsPort,  commonWorkerFsPort);
+        ::readOptionalParameter  (row, "data_dir",     info.dataDir, commonWorkerDataDir);
+
+        Configuration::translateDataDir (info.dataDir, info.name);
+
+        _workerInfo[info.name] = info;
+    }
+
+    // Read database-specific configurations and construct DatabaseInfo.
+    _connection->execute ("SELECT * FROM " + _connection->sqlId ("config_database"));
+
+    database::mysql::Row row;
+    while (_connection->next(row)) {
+
+        std::string database;
+        ::readMandatoryParameter (row, "database", database);
+        _databaseInfo[database].name = database;
+
+        std::string table;
+        ::readMandatoryParameter (row, "table", table);
+        
+        bool isPartitioned;
+        ::readMandatoryParameter (row, "is_partitioned", isPartitioned);
+        
+        if (isPartitioned) partitionedTables.push_back (table);
+        else               regularTables    .push_back (table);
+    }
+
+    // Values of these parameters are predetermined by the connection
+    // parameters passed into this object
+
+    _databaseTechnology = "mysql";
+    _databaseHost       = _connectionParams;
+    _databasePort       = _connectionParams.port;
+    _databaseUser       = _connectionParams.user;
+    _databasePassword   = _connectionParams.password;
+    _databaseName       = _connectionParams.database;
 }
 
 }}} // namespace lsst::qserv::replica_core

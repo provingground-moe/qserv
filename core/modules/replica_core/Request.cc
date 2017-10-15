@@ -33,7 +33,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/DatabaseServices.h"
 #include "replica_core/ProtocolBuffer.h"
@@ -104,13 +103,13 @@ Request::Request (ServiceProvider         &serviceProvider,
         _extendedServerStatus (ExtendedCompletionStatus::EXT_STATUS_NONE),
         _performance          (),
 
-        _bufferPtr  (new ProtocolBuffer(serviceProvider.config().requestBufferSizeBytes())),
-        _workerInfo (serviceProvider.config().workerInfo(worker)),
+        _bufferPtr  (new ProtocolBuffer(serviceProvider.config()->requestBufferSizeBytes())),
+        _workerInfo (serviceProvider.config()->workerInfo(worker)),
 
-        _timerIvalSec (serviceProvider.config().retryTimeoutSec()),
+        _timerIvalSec (serviceProvider.config()->retryTimeoutSec()),
         _timer        (io_service),
 
-        _requestExpirationIvalSec (serviceProvider.config().controllerRequestTimeoutSec()),
+        _requestExpirationIvalSec (serviceProvider.config()->controllerRequestTimeoutSec()),
         _requestExpirationTimer   (io_service) {
 
         _serviceProvider.assertWorkerIsValid(worker);

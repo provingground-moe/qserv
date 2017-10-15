@@ -27,7 +27,6 @@
 ///
 /// class WorkerDeleteRequest
 /// class WorkerDeleteRequestPOSIX
-/// class WorkerDeleteRequestX
 /// (see individual class documentation for more information)
 
 // System headers
@@ -185,59 +184,6 @@ private:
   */
 typedef WorkerDeleteRequestPOSIX WorkerDeleteRequestFS;
 
-
-/**
-  * Class WorkerDeleteRequestX provides an actual implementation for
-  * the replica deletion using XRootD.
-  */
-class WorkerDeleteRequestX
-    :   public WorkerDeleteRequest {
-
-public:
-
-    /// Pointer to self
-    typedef std::shared_ptr<WorkerDeleteRequestX> pointer;
-
-    /**
-     * Static factory method is needed to prevent issue with the lifespan
-     * and memory management of instances created otherwise (as values or via
-     * low-level pointers).
-     */
-    static pointer create (ServiceProvider   &serviceProvider,
-                           const std::string &worker,
-                           const std::string &id,
-                           int                priority,
-                           const std::string &database,
-                           unsigned int       chunk);
-
-    // Default construction and copy semantics are proxibited
-
-    WorkerDeleteRequestX () = delete;
-    WorkerDeleteRequestX (WorkerDeleteRequestX const&) = delete;
-    WorkerDeleteRequestX & operator= (WorkerDeleteRequestX const&) = delete;
-
-    /// Destructor
-    ~WorkerDeleteRequestX () override;
-
-    /**
-     * This method implements the virtual method of the base class
-     *
-     * @see WorkerDeleteRequest::execute
-     */
-    bool execute () override;
-
-private:
-
-    /**
-     * The normal constructor of the class.
-     */
-    WorkerDeleteRequestX (ServiceProvider   &serviceProvider,
-                          const std::string &worker,
-                          const std::string &id,
-                          int                priority,
-                          const std::string &database,
-                          unsigned int       chunk);
-};
 
 }}} // namespace lsst::qserv::replica_core
 

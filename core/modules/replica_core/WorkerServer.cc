@@ -30,7 +30,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerProcessor.h"
 
@@ -63,7 +62,7 @@ WorkerServer::WorkerServer (ServiceProvider      &serviceProvider,
     :   _serviceProvider {serviceProvider},
         _workerName      {workerName},
         _processor       {serviceProvider, requestFactory, workerName},
-        _workerInfo      {serviceProvider.config().workerInfo(workerName)},
+        _workerInfo      {serviceProvider.config()->workerInfo(workerName)},
         _io_service (),
         _acceptor (
             _io_service,

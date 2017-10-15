@@ -34,7 +34,6 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/Performance.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerDeleteRequest.h"
@@ -142,7 +141,7 @@ WorkerProcessor::run () {
 
     if (_state == STATE_IS_STOPPED) {
 
-        size_t const numThreads = _serviceProvider.config().workerNumProcessingThreads();
+        size_t const numThreads = _serviceProvider.config()->workerNumProcessingThreads();
         if (!numThreads) throw std::out_of_range("the number of procesisng threads can't be 0");
     
         // Create threads if needed

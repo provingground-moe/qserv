@@ -34,6 +34,7 @@
 
 // Qserv headers
 
+#include "replica_core/Configuration.h"
 #include "replica_core/DatabaseServices.h"
 
 // Forward declarations
@@ -43,8 +44,6 @@
 namespace lsst {
 namespace qserv {
 namespace replica_core {
-
-class Configuration;
 
 /**
   * Class ServiceProvider hosts various serviceses for the master server.
@@ -62,14 +61,14 @@ public:
     /**
      * Construct the object.
      *
-     * @param configuration - the configuration service
+     * @param configUrl - a source of the application configuration parameters
      */
-    explicit ServiceProvider (Configuration& configuration);
+    explicit ServiceProvider (std::string const& configUrl);
 
     /**
      * Return a reference to the configuration service
      */
-    Configuration& config () const { return _configuration; }
+    Configuration::pointer const& config () const { return _configuration; }
 
     /**
      * Return a reference to the database services
@@ -102,8 +101,8 @@ public:
 private:
 
     /// Configuration manager
-    Configuration& _configuration;
-    
+    Configuration::pointer _configuration;
+
     /// Database services
     DatabaseServices::pointer _databaseServices;
 };

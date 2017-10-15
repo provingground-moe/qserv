@@ -112,11 +112,9 @@ ConfigurationFile::loadConfiguration () {
 
     uint16_t commonWorkerSvcPort;
     uint16_t commonWorkerFsPort;
-    uint16_t commonWorkerXrootdPort;
 
-    ::parseKeyVal(configStore, "worker.svc_port",    commonWorkerSvcPort,    defaultWorkerSvcPort);
-    ::parseKeyVal(configStore, "worker.fs_port",     commonWorkerFsPort,     defaultWorkerFsPort);
-    ::parseKeyVal(configStore, "worker.xrootd_port", commonWorkerXrootdPort, defaultWorkerXrootdPort);
+    ::parseKeyVal(configStore, "worker.svc_port", commonWorkerSvcPort, defaultWorkerSvcPort);
+    ::parseKeyVal(configStore, "worker.fs_port",  commonWorkerFsPort,  defaultWorkerFsPort);
 
     std::string commonDataDir;
     
@@ -136,13 +134,14 @@ ConfigurationFile::loadConfiguration () {
 
         _workerInfo[name].name = name;
 
-        ::parseKeyVal(configStore, section+".svc_host",    _workerInfo[name].svcHost,    defaultWorkerSvcHost);
-        ::parseKeyVal(configStore, section+".svc_port",    _workerInfo[name].svcPort,    commonWorkerSvcPort);
-        ::parseKeyVal(configStore, section+".fs_port",     _workerInfo[name].fsPort,     commonWorkerFsPort);
-        ::parseKeyVal(configStore, section+".xrootd_host", _workerInfo[name].xrootdHost, defaultWorkerXrootdHost);
-        ::parseKeyVal(configStore, section+".xrootd_port", _workerInfo[name].xrootdPort, commonWorkerXrootdPort);
+        ::parseKeyVal(configStore, section+".is_enabled",   _workerInfo[name].isEnabled,  true);
+        ::parseKeyVal(configStore, section+".is_read_only", _workerInfo[name].isReadOnly, false);
+        ::parseKeyVal(configStore, section+".svc_host",     _workerInfo[name].svcHost,    commonWorkerSvcHost);
+        ::parseKeyVal(configStore, section+".svc_port",     _workerInfo[name].svcPort,    commonWorkerSvcPort);
+        ::parseKeyVal(configStore, section+".fs_host",      _workerInfo[name].fsHost,     commonWorkerFsHost);
+        ::parseKeyVal(configStore, section+".fs_port",      _workerInfo[name].fsPort,     commonWorkerFsPort);
+        ::parseKeyVal(configStore, section+".data_dir",     _workerInfo[name].dataDir,    commonDataDir);
 
-        ::parseKeyVal(configStore, section+".data_dir",    _workerInfo[name].dataDir,    commonDataDir);
         Configuration::translateDataDir(_workerInfo[name].dataDir, name);
     }
     

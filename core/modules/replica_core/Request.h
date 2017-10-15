@@ -137,7 +137,7 @@ public:
 
     Request () = delete;
     Request (Request const&) = delete;
-    Request & operator= (Request const&) = delete;
+    Request& operator= (Request const&) = delete;
 
     /// Destructor
     virtual ~Request ();
@@ -146,16 +146,16 @@ public:
     ServiceProvider& serviceProvider() { return _serviceProvider; }
 
     /// Return a string representing a type of a request.
-    const std::string& type () const { return _type; }
+    std::string const& type () const { return _type; }
 
     /// Return a unique identifier of the request
-    const std::string& id () const { return _id; }
+    std::string const& id () const { return _id; }
 
     /// Return the priority level of the request
     int priority () const { return _priority; }
 
     /// Return a unique identifier of the request
-    const std::string& worker () const { return _worker; }
+    std::string const& worker () const { return _worker; }
 
     /// Return the primary status of the request
     State state () const { return _state; }
@@ -167,7 +167,7 @@ public:
     ExtendedCompletionStatus extendedServerStatus () const { return _extendedServerStatus; }
 
     /// Return the performance info
-    const Performance& performance () const { return _performance; }
+    Performance const& performance () const { return _performance; }
 
     /// Return the Controller (if set)
     std::shared_ptr<Controller> const& controller () const { return _controller; }
@@ -237,10 +237,10 @@ protected:
      *                          NOTE: an availability and an implementation of this option
      *                          depends on a specific request.
      */
-    Request (ServiceProvider         &serviceProvider,
-             boost::asio::io_service &io_service,
-             const std::string       &type,
-             const std::string       &worker,
+    Request (ServiceProvider&         serviceProvider,
+             boost::asio::io_service& io_service,
+             std::string const&       type,
+             std::string const&       worker,
              int                      priority=0,
              bool                     keepTracking=true);
     /**
@@ -254,7 +254,7 @@ protected:
      * is configured via the configuraton service. When the request expires
      * it finishes with completion status FINISHED::EXPIRED.
      */
-    void expired (const boost::system::error_code &ec);
+    void expired (boost::system::error_code const& ec);
 
     /**
      * Finalize request processing (as reported by subclasses)
@@ -289,7 +289,7 @@ protected:
      *    which initiated the abort to take care of putting the object into
      *    a proper state.
      */
-    bool isAborted (const boost::system::error_code &ec) const;
+    bool isAborted (boost::system::error_code const& ec) const;
 
     /**
      * Ensure the object is in the deseride internal state. Throw an
@@ -342,7 +342,7 @@ protected:
     std::shared_ptr<ProtocolBuffer> _bufferPtr;
 
     // Parameters of a worker obtained from a configuration
-    const WorkerInfo &_workerInfo;
+    WorkerInfo const& _workerInfo;
 
     /// This time is used to in the communication protocol for requests
     /// which may require multiple retries or any time spacing between network

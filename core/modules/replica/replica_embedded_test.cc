@@ -5,7 +5,6 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/FileServer.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerRequestFactory.h"
@@ -20,8 +19,8 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_worker");
 
 // Command line parameters
 
-bool         enableFileServer;
-std::string  configFileName;
+bool        enableFileServer;
+std::string configUrl;
 
 /**
  * Launch all worker servers in dedicated detached threads. Also run
@@ -30,7 +29,7 @@ std::string  configFileName;
 void runAllWorkers (rc::ServiceProvider      &provider,
                     rc::WorkerRequestFactory &requestFactory) {
 
-    for (const std::string &workerName : provider.config().workers()) {
+    for (const std::string &workerName : provider.config()->workers()) {
         
         // Create the request pocessing server and run it within a dedicated thread
         // because it's the blocking operation fr the launching thread.
@@ -81,9 +80,8 @@ void runAllWorkers (rc::ServiceProvider      &provider,
 void run () {
     
     try {
-        rc::ConfigurationFile    config         {configFileName};
-        rc::ServiceProvider      serviceProvider{config};
-        rc::WorkerRequestFactory requestFactory {serviceProvider};
+        rc::ServiceProvider      serviceProvider (configUrl);
+        rc::WorkerRequestFactory requestFactory  (serviceProvider);
 
         // Run the worker servers
 
@@ -116,15 +114,15 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  [--enable-file-server] [--config=<file>]\n"
+            "  [--enable-file-server] [--config=<url>]\n"
             "\n"
             "Flags and options:\n"
             "  --enable-file-server  - talso launch a dedicated FileServer for each worker\n"
-            "  --config              - the name of the configuration file.\n"
-            "                          [ DEFAULT: replication.cfg ]\n");
+            "  --config              - a configuration URL (a configuration file or a set of the database\n"
+            "                          connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
         ::enableFileServer = parser.flag                ("enable-file-server");
-        ::configFileName   = parser.option <std::string>("config", "replication.cfg");
+        ::configUrl        = parser.option <std::string>("config", "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         return 1;

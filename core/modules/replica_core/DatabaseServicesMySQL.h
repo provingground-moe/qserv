@@ -68,7 +68,7 @@ public:
      *
      * @param configuration - the configuration service
      */
-    explicit DatabaseServicesMySQL (Configuration& configuration);
+    explicit DatabaseServicesMySQL (Configuration::pointer const& configuration);
 
     /// Destructor
     virtual ~DatabaseServicesMySQL ();

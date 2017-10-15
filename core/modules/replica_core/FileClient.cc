@@ -31,7 +31,6 @@
 
 #include "lsst/log/Log.h"
 #include "proto/replication.pb.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -106,13 +105,13 @@ FileClient::FileClient (ServiceProvider   &serviceProvider,
                         const std::string &fileName,
                         bool               readContent)
 
-    :   _workerInfo  (serviceProvider.config().workerInfo  (workerName)),
-        _databaseInfo(serviceProvider.config().databaseInfo(databaseName)),
+    :   _workerInfo  (serviceProvider.config()->workerInfo  (workerName)),
+        _databaseInfo(serviceProvider.config()->databaseInfo(databaseName)),
         _fileName    (fileName),
         _readContent (readContent),
 
         _bufferPtr (
-            new ProtocolBuffer(serviceProvider.config().requestBufferSizeBytes())),
+            new ProtocolBuffer(serviceProvider.config()->requestBufferSizeBytes())),
 
         _io_service(),
         _socket(_io_service),

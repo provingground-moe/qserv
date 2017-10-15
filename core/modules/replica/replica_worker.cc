@@ -6,7 +6,6 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/FileServer.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerProcessor.h"
@@ -23,8 +22,7 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_worker");
 // Command line parameters
 
 std::string workerName;
-std::string configFileName;
-
+std::string configUrl;
 
 /**
  * Instantiate and launch the service in its own thread. Then block
@@ -33,9 +31,8 @@ std::string configFileName;
 void service () {
     
     try {
-        rc::ConfigurationFile    config        {configFileName};
-        rc::ServiceProvider      provider      {config};
-        rc::WorkerRequestFactory requestFactory{provider};
+        rc::ServiceProvider      provider       (configUrl);
+        rc::WorkerRequestFactory requestFactory (provider);
 
         rc::WorkerServer::pointer reqProcSvr =
             rc::WorkerServer::create (provider,
@@ -85,17 +82,17 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <worker> [--config=<file>]\n"
+            "  <worker> [--config=<url>]\n"
             "\n"
             "Parameters:\n"
             "  <worker>   - the name of a worker\n"
             "\n"
             "Flags and options:\n"
-            "  --config   - the name of the configuration file.\n"
-            "               [ DEFAULT: replication.cfg ]\n");
+            "  --config   - a configuration URL (a configuration file or a set of the database\n"
+            "               connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
-        ::workerName     = parser.parameter<std::string> (1);
-        ::configFileName = parser.option   <std::string> ("config", "replication.cfg");
+        ::workerName = parser.parameter<std::string> (1);
+        ::configUrl  = parser.option   <std::string> ("config", "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         return 1;

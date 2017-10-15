@@ -32,7 +32,6 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ErrorReporting.h"
 #include "replica_core/ServiceProvider.h"
 

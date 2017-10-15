@@ -7,7 +7,6 @@
 
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/FileClient.h"
 
@@ -22,7 +21,7 @@ std::string workerName;
 std::string databaseName;
 std::string inFileName;
 std::string outFileName;
-std::string configFileName;
+std::string configUrl;
 
 bool verbose = false;
 
@@ -39,8 +38,7 @@ int run () {
   
     std::FILE* fp = 0;
     try {
-        rc::ConfigurationFile config   {configFileName};
-        rc::ServiceProvider   provider {config};
+        rc::ServiceProvider provider (configUrl);
 
         if (rc::FileClient::pointer file =
             rc::FileClient::open (provider, workerName, databaseName, inFileName)) {
@@ -49,7 +47,7 @@ int run () {
             if (verbose)
                 std::cout << "file size: " << fileSize << " bytes" << std::endl;
 
-            if ((fp = std::fopen(outFileName.c_str(), "wb"))) {
+            if ((fp = std::fopen (outFileName.c_str(), "wb"))) {
                 
                 size_t totalRead = 0;
                 size_t num;
@@ -94,7 +92,7 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <worker> <database> <infile> <outfile> [--verbose] [--config=<file>]\n"
+            "  <worker> <database> <infile> <outfile> [--verbose] [--config=<url>]\n"
             "\n"
             "Parameters:\n"
             "  <worker>   - the name of a worker\n"
@@ -104,8 +102,8 @@ int main (int argc, const char* const argv[]) {
             "\n"
             "Flags and options:\n"
             "  --verbose  - the flag triggering a report on a progress of the operation\n"
-            "  --config   - the name of the configuration file.\n"
-            "               [ DEFAULT: replication.cfg ]\n");
+            "  --config   - a configuration URL (a configuration file or a set of the database\n"
+            "               connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
         ::workerName     = parser.parameter<std::string> (1);
         ::databaseName   = parser.parameter<std::string> (2);
@@ -113,7 +111,7 @@ int main (int argc, const char* const argv[]) {
         ::outFileName    = parser.parameter<std::string> (4);
 
         ::verbose        = parser.flag                ("verbose");
-        ::configFileName = parser.option<std::string> ("config", "replication.cfg");
+        ::configUrl      = parser.option<std::string> ("config", "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         return 1;
