@@ -30,14 +30,64 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "replica_core/ConfigurationFile.h"
 #include "replica_core/ConfigurationMySQL.h"
 #include "replica_core/FileUtils.h"
+
+namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.Configuration");
+
+/**
+ * Print the content of a vector into the provided stream.
+ * Assume that proper astreaming operator is defined for the vector
+ * elements.
+ *
+ * @param os - the output stream object
+ * @param v  - the vector to stream
+ * @return   - the stream object
+ */
+template <typename T>
+void vector2stream (std::ostream&         os,
+                    std::vector<T> const& v) {
+    os  << "[";
+    for (size_t i = 0, num = v.size(); i < num; ++i)
+        os  << (i ? "," : "") << v[i];
+    os  << "]";
+}
+
+} // namespace
+
 
 namespace lsst {
 namespace qserv {
 namespace replica_core {
 
+std::ostream& operator << (std::ostream& os, WorkerInfo const& info) {
+    os  << "WorkerInfo ("
+        << "name:'"      <<      info.name       << "',"
+        << "isEnabled:"  << (int)info.isEnabled  << ","
+        << "isReadOnly:" << (int)info.isReadOnly << ","
+        << "svcHost:'"   <<      info.svcHost    << "',"
+        << "svcPort:"    <<      info.svcPort    << ","
+        << "fsHost:'"    <<      info.fsHost     << "',"
+        << "fsPort:"     <<      info.fsPort     << ","
+        << "dataDir:'"   <<      info.dataDir    << "')";
+    return os;
+}
+
+std::ostream& operator << (std::ostream& os, DatabaseInfo const& info) {
+    os  << "DatabaseInfo ("
+        << "name:'"              <<                    info.name               << "',"
+        << "partitionedTables:[";
+    ::vector2stream (os, info.partitionedTables);
+    os  << "],"
+        << "regularTables:[";
+    ::vector2stream (os, info.regularTables);
+    os  << "])";
+    return os;
+}
 
 Configuration::pointer
 Configuration::load (std::string const& configUrl) {
@@ -151,5 +201,51 @@ Configuration::databaseInfo (std::string const& name) const {
                 "Configuration::databaseInfo() uknown database name '" + name + "'");
     return _databaseInfo.at(name);
 }
-    
+
+
+void
+Configuration::dumpIntoLogger () {
+
+    static char const* context = "Configuration::";
+
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultRequestBufferSizeBytes:       " << defaultRequestBufferSizeBytes);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultRetryTimeoutSec:              " << defaultRetryTimeoutSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultControllerHttpPort:           " << defaultControllerHttpPort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultControllerHttpThreads:        " << defaultControllerHttpThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultControllerRequestTimeoutSec:  " << defaultControllerRequestTimeoutSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerTechnology:             " << defaultWorkerTechnology);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerNumProcessingThreads:   " << defaultWorkerNumProcessingThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerNumFsProcessingThreads: " << defaultWorkerNumFsProcessingThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerFsBufferSizeBytes:      " << defaultWorkerFsBufferSizeBytes);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerSvcHost:                " << defaultWorkerSvcHost);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerSvcPort:                " << defaultWorkerSvcPort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerFsHost:                 " << defaultWorkerFsHost);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultWorkerFsPort:                 " << defaultWorkerFsPort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultDataDir:                      " << defaultDataDir);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabaseTechnology:           " << defaultDatabaseTechnology);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabaseHost:                 " << defaultDatabaseHost);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabasePort:                 " << defaultDatabasePort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabaseUser:                 " << defaultDatabaseUser);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabasePassword:             " << "*****");
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabaseName:                 " << defaultDatabaseName);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_requestBufferSizeBytes:             "  << _requestBufferSizeBytes);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_retryTimeoutSec:                    "  << _retryTimeoutSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerHttpPort:                 "  << _controllerHttpPort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerHttpThreads:              "  << _controllerHttpThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerRequestTimeoutSec:        "  << _controllerRequestTimeoutSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerTechnology:                   "  << _workerTechnology);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerNumProcessingThreads:         "  << _workerNumProcessingThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerNumFsProcessingThreads:       "  << _workerNumFsProcessingThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerFsBufferSizeBytes:            "  << _workerFsBufferSizeBytes);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseTechnology:                 "  << _databaseTechnology);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseHost:                       "  << _databaseHost);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databasePort:                       "  << _databasePort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseUser:                       "  << _databaseUser);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databasePassword:                   "  << "*****");
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseName:                       "  << _databaseName);
+    for (auto const& elem: _workerInfo)   LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
+    for (auto const& elem: _databaseInfo) LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
+
+}
+
 }}} // namespace lsst::qserv::replica_core
