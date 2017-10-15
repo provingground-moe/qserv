@@ -47,11 +47,25 @@ namespace {
 template <typename T, typename D>
 void parseKeyVal (lsst::qserv::util::ConfigStore &configStore,
                   std::string const& key,
-                  T& val,
-                  D& defaultVal) {
+                  T&                 val,
+                  D const&           defaultVal) {
 
     std::string const str = configStore.get(key);
     val = str.empty() ? defaultVal : boost::lexical_cast<T>(str);        
+}
+
+/**
+ * Function specialization for the boolean type
+ */
+template <>
+void parseKeyVal<bool,bool> (lsst::qserv::util::ConfigStore &configStore,
+                             std::string const& key,
+                             bool&              val,
+                             bool const&        defaultVal) {
+
+    unsigned int number;
+    parseKeyVal (configStore, key, number, defaultVal ? 1 : 0);
+    val = (bool) number;      
 }
 
 }  // namespace
@@ -136,9 +150,9 @@ ConfigurationFile::loadConfiguration () {
 
         ::parseKeyVal(configStore, section+".is_enabled",   _workerInfo[name].isEnabled,  true);
         ::parseKeyVal(configStore, section+".is_read_only", _workerInfo[name].isReadOnly, false);
-        ::parseKeyVal(configStore, section+".svc_host",     _workerInfo[name].svcHost,    commonWorkerSvcHost);
+        ::parseKeyVal(configStore, section+".svc_host",     _workerInfo[name].svcHost,    defaultWorkerSvcHost);
         ::parseKeyVal(configStore, section+".svc_port",     _workerInfo[name].svcPort,    commonWorkerSvcPort);
-        ::parseKeyVal(configStore, section+".fs_host",      _workerInfo[name].fsHost,     commonWorkerFsHost);
+        ::parseKeyVal(configStore, section+".fs_host",      _workerInfo[name].fsHost,     defaultWorkerFsHost);
         ::parseKeyVal(configStore, section+".fs_port",      _workerInfo[name].fsPort,     commonWorkerFsPort);
         ::parseKeyVal(configStore, section+".data_dir",     _workerInfo[name].dataDir,    commonDataDir);
 
@@ -167,6 +181,7 @@ ConfigurationFile::loadConfiguration () {
             _databaseInfo[name].regularTables = std::vector<std::string>(begin, end);
         }
     }
+    dumpIntoLogger ();
 }
     
 }}} // namespace lsst::qserv::replica_core

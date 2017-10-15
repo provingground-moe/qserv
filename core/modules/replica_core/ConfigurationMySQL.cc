@@ -30,7 +30,7 @@
 // Qserv headers
 
 namespace {
-    
+
 using namespace lsst::qserv::replica_core;
 
 template <typename T>
@@ -48,7 +48,7 @@ bool tryParameter (database::mysql::Row& row,
     if (desiredParam != param) return false;
 
     row.get ("value", value);
-    reurn true;
+    return true;
 }
 
 template <typename T>
@@ -103,15 +103,18 @@ ConfigurationMySQL::loadConfiguration () {
 
     // Open and keep a database connection for loading other parameters
     // from there.
-    _connection = database::mysql::Connection::open (_connectionParams);
+    database::mysql::Connection::pointer const conn =
+        database::mysql::Connection::open (_connectionParams);
+
+    database::mysql::Row row;
 
     // Read the common parameters and defaults shared by all components
     // of the replication system. The table also provides default values
     // for some critical parameters of the worker-side services.
-    _connection->execute ("SELECT * FROM " + _connection->sqlId ("config"));
 
-    database::mysql::Row row;
-    while (_connection->next(row)) {
+    conn->execute ("SELECT * FROM " + conn->sqlId ("config"));
+
+    while (conn->next(row)) {
         
         ::tryParameter (row, "common", "request_buf_size_bytes",     _requestBufferSizeBytes) ||
         ::tryParameter (row, "common", "request_retry_interval_sec", _retryTimeoutSec) ||
@@ -131,10 +134,10 @@ ConfigurationMySQL::loadConfiguration () {
     
     // Read worker-specific configurations and construct WorkerInfo.
     // Use the above retreived common parameters as defaults where applies
-    _connection->execute ("SELECT * FROM " + _connection->sqlId ("config_worker"));
 
-    database::mysql::Row row;
-    while (_connection->next(row)) {
+    conn->execute ("SELECT * FROM " + conn->sqlId ("config_worker"));
+
+    while (conn->next(row)) {
         WorkerInfo info;
         ::readMandatoryParameter (row, "name",         info.name);
         ::readMandatoryParameter (row, "is_enabled",   info.isEnabled);
@@ -151,10 +154,10 @@ ConfigurationMySQL::loadConfiguration () {
     }
 
     // Read database-specific configurations and construct DatabaseInfo.
-    _connection->execute ("SELECT * FROM " + _connection->sqlId ("config_database"));
 
-    database::mysql::Row row;
-    while (_connection->next(row)) {
+    conn->execute ("SELECT * FROM " + conn->sqlId ("config_database"));
+
+    while (conn->next(row)) {
 
         std::string database;
         ::readMandatoryParameter (row, "database", database);
@@ -166,19 +169,21 @@ ConfigurationMySQL::loadConfiguration () {
         bool isPartitioned;
         ::readMandatoryParameter (row, "is_partitioned", isPartitioned);
         
-        if (isPartitioned) partitionedTables.push_back (table);
-        else               regularTables    .push_back (table);
+        if (isPartitioned) _databaseInfo[database].partitionedTables.push_back (table);
+        else               _databaseInfo[database].regularTables    .push_back (table);
     }
 
     // Values of these parameters are predetermined by the connection
     // parameters passed into this object
 
     _databaseTechnology = "mysql";
-    _databaseHost       = _connectionParams;
+    _databaseHost       = _connectionParams.host;
     _databasePort       = _connectionParams.port;
     _databaseUser       = _connectionParams.user;
     _databasePassword   = _connectionParams.password;
     _databaseName       = _connectionParams.database;
+
+    dumpIntoLogger ();
 }
 
 }}} // namespace lsst::qserv::replica_core

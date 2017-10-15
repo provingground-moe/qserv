@@ -281,6 +281,12 @@ public:
     bool get (std::string const& columnName, float&  value) const;
     bool get (std::string const& columnName, double& value) const;
 
+    // Other types
+    
+    bool get (size_t columnIdx, bool& value) const;
+
+    bool get (std::string const& columnName, bool&  value) const;
+
     /**
      * Return a reference to the data cell for the column
      *

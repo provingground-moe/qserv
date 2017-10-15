@@ -31,6 +31,7 @@
 
 #include <map>
 #include <memory>       // shared_ptr, enable_shared_from_this
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -74,6 +75,9 @@ struct WorkerInfo {
     std::string dataDir;
 };
 
+/// Overloaded operator for dumping objects of class WorkerInfo
+std::ostream& operator << (std::ostream& os, WorkerInfo const& info);
+
 /// The descriptor of a database
 struct DatabaseInfo {
 
@@ -86,6 +90,9 @@ struct DatabaseInfo {
     /// The list of fully replicated tables
     std::vector<std::string> regularTables;
 };
+
+/// Overloaded operator for dumping objects of class WorkerInfo
+std::ostream& operator << (std::ostream& os, DatabaseInfo const& info);
 
 /**
   * Class Configuration is a base class for a family of concrete classes
@@ -234,6 +241,12 @@ public:
 
     /// Return the buffer size for the file I/O operations
     size_t workerFsBufferSizeBytes () const { return _workerFsBufferSizeBytes; }
+
+
+    /**
+     * Serialize the configuration parameters into the Logger
+     */
+    void dumpIntoLogger ();
 
 protected:
 

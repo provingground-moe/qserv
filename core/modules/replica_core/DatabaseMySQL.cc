@@ -230,6 +230,23 @@ bool Row::get (size_t columnIdx, double& value) const { return ::getAsNumber (*t
 bool Row::get (std::string const& columnName, float&  value) const { return ::getAsNumber (*this, columnName, value); }
 bool Row::get (std::string const& columnName, double& value) const { return ::getAsNumber (*this, columnName, value); }
 
+bool Row::get (size_t columnIdx, bool& value) const {
+    uint8_t number;
+    if (::getAsNumber (*this, columnIdx, number)) {
+        value = (bool) number;
+        return true;
+    }
+    return false;
+}
+
+bool Row::get (std::string const& columnName, bool&  value) const {    
+    uint8_t number;
+    if (::getAsNumber (*this, columnName, number)) {
+        value = (bool) number;
+        return true;
+    }
+    return false;
+}
 
 Row::Cell const&
 Row::getDataCell (size_t columnIdx) const {

@@ -239,7 +239,7 @@ public:
 
 std::ostream&
 operator << (std::ostream& os, ControllerIdentity const& identity) {
-    os << "ControllerIdentity (id: " << identity.id << ", host: " << identity.host << ", pid: " << identity.pid << ")";
+    os << "ControllerIdentity (id:'" << identity.id << "',host:'" << identity.host << "', pid:" << identity.pid << ")";
     return os;
 }
 
