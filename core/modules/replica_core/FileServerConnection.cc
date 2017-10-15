@@ -35,7 +35,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
 
 namespace fs    = boost::filesystem;
@@ -145,15 +144,15 @@ FileServerConnection::FileServerConnection (ServiceProvider         &serviceProv
 
     :   _serviceProvider {serviceProvider},
         _workerName      {workerName},
-        _workerInfo      {serviceProvider.config().workerInfo(workerName)},
+        _workerInfo      {serviceProvider.config()->workerInfo(workerName)},
         _socket          {io_service},
 
         _bufferPtr (
             std::make_shared<ProtocolBuffer>(
-                serviceProvider.config().requestBufferSizeBytes())),
+                serviceProvider.config()->requestBufferSizeBytes())),
         _fileName   (),
         _filePtr    (0),
-        _fileBufSize(serviceProvider.config().workerFsBufferSizeBytes()),
+        _fileBufSize(serviceProvider.config()->workerFsBufferSizeBytes()),
         _fileBuf    (0) {
 
     if (!_fileBufSize || _fileBufSize > maxFileBufSizeBytes)
@@ -229,7 +228,7 @@ FileServerConnection::requestReceived (const boost::system::error_code &ec,
     bool available = false; 
     uint64_t size = 0;
     do {
-        if (!_serviceProvider.config().isKnownDatabase(request.database())) {
+        if (!_serviceProvider.config()->isKnownDatabase(request.database())) {
             LOGS(_log, LOG_LVL_ERROR, context << "requestReceived  unknown database: " << request.database());
             break;
         }

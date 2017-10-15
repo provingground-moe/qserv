@@ -32,7 +32,6 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ErrorReporting.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -282,7 +281,7 @@ ReplicateJob::onPrecursorJobFinish () {
             std::string destinationWorker;
             size_t      numChunksPerDestinationWorker = numUniqueChunks;
 
-            for (auto const& worker: _controller->serviceProvider().config().workers()) {
+            for (auto const& worker: _controller->serviceProvider().config()->workers()) {
 
                 // Exclude failed workers
                 if (failedWorkers.count(worker)) continue;

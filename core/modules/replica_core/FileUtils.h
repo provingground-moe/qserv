@@ -22,7 +22,7 @@
 #ifndef LSST_QSERV_REPLICA_CORE_FILEUTILS_H
 #define LSST_QSERV_REPLICA_CORE_FILEUTILS_H
 
-/// Configuration.h declares:
+/// FileUtils.h declares:
 ///
 /// class FileUtils
 /// class FileCsComputeEngine

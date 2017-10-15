@@ -350,63 +350,6 @@ private:
 };
 
 
-/**
-  * Class WorkerReplicationRequestX provides an actual implementation for
-  * the replication requests using XRootD.
-  */
-class WorkerReplicationRequestX
-    :   public WorkerReplicationRequest {
-
-public:
-
-    /// Pointer to self
-    typedef std::shared_ptr<WorkerReplicationRequestX> pointer;
-
-    /**
-     * Static factory method is needed to prevent issue with the lifespan
-     * and memory management of instances created otherwise (as values or via
-     * low-level pointers).
-     */
-    static pointer create (ServiceProvider&   serviceProvider,
-                           std::string const& worker,
-                           std::string const& id,
-                           int                priority,
-                           std::string const& database,
-                           unsigned int       chunk,
-                           std::string const& sourceWorker);
-
-    // Default construction and copy semantics are proxibited
-
-    WorkerReplicationRequestX () = delete;
-    WorkerReplicationRequestX (WorkerReplicationRequestX const&) = delete;
-    WorkerReplicationRequestX& operator= (WorkerReplicationRequestX const&) = delete;
-
-    /// Destructor
-    ~WorkerReplicationRequestX () override;
-
-    /**
-     * This method implements the virtual method of the base class
-     *
-     * @see WorkerReplicationRequest::execute
-     */
-    bool execute () override;
-
-private:
-
-    /**
-     * The normal constructor of the class.
-     */
-    WorkerReplicationRequestX (ServiceProvider&   serviceProvider,
-                               std::string const& worker,
-                               std::string const& id,
-                               int                priority,
-                               std::string const& database,
-                               unsigned int       chunk,
-                               std::string const& sourceWorker);
-};
-
-
-
 }}} // namespace lsst::qserv::replica_core
 
 #endif // LSST_QSERV_REPLICA_CORE_WORKERREPLICATIONREQUEST_H

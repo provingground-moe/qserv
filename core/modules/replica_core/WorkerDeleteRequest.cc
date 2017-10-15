@@ -31,7 +31,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/FileUtils.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -162,8 +161,8 @@ WorkerDeleteRequestPOSIX::execute () {
          << "  db: "    << database()
          << "  chunk: " << chunk());
 
-    const WorkerInfo   &workerInfo    = _serviceProvider.config().workerInfo  (worker());
-    const DatabaseInfo &databaseInfo  = _serviceProvider.config().databaseInfo(database());
+    const WorkerInfo   &workerInfo    = _serviceProvider.config()->workerInfo  (worker());
+    const DatabaseInfo &databaseInfo  = _serviceProvider.config()->databaseInfo(database());
     
     const std::vector<std::string> files =
         FileUtils::partitionedFiles (databaseInfo, chunk());
@@ -207,54 +206,6 @@ WorkerDeleteRequestPOSIX::execute () {
     setStatus(STATUS_SUCCEEDED);
     return true;
 }
-
-
-///////////////////////////////////////////////////////////////
-///////////////////// WorkerDeleteRequestX ////////////////////
-///////////////////////////////////////////////////////////////
-
-WorkerDeleteRequestX::pointer
-WorkerDeleteRequestX::create (ServiceProvider   &serviceProvider,
-                              const std::string &worker,
-                              const std::string &id,
-                              int                priority,
-                              const std::string &database,
-                              unsigned int       chunk) {
-
-    return WorkerDeleteRequestX::pointer (
-        new WorkerDeleteRequestX (serviceProvider,
-                                  worker,
-                                  id,
-                                  priority,
-                                  database,
-                                  chunk));
-}
-
-WorkerDeleteRequestX::WorkerDeleteRequestX (ServiceProvider   &serviceProvider,
-                                            const std::string &worker,
-                                            const std::string &id,
-                                            int                priority,
-                                            const std::string &database,
-                                            unsigned int       chunk)
-    :   WorkerDeleteRequest (serviceProvider,
-                             worker,
-                             id,
-                             priority,
-                             database,
-                             chunk) {
-}
-
-WorkerDeleteRequestX::~WorkerDeleteRequestX () {
-}
-
-bool
-WorkerDeleteRequestX::execute () {
-
-    // TODO: provide the actual implementation instead of the dummy one.
-
-    return WorkerDeleteRequest::execute();
-}
-
 
 }}} // namespace lsst::qserv::replica_core
 

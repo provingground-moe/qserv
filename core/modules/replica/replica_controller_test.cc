@@ -8,7 +8,6 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/Controller.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/ServiceProvider.h"
@@ -27,7 +26,7 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_controller_test");
 std::string workerName;
 std::string sourceWorkerName;
 std::string database;
-std::string configFileName;
+std::string configUrl;
     
 /**
  * The helper class for generating various requests. The main purpose
@@ -205,10 +204,9 @@ void test () {
 
         rc::BlockPost blockPost (0, 100);  // for random delays (milliseconds) between operations
 
-        rc::ConfigurationFile config  {configFileName};
-        rc::ServiceProvider   provider{config};
+        rc::ServiceProvider provider (configUrl);
 
-        rc::Controller::pointer controller = rc::Controller::create(provider);
+        rc::Controller::pointer controller = rc::Controller::create (provider);
 
         // Configure the generator of requests 
 
@@ -320,7 +318,7 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <worker> <source_worker> <database> [--config=<file>]\n"
+            "  <worker> <source_worker> <database> [--config=<url>]\n"
             "\n"
             "Parameters:\n"
             "  <worker>           - the name of a destination worker\n"
@@ -328,14 +326,13 @@ int main (int argc, const char* const argv[]) {
             "  <database>         - the name of a database\n"
             "\n"
             "Flags and options:\n"
-            "  --config           - the name of the configuration file.\n"
-            "                       [ DEFAULT: replication.cfg ]\n");
+            "  --config           - a configuration URL (a configuration file or a set of the database\n"
+            "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
         ::workerName       = parser.parameter<std::string> (1);
         ::sourceWorkerName = parser.parameter<std::string> (2);
         ::database         = parser.parameter<std::string> (3);
-
-        ::configFileName   = parser.option   <std::string> ("config", "replication.cfg");
+        ::configUrl        = parser.option   <std::string> ("config", "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         return 1;

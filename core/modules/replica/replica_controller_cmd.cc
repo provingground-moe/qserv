@@ -8,7 +8,6 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/BlockPost.h"
-#include "replica_core/ConfigurationFile.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FindAllRequest.h"
@@ -28,7 +27,7 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica.replica_controller_cmd");
 
 // Command line parameters
 //
-std::string configFileName;
+std::string configUrl;
 std::string operation;
 std::string worker;
 std::string sourceWorker;
@@ -70,10 +69,9 @@ bool test () {
         ///////////////////////////////////////////////////////////////////////
         // Start the controller in its own thread before injecting any requests
 
-        rc::ConfigurationFile config  {configFileName};
-        rc::ServiceProvider   provider{config};
+        rc::ServiceProvider provider (configUrl);
 
-        rc::Controller::pointer controller = rc::Controller::create(provider);
+        rc::Controller::pointer controller = rc::Controller::create (provider);
 
         controller->run();
 
@@ -280,7 +278,7 @@ int main (int argc, const char* const argv[]) {
             "Usage:\n"
             "  <operation> [<parameter> [<parameter> [...]]]\n"
             "              [--check-sum] [--do-not-track]\n"
-            "              [--priority=<level>] [--config=<file>]\n"
+            "              [--priority=<level>] [--config=<url>]\n"
             "\n"
             "Supported operations and mandatory parameters:\n"
             "    REPLICA_CREATE                  <worker> <source_worker> <db> <chunk>\n"
@@ -309,8 +307,8 @@ int main (int argc, const char* const argv[]) {
             "  --priority=<level>  - assign the specific priority level (default: 0)\n"
             "  --check-sum         - compute check/control sum of files\n"
             "  --do-not-track      - do not keep tracking\n"
-            "  --config            - the name of the configuration file.\n"
-            "                       [ DEFAULT: replication.cfg ]\n");
+            "  --config            - a configuration URL (a configuration file or a set of the database\n"
+            "                        connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
         ::operation = parser.parameterRestrictedBy (1, {
 
@@ -366,10 +364,10 @@ int main (int argc, const char* const argv[]) {
 
             ::id  =   parser.parameter<std::string>(3);
         }
-        ::computeCheckSum =   parser.flag ("check-sum");
-        ::keepTracking    = ! parser.flag ("do-not-track");
+        ::computeCheckSum =   parser.flag                ("check-sum");
+        ::keepTracking    = ! parser.flag                ("do-not-track");
         ::priority        =   parser.option<int>         ("priority", 1);
-        ::configFileName  =   parser.option<std::string> ("config",   "replication.cfg");
+        ::configUrl       =   parser.option<std::string> ("config",   "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         std::cerr << ex.what() << std::endl;

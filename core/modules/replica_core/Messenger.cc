@@ -30,7 +30,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
 
 namespace {
@@ -55,7 +54,7 @@ Messenger::create (ServiceProvider&         serviceProvider,
 Messenger::Messenger (ServiceProvider&         serviceProvider,
                       boost::asio::io_service& io_service) {
 
-    for (auto const& worker: serviceProvider.config().workers())
+    for (auto const& worker: serviceProvider.config()->workers())
         _connector[worker] = MessengerConnector::create(serviceProvider,
                                                         io_service,
                                                         worker);

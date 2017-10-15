@@ -35,6 +35,8 @@
 
 // Qserv headers
 
+#include "replica_core/Configuration.h"
+
 // Forward declarations
 
 // This header declarations
@@ -45,8 +47,8 @@ namespace replica_core {
 
 // Forward declarations
 
-class Configuration;
 struct ControllerIdentity;
+
 class Job;
 class Request;
 
@@ -78,7 +80,7 @@ public:
      *
      * @param configuration - the configuration service
      */
-    static pointer create (Configuration& configuration);
+    static pointer create (Configuration::pointer const& configuration);
 
     // Default construction and copy semantics are proxibited
 
@@ -142,12 +144,12 @@ protected:
      *
      * @param configuration - the configuration service
      */
-    explicit DatabaseServices (Configuration& configuration);
+    explicit DatabaseServices (Configuration::pointer const& configuration);
 
 protected:
 
     /// The configuration service
-    Configuration& _configuration;
+    Configuration::pointer _configuration;
 
     /// The mutex for enforcing thread safety of the class's public API
     /// and internal operations.

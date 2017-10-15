@@ -30,11 +30,42 @@
 
 // Qserv headers
 
+#include "replica_core/ConfigurationFile.h"
+#include "replica_core/ConfigurationMySQL.h"
 #include "replica_core/FileUtils.h"
 
 namespace lsst {
 namespace qserv {
 namespace replica_core {
+
+
+Configuration::pointer
+Configuration::load (std::string const& configUrl) {
+ 
+    for (auto const& proposedPrefix: std::vector<std::string>{"file:","mysql:"}) {
+ 
+        std::string::size_type const prefixSize = proposedPrefix.size();
+        std::string const            prefix = configUrl.substr (0, prefixSize);
+        std::string const            suffix = configUrl.substr (prefixSize);
+ 
+        if ("file:"  == prefix)
+            return Configuration::pointer (
+                new ConfigurationFile  (suffix));
+
+        if ("mysql:" == prefix)
+            return Configuration::pointer (
+                new ConfigurationMySQL (
+                    database::mysql::ConnectionParams::parse (
+                        suffix,
+                        Configuration::defaultDatabaseHost,
+                        Configuration::defaultDatabasePort,
+                        Configuration::defaultDatabaseUser,
+                        Configuration::defaultDatabasePassword)));
+    }
+    throw std::invalid_argument (
+            "Configuration::load:  unsupported configUrl: " + configUrl);
+}
+
 
 // Set some reasonable defaults
 
@@ -49,9 +80,8 @@ size_t       const Configuration::defaultWorkerNumFsProcessingThreads{1};
 size_t       const Configuration::defaultWorkerFsBufferSizeBytes     {1048576};
 std::string  const Configuration::defaultWorkerSvcHost               {"localhost"};
 uint16_t     const Configuration::defaultWorkerSvcPort               {50000};
+std::string  const Configuration::defaultWorkerFsHost                {"localhost"};
 uint16_t     const Configuration::defaultWorkerFsPort                {50001};
-std::string  const Configuration::defaultWorkerXrootdHost            {"localhost"};
-uint16_t     const Configuration::defaultWorkerXrootdPort            {1094};
 std::string  const Configuration::defaultDataDir                     {"{worker}"};
 std::string  const Configuration::defaultDatabaseTechnology          {"mysql"};
 std::string  const Configuration::defaultDatabaseHost                {"localhost"};

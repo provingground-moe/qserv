@@ -31,7 +31,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/FileUtils.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -200,8 +199,8 @@ WorkerFindRequestPOSIX::execute () {
 
     if (!_computeCheckSum || !_csComputeEnginePtr) {
 
-        const WorkerInfo   &workerInfo   = _serviceProvider.config().workerInfo  (worker  ());
-        const DatabaseInfo &databaseInfo = _serviceProvider.config().databaseInfo(database());
+        const WorkerInfo   &workerInfo   = _serviceProvider.config()->workerInfo  (worker  ());
+        const DatabaseInfo &databaseInfo = _serviceProvider.config()->databaseInfo(database());
     
         // Check if the data directory exists and it can be read
         
@@ -336,7 +335,7 @@ WorkerFindRequestPOSIX::execute () {
 
             // Fnalize the operation
 
-            const DatabaseInfo &databaseInfo = _serviceProvider.config().databaseInfo(database());
+            const DatabaseInfo &databaseInfo = _serviceProvider.config()->databaseInfo(database());
 
             ReplicaInfo::Status status = ReplicaInfo::Status::NOT_FOUND;
             if (fileInfoCollection.size())
@@ -372,64 +371,6 @@ WorkerFindRequestPOSIX::execute () {
 
     return finished;
 }
-
-
-/////////////////////////////////////////////////////////////
-///////////////////// WorkerFindRequestX ////////////////////
-/////////////////////////////////////////////////////////////
-
-WorkerFindRequestX::pointer
-WorkerFindRequestX::create (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
-        int                priority,
-        const std::string &database,
-        unsigned int       chunk,
-        bool               computeCheckSum) {
-
-    return WorkerFindRequestX::pointer (
-        new WorkerFindRequestX (
-                serviceProvider,
-                worker,
-                id,
-                priority,
-                database,
-                chunk,
-                computeCheckSum));
-}
-
-WorkerFindRequestX::WorkerFindRequestX (
-        ServiceProvider   &serviceProvider,
-        const std::string &worker,
-        const std::string &id,
-        int                priority,
-        const std::string &database,
-        unsigned int       chunk,
-        bool               computeCheckSum)
-
-    :   WorkerFindRequest (
-            serviceProvider,
-            worker,
-            id,
-            priority,
-            database,
-            chunk,
-            computeCheckSum) {
-}
-
-WorkerFindRequestX::~WorkerFindRequestX () {
-}
-
-
-bool
-WorkerFindRequestX::execute () {
-
-    // TODO: provide the actual implementation instead of the dummy one.
-
-    return WorkerFindRequest::execute();
-}
-
 
 }}} // namespace lsst::qserv::replica_core
 

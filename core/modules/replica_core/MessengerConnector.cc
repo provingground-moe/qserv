@@ -33,7 +33,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ProtocolBuffer.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -77,10 +76,10 @@ MessengerConnector::MessengerConnector (ServiceProvider&         serviceProvider
                                         boost::asio::io_service& io_service,
                                         std::string const&       worker)
     :   _serviceProvider (serviceProvider),
-        _workerInfo      (serviceProvider.config().workerInfo(worker)),
+        _workerInfo      (serviceProvider.config()->workerInfo(worker)),
 
-        _bufferCapacityBytes (serviceProvider.config().requestBufferSizeBytes()),
-        _timerIvalSec        (serviceProvider.config().retryTimeoutSec()),
+        _bufferCapacityBytes (serviceProvider.config()->requestBufferSizeBytes()),
+        _timerIvalSec        (serviceProvider.config()->retryTimeoutSec()),
  
         _state (State::STATE_INITIAL),
 
@@ -88,7 +87,7 @@ MessengerConnector::MessengerConnector (ServiceProvider&         serviceProvider
         _socket   (io_service),
         _timer    (io_service),
 
-        _inBuffer (serviceProvider.config().requestBufferSizeBytes()) {
+        _inBuffer (serviceProvider.config()->requestBufferSizeBytes()) {
 }
 
 MessengerConnector::~MessengerConnector () {

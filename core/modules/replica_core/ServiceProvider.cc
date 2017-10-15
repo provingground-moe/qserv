@@ -31,21 +31,21 @@
 
 // Qserv headers
 
-#include "replica_core/Configuration.h"
 
 namespace lsst {
 namespace qserv {
 namespace replica_core {
 
 
-ServiceProvider::ServiceProvider (Configuration& configuration)
-    :   _configuration    (configuration),
-        _databaseServices (DatabaseServices::create (configuration)) {
+ServiceProvider::ServiceProvider (std::string const& configUrl) {
+
+    _configuration    = Configuration   ::load   (configUrl);
+    _databaseServices = DatabaseServices::create (_configuration);
 }
 
 void
 ServiceProvider::assertWorkerIsValid (std::string const& name) {
-    if (!_configuration.isKnownWorker(name))
+    if (!_configuration->isKnownWorker(name))
         throw std::invalid_argument (
             "Request::assertWorkerIsValid: worker name is not valid: " + name);
 }
@@ -53,8 +53,8 @@ ServiceProvider::assertWorkerIsValid (std::string const& name) {
 void
 ServiceProvider::assertWorkersAreDifferent (std::string const& firstName,
                                             std::string const& secondName) {
-    assertWorkerIsValid(firstName);
-    assertWorkerIsValid(secondName);
+    assertWorkerIsValid (firstName);
+    assertWorkerIsValid (secondName);
 
     if (firstName == secondName)
         throw std::invalid_argument (
@@ -63,7 +63,7 @@ ServiceProvider::assertWorkersAreDifferent (std::string const& firstName,
 
 void
 ServiceProvider::assertDatabaseIsValid (std::string const& name) {
-    if (!_configuration.isKnownDatabase(name))
+    if (!_configuration->isKnownDatabase(name))
         throw std::invalid_argument (
             "Request::assertDatabaseIsValid: database name is not valid: " + name);
 }

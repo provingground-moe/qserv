@@ -30,6 +30,7 @@
 // System headers
 
 #include <map>
+#include <memory>       // shared_ptr, enable_shared_from_this
 #include <string>
 #include <vector>
 
@@ -49,20 +50,24 @@ struct WorkerInfo {
     /// The logical name of a worker
     std::string name;
 
+    /// The worker is allowed to participate in the replication operations
+    bool isEnabled;
+
+    /// The worker can only server as a source of replicas. New replicas can't
+    /// be placed on it.
+    bool isReadOnly;
+
     /// The host name (or IP address) of the worker service
     std::string svcHost;
 
     /// The port number of the worker service
     uint16_t svcPort;
 
-    /// The port number for the file service run on a worker node
+    /// The host name (or IP address) of the file service for the worker
+    std::string fsHost;
+
+    /// The port number for the file service for the worker
     uint16_t fsPort;
-
-    /// The host name (or IP address) of the XRootD service
-    std::string xrootdHost;
-
-    /// The port number of the XRootD service
-    uint16_t xrootdPort;
 
     /// An absolute path to the data directory under which the MySQL database
     /// folders are residing.
@@ -87,9 +92,26 @@ struct DatabaseInfo {
   * providing configuration services for the components of the Replication
   * system.
   */
-class Configuration {
+class Configuration
+    :   public std::enable_shared_from_this<Configuration> {
 
 public:
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<Configuration> pointer;
+
+    /**
+     * The static factory method will instantiate an instance of a subclass
+     * corresponding to a prefix of the configuration URL. The following
+     * prefixes are supported:
+     *
+     *   file:<path>
+     *   mysql:database=<name>[,host=<name>][,port=<number>][,user=<username>][,password=<***>]
+     *
+     * @param configUrl - the configuration source
+     * @throw std::invalid_argument - if the URL has unsupported prefix or it couldn't be parsed
+     */
+    static pointer load (std::string const& configUrl);
 
     // Copy semantics is prohibited
 
@@ -230,9 +252,8 @@ protected:
     static size_t       const defaultWorkerFsBufferSizeBytes;
     static std::string  const defaultWorkerSvcHost;
     static uint16_t     const defaultWorkerSvcPort;
+    static std::string  const defaultWorkerFsHost;
     static uint16_t     const defaultWorkerFsPort;
-    static std::string  const defaultWorkerXrootdHost;
-    static uint16_t     const defaultWorkerXrootdPort;
     static std::string  const defaultDataDir;
     static std::string  const defaultDatabaseTechnology;
     static std::string  const defaultDatabaseHost;

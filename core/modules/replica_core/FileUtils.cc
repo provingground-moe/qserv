@@ -39,7 +39,6 @@
 
 #include "replica_core/Configuration.h"
 
-
 namespace {
 
 /// Standard file extention of the MyISAM (and derived) engine's table files

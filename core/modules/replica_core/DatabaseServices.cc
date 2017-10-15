@@ -30,7 +30,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/DatabaseServicesMySQL.h"
 #include "replica_core/Job.h"
@@ -48,12 +47,12 @@ namespace qserv {
 namespace replica_core {
 
 DatabaseServices::pointer
-DatabaseServices::create (Configuration& configuration) {
+DatabaseServices::create (Configuration::pointer const& configuration) {
 
     // If the configuration is pulled from a database then *try*
     // using the corresponding technology.
 
-    if ("mysql" == configuration.databaseTechnology()) {
+    if ("mysql" == configuration->databaseTechnology()) {
         try {
             return DatabaseServices::pointer (
                 new DatabaseServicesMySQL (configuration));
@@ -69,7 +68,7 @@ DatabaseServices::create (Configuration& configuration) {
             new DatabaseServices (configuration));
 }
 
-DatabaseServices::DatabaseServices (Configuration& configuration)
+DatabaseServices::DatabaseServices (Configuration::pointer const& configuration)
     :   _configuration (configuration) {
 }
 

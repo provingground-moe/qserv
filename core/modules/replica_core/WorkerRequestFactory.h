@@ -187,9 +187,6 @@ public:
      *              on a POSIX file system and for reading remote files using
      *              the built-into-worker simple file server.
      *
-     *   'XROOTD' - request objects based on the in-direct manipulation of files
-     *              using the XRootD services.
-     *
      * @param serviceProvider - a provider of various serviceses (including configurations)
      * @param technology      - the name of the technology
      */

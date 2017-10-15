@@ -124,7 +124,36 @@ struct ConnectionParams {
     /// The name of a database to be set upon the connection
     std::string database;  
 
-    /// Return a string representation of all (but the password) parameters
+    /**
+     * The factory method will return an instance of this structure initialized
+     * by values of parameters found in the input encoded string. The string is
+     * expected to have the following syntax:
+     *
+     *   database=<name>[,host=<name>][,port=<number>][,user=<username>][,password=<***>]
+     *
+     * Note that the only mandatory parameter in that string is the name of
+     * a database. Default values for other parameters (if missing in the string)
+     * will be assumed.
+     * 
+     * @param params          - connection parameters packed into a string
+     * @param defaultHost     - default value for a host name
+     * @param defaultPort     - default port number
+     * @param defaultUser     - default value for a database user account
+     * @param defaultPassword - default value for a database user account
+     *
+     * @throw std::invalid_argument - if the string can't be parsed
+     */
+    static ConnectionParams parse (std::string const& params,
+                                   std::string const& defaultHost,
+                                   uint16_t           defaultPort,
+                                   std::string const& defaultUser,
+                                   std::string const& defaultPassword);
+
+    /**
+     * Return a string representation of all (but the password) parameters.
+     * The result will be formatted similarily to the one expected by
+     * the non-default constructor of the class.
+     */
     std::string toString () const;
 };
 
@@ -151,6 +180,15 @@ std::ostream& operator<< (std::ostream&, ConnectionParams const&);
  *   std::invalid_argument - for unknown column names
  *   InvalidTypeError      - when the conversion of row data into a value of
  *                           the requested type is not possible.
+ *
+ * @note the validty of each object of this class is limited by the life
+ * span of the database Connection object and a result set of the last
+ * query. Use this object only for short periods of time while iterating over
+ * a result set after each successful invocation of the iterator method
+ * Connection::next().
+ *
+ * @see Connection::next()
+ * 
  */
 class Row {
     
@@ -168,11 +206,14 @@ public:
 
     /**
      * The default constructor will initialize invalid instances of the class.
+     * 
+     * @note Any attempts to call most (but 'isValid', copy constructor,
+     * assignment operator and destrctor) method of objects constracted
+     * with this state will throw exception std::logic_error. So, make sure
+     * the object is properly set by passing it for initialization to method
+     * Connection::next() when iterating over a result set.
      *
-     * Most (but 'isValid', copy constructor, assignment operator an ddestrctor)
-     * methods of this class may throw the following exceptions:
-     *
-     * @throws std::logic_error - if the object is not valid
+     * @see Connection::next()
      */
     Row ();
 
@@ -198,7 +239,10 @@ public:
     bool isNull (size_t             columnIdx)  const;
     bool isNull (std::string const& columnName) const;
 
-    // Type-specific data extractors/converters for values at the specified column
+    // Type-specific data extractors/converters for values of fields.
+    // There are two ways to access the values: either by a relative
+    // index of a column in a result set, or by the name of the column.
+    // The second method has some extra (though, minor) overhead.
     //
     // @see class Row
 
@@ -308,8 +352,8 @@ public:
      *                           if the dropped connection was discovered.
      *                           This option is useful when the application is inactive
      *                           for a prologed period of time causing the server to kick out
-     *                           the client. Note that only one reconnection
-     *                           attempt is made each time the dropped conneciton is detected.
+     *                           the client. Note that only one reconnection attempt will be
+     *                           made each time the dropped conneciton is detected.
      *
      * @return a valid object if the connection attempt succeeded
      * @throws Error - if the connection failed
@@ -365,7 +409,7 @@ public:
         sql += ss.str();
 
         // Recursively keep drilling down the list of arguments with one
-        // argument less
+        // argument less.
         sqlValues (sql, Fargs...);
     }
     
@@ -485,16 +529,17 @@ public:
      * - The column names will be surrounded with back-tick quotes.
      *
      * For example, the following call:
-     *   @code
+     * @code
      *     sqlPackPairs (
-     *       std::make_pair ("col1", "st'r"),
-     *       std::make_pair ("col2", std::string("c")),
-     *       std::make_pair ("col3", 123));
-     *   @code
-     * will produce the following output:
-     *   @code
-     *     `col1`='st\'r',`col2`="c",`col3`=123
-     *   @code
+     *         std::make_pair ("col1",  "st'r"),
+     *         std::make_pair ("col2",  std::string("c")),
+     *         std::make_pair ("col3",  123),
+     *         std::make_pair ("fk_id", Function::LAST_INSERT_ID));
+     * @code
+     * will produce the following string content:
+     * @code
+     *     `col1`='st\'r',`col2`="c",`col3`=123,`fk_id`=LAST_INSERT_ID()
+     * @code
      *
      * @param tableName      - the name of a table
      * @param whereCondition - the optional condition for selecting rows to be updated 
@@ -519,6 +564,26 @@ public:
      * - Values types 'std::sting' and 'char*' will be additionally escaped and
      *   surrounded by single quotes as required by the SQL standard.
      * - The column names will be surrounded with back-tick quotes.
+     *
+     * For example:
+     * @code
+     *     connection->sqlSimpleUpdateQuery (
+     *         "table",
+     *         sqlEqual("fk_id", Function::LAST_INSERT_ID),
+     *         std::make_pair ("col1",  "st'r"),
+     *         std::make_pair ("col2",  std::string("c")),
+     *         std::make_pair ("col3",  123));
+     * @code
+     * This will generate the following query (extra newline symbols are added
+     * to me this example a bit easy to read:
+     * @code
+     *     UPDATE `table`
+     *     SET `col1`='st\'r',
+     *         `col2`="c",
+     *         `col3`=123
+     *     WHERE
+     *       `fk_id`=LAST_INSERT_ID()
+     * @code
      *
      * @param tableName      - the name of a table
      * @param whereCondition - the optional condition for selecting rows to be updated 

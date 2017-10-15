@@ -31,7 +31,6 @@
 // Qserv headers
 
 #include "lsst/log/Log.h"
-#include "replica_core/Configuration.h"
 #include "replica_core/ServiceProvider.h"
 #include "replica_core/WorkerDeleteRequest.h"
 #include "replica_core/WorkerFindAllRequest.h"
@@ -423,128 +422,6 @@ public:
 };
 
 
-////////////////////////////////////////////////////////////////
-///////////////////// WorkerRequestFactoryX ////////////////////
-////////////////////////////////////////////////////////////////
-
-
-/**
-  * Class WorkerRequestFactoryX creates request objects based on the XRootD
-  * implementation of the file system operations.
-  */
-class WorkerRequestFactoryX
-    :   public WorkerRequestFactoryBase {
-
-public:
-
-    // Default construction and copy semantics are proxibited
-
-    WorkerRequestFactoryX () = delete;
-    WorkerRequestFactoryX (WorkerRequestFactoryX const&) = delete;
-    WorkerRequestFactoryX& operator= (WorkerRequestFactoryX const&) = delete;
-
-    /// Normal constructor
-    WorkerRequestFactoryX (ServiceProvider& serviceProvider)
-        :   WorkerRequestFactoryBase (serviceProvider) {}
-    
-    /// Destructor
-    ~WorkerRequestFactoryX () override {}
-
-    /**
-     * Implements the corresponding method of the base class
-     *
-     * @see WorkerReplicationRequestBase::technology
-     */
-    std::string technology () const { return "XROOTD"; }
-
-    /**
-     * Implements the corresponding method of the base class
-     *
-     * @see WorkerReplicationRequestBase::createReplicationRequest
-     */
-    WorkerReplicationRequest_pointer createReplicationRequest (
-            std::string const& worker,
-            std::string const& id,
-            int                priority,
-            std::string const& database,
-            unsigned int       chunk,
-            std::string const& sourceWorker) override {
-
-        return WorkerReplicationRequestX::create (
-            _serviceProvider,
-            worker,
-            id,
-            priority,
-            database,
-            chunk,
-            sourceWorker);
-    }
-
-    /**
-     * Implements the corresponding method of the base class
-     *
-     * @see WorkerReplicationRequestBase::createDeleteRequest
-     */
-    WorkerDeleteRequest_pointer createDeleteRequest (
-            std::string const& worker,
-            std::string const& id,
-            int                priority,
-            std::string const& database,
-            unsigned int       chunk) override {
-
-        return WorkerDeleteRequestX::create (
-            _serviceProvider,
-            worker,
-            id,
-            priority,
-            database,
-            chunk);
-    }
-
-    /**
-     * Implements the corresponding method of the base class
-     *
-     * @see WorkerReplicationRequestBase::createFindRequest
-     */
-    WorkerFindRequest_pointer createFindRequest (
-             std::string const& worker,
-             std::string const& id,
-             int                priority,
-             std::string const& database,
-             unsigned int       chunk,
-             bool               computeCheckSum) override {
-
-        return WorkerFindRequestX::create (
-            _serviceProvider,
-            worker,
-            id,
-            priority,
-            database,
-            chunk,
-            computeCheckSum);
-    }
-
-    /**
-     * Implements the corresponding method of the base class
-     *
-     * @see WorkerReplicationRequestBase::createFindAllRequest
-     */
-    WorkerFindAllRequest_pointer createFindAllRequest (
-            std::string const& worker,
-            std::string const& id,
-            int                priority,
-            std::string const& database) override {
-
-        return WorkerFindAllRequestX::create (
-            _serviceProvider,
-            worker,
-            id,
-            priority,
-            database);
-    }
-};
-
-
 ///////////////////////////////////////////////////////////////
 ///////////////////// WorkerRequestFactory ////////////////////
 ///////////////////////////////////////////////////////////////
@@ -554,12 +431,11 @@ WorkerRequestFactory::WorkerRequestFactory (ServiceProvider&   serviceProvider,
     :   WorkerRequestFactoryBase (serviceProvider) {
         
     std::string const finalTechnology =
-        technology.empty() ? serviceProvider.config().workerTechnology() : technology;
+        technology.empty() ? serviceProvider.config()->workerTechnology() : technology;
 
-    if      (finalTechnology == "TEST")   _ptr = new WorkerRequestFactoryTest  (serviceProvider);
-    else if (finalTechnology == "POSIX")  _ptr = new WorkerRequestFactoryPOSIX (serviceProvider);
-    else if (finalTechnology == "FS")     _ptr = new WorkerRequestFactoryFS    (serviceProvider);
-    else if (finalTechnology == "XROOTD") _ptr = new WorkerRequestFactoryX     (serviceProvider);
+    if      (finalTechnology == "TEST")  _ptr = new WorkerRequestFactoryTest  (serviceProvider);
+    else if (finalTechnology == "POSIX") _ptr = new WorkerRequestFactoryPOSIX (serviceProvider);
+    else if (finalTechnology == "FS")    _ptr = new WorkerRequestFactoryFS    (serviceProvider);
     else
         throw std::invalid_argument("WorkerRequestFactory::WorkerRequestFactory() unknown technology: '" +
                                     finalTechnology);
