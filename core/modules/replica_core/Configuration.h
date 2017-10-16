@@ -139,11 +139,36 @@ public:
     // -- Common configuration parameters of both the controller and workers --
     // ------------------------------------------------------------------------
 
-    /// The names of known workers
-    std::vector<std::string> const& workers () const { return _workers; }
+    /**
+     * The names of known workers which have the specified properties
+     * as per input filters.
+     *
+     * @param isEnabled  - select workers which are allowed to participate in the
+     *                     replication operations.
+     * @param isReadOnly - a subclass of the 'enabled' workers which can only serve as
+     *                     a source of replicas. No replica modification (creaion or
+     *                     deletion) operations would be allowed against those workers.
+     *                     NOTE: this filter only matters for the 'enabled' workers.
+     */
+    std::vector<std::string> workers (bool isEnabled,
+                                      bool isReadOnly=false) const;
+
+    /**
+     * Return the nams of workers which are 'allowed' and which are *NOT* in
+     * the 'read-only' state. Ths method has a similar effcet as the previously
+     * defined one called with the following filter options:
+     *   @code
+     *     bool isEnabled = true;
+     *     bool isReadOnly = false;
+     *     workers (isEnabled, isReadOnly);
+     *   @code
+     */
+    std::vector<std::string> workers () const {
+        return workers (true, false);
+    }
 
     /// The names of known databases
-    std::vector<std::string> const& databases () const { return _databases; }
+    std::vector<std::string> databases () const;
 
     /// The maximum size of the request buffers in bytes
     size_t requestBufferSizeBytes () const { return _requestBufferSizeBytes; }
@@ -295,9 +320,6 @@ protected:
 protected:
 
     // Cached values of the parameters
-
-    std::vector<std::string> _workers;
-    std::vector<std::string> _databases;
 
     size_t       _requestBufferSizeBytes;
     unsigned int _retryTimeoutSec;
