@@ -77,7 +77,7 @@ bool getAsNumber (Row const& row,
         }
         return false;
     } catch (boost::bad_lexical_cast const& ex) {
-        throw InvalidTypeError ("DatabaseMySQL::getAsNumber<K,T>()  type conversion failed");
+        throw InvalidTypeError ("DatabaseMySQL::getAsNumber<K,T>()  type conversion failed for key: " + key);
     }
 }
 
@@ -380,7 +380,7 @@ Connection::execute (std::string const& query) {
 
     static std::string const context = "Connection::execute()  ";
 
-    LOGS(_log, LOG_LVL_DEBUG, context + query);
+    LOGS(_log, LOG_LVL_DEBUG, context << query);
 
     if (query.empty())
         throw std::invalid_argument (
@@ -463,8 +463,12 @@ Connection::next (Row& row) {
     // the provided Row object.
 
     row._isValid = true;
+
+    row._name2index.clear();
+    row._index2cell.clear();
+
     row._index2cell.reserve (_numFields);
-    for (size_t i = 0; i < _numFields; i++) {
+    for (size_t i = 0; i < _numFields; ++i) {
         row._name2index[_fields[i].name] = i;
         row._index2cell.emplace_back (Row::Cell {_row[i], lengths[i]});
     }

@@ -51,10 +51,8 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.Configuration");
 template <typename T>
 void vector2stream (std::ostream&         os,
                     std::vector<T> const& v) {
-    os  << "[";
     for (size_t i = 0, num = v.size(); i < num; ++i)
         os  << (i ? "," : "") << v[i];
-    os  << "]";
 }
 
 } // namespace
@@ -155,8 +153,7 @@ Configuration::translateDataDir (std::string&       dataDir,
 }
 
 Configuration::Configuration ()
-    :   _workers                      (),
-        _requestBufferSizeBytes       (defaultRequestBufferSizeBytes),
+    :   _requestBufferSizeBytes       (defaultRequestBufferSizeBytes),
         _retryTimeoutSec              (defaultRetryTimeoutSec),
         _controllerHttpPort           (defaultControllerHttpPort),
         _controllerHttpThreads        (defaultControllerHttpThreads),
@@ -174,6 +171,32 @@ Configuration::Configuration ()
 }
 
 Configuration::~Configuration () {
+}
+
+std::vector<std::string>
+Configuration::workers (bool isEnabled,
+                        bool isReadOnly) const {
+    std::vector<std::string> names;
+    for (auto const& entry: _workerInfo) {
+        auto const& name = entry.first;
+        auto const& info = entry.second;
+        if (isEnabled) {
+            if (info.isEnabled && (isReadOnly == info.isReadOnly))
+                names.push_back (name);
+        } else {
+            if (!info.isEnabled)
+                names.push_back (name);
+        }
+    }
+    return names;
+}
+
+std::vector<std::string>
+Configuration::databases () const {
+    std::vector<std::string> names;
+    for (auto const& entry: _databaseInfo)
+        names.push_back (entry.first);
+    return names;
 }
 
 bool

@@ -91,15 +91,17 @@ ConfigurationFile::loadConfiguration () {
 
     // Parse the list of worker names
 
+    std::vector<std::string> workers;
     {
         std::istringstream ss(configStore.getRequired("common.workers"));
         std::istream_iterator<std::string> begin(ss), end;
-        _workers = std::vector<std::string>(begin, end);
+        workers = std::vector<std::string>(begin, end);
     }
+    std::vector<std::string> databases;
     {
         std::istringstream ss(configStore.getRequired("common.databases"));
         std::istream_iterator<std::string> begin(ss), end;
-        _databases = std::vector<std::string>(begin, end);
+        databases = std::vector<std::string>(begin, end);
     }
 
     ::parseKeyVal(configStore, "common.request_buf_size_bytes",     _requestBufferSizeBytes,       defaultRequestBufferSizeBytes);
@@ -138,7 +140,7 @@ ConfigurationFile::loadConfiguration () {
     // or (previously parsed) common values if a whole secton or individual
     // parameters are missing.
 
-    for (std::string const& name: _workers) {
+    for (std::string const& name: workers) {
 
         std::string const section = "worker:" + name;
         if (_workerInfo.count(name))
@@ -161,7 +163,7 @@ ConfigurationFile::loadConfiguration () {
     
     // Parse mandatory database-specific configuraton sections
 
-    for (std::string const& name: _databases) {
+    for (std::string const& name: databases) {
 
         std::string const section = "database:" + name;
         if (_databaseInfo.count(name))
