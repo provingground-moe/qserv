@@ -121,7 +121,7 @@ public:
     /// Return the string representation of the status
     static std::string state2string (State state);
 
-    // Default construction and copy semantics are proxibited
+    // Default construction and copy semantics are prohibited
 
     WorkerProcessor () = delete;
     WorkerProcessor (WorkerProcessor const&) = delete;

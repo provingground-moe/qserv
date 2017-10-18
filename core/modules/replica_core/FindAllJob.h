@@ -86,13 +86,26 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param database   - the name of a database
-     * @param controller - for launching requests
-     * @param onFinish   - a callback function to be called upon a completion of the job
+     * @param database    - the name of a database
+     * @param controller  - for launching requests
+     * @param onFinish    - a callback function to be called upon a completion of
+     *                      the job
+     * @param priority    - set the desired job priority (larger values
+     *                      mean higher priorities). A job with the highest
+     *                      priority will be select from an input queue by
+     *                      the JobScheduler.
+     * @param exclusive   - set to 'true' to indicate that the job can't be
+     *                      running simultaneously alongside other jobs.
+     * @param preemptable - set to 'true' to indicate that this job can be
+     *                      interrupted to give a way to some other job of
+     *                      high importancy.
      */
     static pointer create (std::string const&         database,
                            Controller::pointer const& controller,
-                           callback_type              onFinish);
+                           callback_type              onFinish,
+                           int                        priority    = 0,
+                           bool                       exclusive   = false,
+                           bool                       preemptable = true);
 
     // Default construction and copy semantics are prohibited
 
@@ -139,13 +152,14 @@ protected:
     /**
      * Construct the job with the pointer to the services provider.
      *
-     * @param database   - the name of a database
-     * @param controller - for launching requests
-     * @param onFinish   - a callback function to be called upon a completion of the job
+     * @see FindAllJob::create()
      */
     FindAllJob (std::string const&         database,
                 Controller::pointer const& controller,
-                callback_type              onFinish);
+                callback_type              onFinish,
+                int                        priority,
+                bool                       exclusive,
+                bool                       preemptable);
 
     /**
       * Implement the corresponding method of the base class.

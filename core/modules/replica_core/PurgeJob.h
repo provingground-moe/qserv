@@ -94,12 +94,24 @@ public:
      * @param bestEffort  - the flag (if set) allowing to proceed with the replication effort
      *                      when some workers fail to report their cunk disposition.
      *                      ATTENTION: do *NOT* use this in production!
+     * @param priority    - set the desired job priority (larger values
+     *                      mean higher priorities). A job with the highest
+     *                      priority will be select from an input queue by
+     *                      the JobScheduler.
+     * @param exclusive   - set to 'true' to indicate that the job can't be
+     *                      running simultaneously alongside other jobs.
+     * @param preemptable - set to 'true' to indicate that this job can be
+     *                      interrupted to give a way to some other job of
+     *                      high importancy.
      */
     static pointer create (unsigned int               numReplicas,
                            std::string const&         database,
                            Controller::pointer const& controller,
                            callback_type              onFinish,
-                           bool                       bestEffort=false);
+                           bool                       bestEffort  = false,
+                           int                        priority    = -1,
+                           bool                       exclusive   = false,
+                           bool                       preemptable = true);
 
     // Default construction and copy semantics are prohibited
 
@@ -150,19 +162,16 @@ protected:
     /**
      * Construct the job with the pointer to the services provider.
      *
-     * @param numReplicas - the minimum number of replicas for each chunk
-     * @param database    - the name of a database
-     * @param controller  - for launching requests
-     * @param onFinish    - a callback function to be called upon a completion of the job
-     * @param bestEffort  - the flag (if set) allowing to proceed with the replication effort
-     *                      when some workers fail to report their cunk disposition.
-     *                      ATTENTION: do *NOT* use this in production!
+     * @see PurgeJob::create()
      */
     PurgeJob (unsigned int               numReplicas,
               std::string const&         database,
               Controller::pointer const& controller,
               callback_type              onFinish,
-              bool                       bestEffort);
+              bool                       bestEffort,
+              int                        priority,
+              bool                       exclusive,
+              bool                       preemptable);
 
     /**
       * Implement the corresponding method of the base class.

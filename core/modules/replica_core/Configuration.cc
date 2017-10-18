@@ -137,6 +137,7 @@ uint16_t     const Configuration::defaultDatabasePort                {3306};
 std::string  const Configuration::defaultDatabaseUser                {FileUtils::getEffectiveUser()};
 std::string  const Configuration::defaultDatabasePassword            {""};
 std::string  const Configuration::defaultDatabaseName                {"replica"};
+unsigned int const Configuration::defaultJobSchedulerIvalSec         {1};
 
 void
 Configuration::translateDataDir (std::string&       dataDir,
@@ -167,7 +168,8 @@ Configuration::Configuration ()
         _databasePort                 (defaultDatabasePort),
         _databaseUser                 (defaultDatabaseUser),
         _databasePassword             (defaultDatabasePassword),
-        _databaseName                 (defaultDatabaseName) {
+        _databaseName                 (defaultDatabaseName),
+        _jobSchedulerIvalSec          (defaultJobSchedulerIvalSec) {
 }
 
 Configuration::~Configuration () {
@@ -251,21 +253,23 @@ Configuration::dumpIntoLogger () {
     LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabaseUser:                 " << defaultDatabaseUser);
     LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabasePassword:             " << "*****");
     LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabaseName:                 " << defaultDatabaseName);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_requestBufferSizeBytes:             "  << _requestBufferSizeBytes);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_retryTimeoutSec:                    "  << _retryTimeoutSec);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerHttpPort:                 "  << _controllerHttpPort);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerHttpThreads:              "  << _controllerHttpThreads);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerRequestTimeoutSec:        "  << _controllerRequestTimeoutSec);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_workerTechnology:                   "  << _workerTechnology);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_workerNumProcessingThreads:         "  << _workerNumProcessingThreads);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_workerNumFsProcessingThreads:       "  << _workerNumFsProcessingThreads);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_workerFsBufferSizeBytes:            "  << _workerFsBufferSizeBytes);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseTechnology:                 "  << _databaseTechnology);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseHost:                       "  << _databaseHost);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_databasePort:                       "  << _databasePort);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseUser:                       "  << _databaseUser);
-    LOGS (_log, LOG_LVL_DEBUG, context << "_databasePassword:                   "  << "*****");
-    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseName:                       "  << _databaseName);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultJobSchedulerIvalSec:          " << defaultJobSchedulerIvalSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_requestBufferSizeBytes:             " << _requestBufferSizeBytes);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_retryTimeoutSec:                    " << _retryTimeoutSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerHttpPort:                 " << _controllerHttpPort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerHttpThreads:              " << _controllerHttpThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_controllerRequestTimeoutSec:        " << _controllerRequestTimeoutSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerTechnology:                   " << _workerTechnology);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerNumProcessingThreads:         " << _workerNumProcessingThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerNumFsProcessingThreads:       " << _workerNumFsProcessingThreads);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_workerFsBufferSizeBytes:            " << _workerFsBufferSizeBytes);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseTechnology:                 " << _databaseTechnology);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseHost:                       " << _databaseHost);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databasePort:                       " << _databasePort);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseUser:                       " << _databaseUser);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databasePassword:                   " << "*****");
+    LOGS (_log, LOG_LVL_DEBUG, context << "_databaseName:                       " << _databaseName);
+    LOGS (_log, LOG_LVL_DEBUG, context << "_jobSchedulerIvalSec:                " << _jobSchedulerIvalSec);
     for (auto const& elem: _workerInfo)   LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
     for (auto const& elem: _databaseInfo) LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
 

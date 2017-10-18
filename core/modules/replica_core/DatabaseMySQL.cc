@@ -293,18 +293,22 @@ Function::Function (std::string const& name_)
 
 Connection::pointer
 Connection::open (ConnectionParams const& connectionParams,
-                  bool                    autoReconnect) {
+                  bool                    autoReconnect,
+                  bool                    autoCommit) {
 
     Connection::pointer ptr (new Connection(connectionParams,
-                                            autoReconnect));
+                                            autoReconnect,
+                                            autoCommit));
     ptr->connect();
     return ptr;
 }
 
 Connection::Connection (ConnectionParams const& connectionParams,
-                        bool                    autoReconnect)
+                        bool                    autoReconnect,
+                        bool                    autoCommit)
     :   _connectionParams (connectionParams),
         _autoReconnect    (autoReconnect),
+        _autoCommit       (autoCommit),
 
         _inTransaction (false),
 
@@ -487,7 +491,7 @@ Connection::connect () {
     // Allow automatic reconnect if requested
     if (_autoReconnect) {
         my_bool reconnect = 0;
-        mysql_options(_mysql, MYSQL_OPT_RECONNECT, &reconnect);
+        mysql_options (_mysql, MYSQL_OPT_RECONNECT, &reconnect);
     }
 
     // Connect now
@@ -505,7 +509,8 @@ Connection::connect () {
 
     // Set session attributes
     if (mysql_query (_mysql, "SET SESSION SQL_MODE='ANSI'") ||
-        mysql_query (_mysql, "SET SESSION AUTOCOMMIT=0"))
+        mysql_query (_mysql, _autoCommit ? "SET SESSION AUTOCOMMIT=1" :
+                                           "SET SESSION AUTOCOMMIT=0"))
         throw Error (context + "mysql_query() failed, error: " +
                      std::string(mysql_error(_mysql)));
 }

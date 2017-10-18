@@ -56,23 +56,35 @@ ReplicateJob::create (unsigned int               numReplicas,
                       std::string const&         database,
                       Controller::pointer const& controller,
                       callback_type              onFinish,
-                      bool                       bestEffort) {
+                      bool                       bestEffort,
+                      int                        priority,
+                      bool                       exclusive,
+                      bool                       preemptable) {
     return ReplicateJob::pointer (
         new ReplicateJob (numReplicas,
                           database,
                           controller,
                           onFinish,
-                          bestEffort));
+                          bestEffort,
+                          priority,
+                          exclusive,
+                          preemptable));
 }
 
 ReplicateJob::ReplicateJob (unsigned int               numReplicas,
                             std::string const&         database,
                             Controller::pointer const& controller,
                             callback_type              onFinish,
-                            bool                       bestEffort)
+                            bool                       bestEffort,
+                            int                        priority,
+                            bool                       exclusive,
+                            bool                       preemptable)
 
     :   Job (controller,
-             "REPLICATE"),
+             "REPLICATE",
+             priority,
+             exclusive,
+             preemptable),
 
         _numReplicas (numReplicas),
         _database    (database),

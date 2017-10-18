@@ -360,12 +360,18 @@ public:
      *                           for a prologed period of time causing the server to kick out
      *                           the client. Note that only one reconnection attempt will be
      *                           made each time the dropped conneciton is detected.
+     * @autoCommit             - if set 'true' then no transactions will be required
+     *                           whene executing queries modifying the contents of tables.
+     *                           ATTENTION: this is a special option which must be used
+     *                           with care. One proposed use case fr it is to use it
+     *                           whith 'LOCK/UNLOCK TABLES' statements.
      *
      * @return a valid object if the connection attempt succeeded
      * @throws Error - if the connection failed
      */
     static pointer open (ConnectionParams const& connectionParams,
-                         bool                    autoReconnect=true);
+                         bool                    autoReconnect = true,
+                         bool                    autoCommit    = false);
 
     // Default construction and copy semantics are prohibited
 
@@ -820,12 +826,11 @@ private:
     /**
      * Construct an object
      *
-     * @param connectionParams - the connection parameters
-     * @param autoReconnect    - automaticalluy reconnect to the service
-     *                           if the dropped connection was discovered.
+     * @see Connection::connect()
      */
     explicit Connection (ConnectionParams const& connectionParams,
-                         bool                    autoReconnect);
+                         bool                    autoReconnect,
+                         bool                    autoCommit);
 
     /**
      * Establish a connection
@@ -856,6 +861,9 @@ private:
 
     /// Auto-reconnect policy
     bool _autoReconnect;
+
+    /// Auto-commit policy
+    bool _autoCommit;
 
     /// The last SQL statement
     std::string _lastQuery;

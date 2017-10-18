@@ -267,6 +267,14 @@ public:
     /// Return the buffer size for the file I/O operations
     size_t workerFsBufferSizeBytes () const { return _workerFsBufferSizeBytes; }
 
+    // ---------------------------------------------------
+    // -- Configuration parameters of the Job Scheduler --
+    // ---------------------------------------------------
+
+    /// Return the number of seconds betwean re-evaluations of the Schedule's
+    /// state. At each expiration moment of the interval the Scheduler would
+    /// check if there are new jobs which are requested to be run on the time basis.
+    unsigned int jobSchedulerIvalSec () const { return _jobSchedulerIvalSec; }
 
     /**
      * Serialize the configuration parameters into the Logger
@@ -299,6 +307,7 @@ protected:
     static std::string  const defaultDatabaseUser;
     static std::string  const defaultDatabasePassword;
     static std::string  const defaultDatabaseName;
+    static unsigned int const defaultJobSchedulerIvalSec;
 
     /**
      * Inplace translation of the the data directory string by finding an optional
@@ -355,7 +364,10 @@ protected:
     std::string _databasePassword;
 
     /// The name of a database to be set upon the connection
-    std::string _databaseName; 
+    std::string _databaseName;
+    
+    // Parameters of the Job scheduler
+    unsigned int _jobSchedulerIvalSec;
 };
 
 }}} // namespace lsst::qserv::replica_core

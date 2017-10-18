@@ -52,19 +52,31 @@ namespace replica_core {
 FindAllJob::pointer
 FindAllJob::create (std::string const&         database,
                     Controller::pointer const& controller,
-                    callback_type              onFinish) {
+                    callback_type              onFinish,
+                    int                        priority,
+                    bool                       exclusive,
+                    bool                       preemptable) {
     return FindAllJob::pointer (
         new FindAllJob (database,
                         controller,
-                        onFinish));
+                        onFinish,
+                        priority,
+                        exclusive,
+                        preemptable));
 }
 
 FindAllJob::FindAllJob (std::string const&         database,
                         Controller::pointer const& controller,
-                        callback_type              onFinish)
+                        callback_type              onFinish,
+                        int                        priority,
+                        bool                       exclusive,
+                        bool                       preemptable)
 
     :   Job (controller,
-             "FIND_ALL"),
+             "FIND_ALL",
+             priority,
+             exclusive,
+             preemptable),
 
         _database (database),
         _onFinish (onFinish),
