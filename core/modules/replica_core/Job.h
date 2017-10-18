@@ -122,6 +122,17 @@ public:
     /// Return a unique identifier of the job
     std::string const& id () const { return _id; }
 
+    /// Return the priority of the job
+    int priority () const { return _priority; }
+
+    /// Return the flag indicating of this job can't be run simultaneously
+    /// along with other jobs.
+    bool exclusive () const { return _exclusive; }
+
+    /// Retun 'true' if the job is allowed to be interrupted by some
+    /// by other jobs.
+    bool preemptable () const { return _preemptable; }
+
     /// Return the primary status of the job
     State state () const { return _state; }
 
@@ -184,11 +195,23 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      *
-     * @param controller - for launching requests
-     * @param type       - its type name
+     * @param controller  - for launching requests
+     * @param type        - its type name
+     * @param priority    - set the desired job priority (larger values
+     *                      mean higher priorities). A job with the highest
+     *                      priority will be select from an input queue by
+     *                      the JobScheduler.
+     * @param exclusive   - set to 'true' to indicate that the job can't be
+     *                      running simultaneously alongside other jobs.
+     * @param preemptable - set to 'true' to indicate that this job can be
+     *                      interrupted to give a way to some other job of
+     *                      high importancy.
      */
     Job (Controller::pointer const& controller,
-         std::string const&         type);
+         std::string const&         type,
+         int                        priority,
+         bool                       exclusive,
+         bool                       preemptable);
 
     /**
       * This method is supposed to be provided by subclasses for additional
@@ -249,6 +272,12 @@ protected:
     /// The type of the job
     std::string _type;
 
+    // Job scheduling attributes
+
+    int  _priority;
+    bool _exclusive;
+    bool _preemptable;
+
     /// Primary state of the job
     State _state;
 
@@ -262,6 +291,17 @@ protected:
 
     /// Mutex guarding internal state
     mutable std::mutex _mtx;
+};
+
+/// Comparision type for strict weak ordering reaquired by std::priority_queue
+struct JobCompare {
+
+    /// Order requests by their priorities
+    bool operator() (const Job::pointer& lhs,
+                     const Job::pointer& rhs) const {
+
+        return lhs->priority() < rhs->priority();
+    }
 };
 
 }}} // namespace lsst::qserv::replica_core

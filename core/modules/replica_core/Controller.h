@@ -164,7 +164,7 @@ public:
     boost::asio::io_service& io_service () { return _io_service; }
 
     /**
-     * Run the server in a dedicated thread unless it's already running.
+     * Run the Controller in a dedicated thread unless it's already running.
      * It's safe to call this method multiple times from any thread.
      */
     void run ();
