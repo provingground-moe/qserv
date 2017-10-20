@@ -152,6 +152,16 @@ ConfigurationMySQL::loadConfiguration () {
 
         _workerInfo[info.name] = info;
     }
+    // Read database family-specific configurations and construct _replicationLevel
+
+    conn->execute ("SELECT * FROM " + conn->sqlId ("config_database_family"));
+
+    while (conn->next(row)) {
+
+        std::string family;
+        ::readMandatoryParameter (row, "name", family);
+        ::readMandatoryParameter (row, "min_replication_level", _replicationLevel[family]);
+    }
 
     // Read database-specific configurations and construct DatabaseInfo.
 
@@ -162,6 +172,18 @@ ConfigurationMySQL::loadConfiguration () {
         std::string database;
         ::readMandatoryParameter (row, "database", database);
         _databaseInfo[database].name = database;
+
+        ::readMandatoryParameter (row, "family_name", _databaseInfo[database].family);
+    }
+
+    // Read database-specific table definitions and extend the corresponding DatabaseInfo.
+
+    conn->execute ("SELECT * FROM " + conn->sqlId ("config_database_table"));
+
+    while (conn->next(row)) {
+
+        std::string database;
+        ::readMandatoryParameter (row, "database", database);
 
         std::string table;
         ::readMandatoryParameter (row, "table", table);

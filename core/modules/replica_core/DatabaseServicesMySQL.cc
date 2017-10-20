@@ -394,6 +394,8 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
                 request->id(),
                 request->jobId(),
                 request->type(),
+                request->worker(),
+                request->priority(),
                 Request::state2string (request->state()),
                 Request::state2string (request->extendedState()),
                         status2string (request->extendedServerStatus()),
@@ -409,7 +411,6 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
                 _conn->executeInsertQuery (
                     "request_replica_create",
                     ptr->id(),
-                    ptr->worker(),
                     ptr->database(),
                     ptr->chunk(),
                     ptr->sourceWorker());
@@ -419,7 +420,6 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
                 _conn->executeInsertQuery (
                     "request_replica_delete",
                     ptr->id(),
-                    ptr->worker(),
                     ptr->database(),
                     ptr->chunk());
             }

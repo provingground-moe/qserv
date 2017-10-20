@@ -60,6 +60,29 @@ class ReplicateJob;
 class ServiceProvider;
 
 /**
+ * The base class for implementing requests registry as a polymorphic
+ * collection to store active jobs. Pure virtual methods of
+ * the class will be overriden by request-type-specific implementations
+ * (see struct JobWrappeImpl<JOB_TYPE> in the .cc file) capturing
+ * type-dependant pointer and a callback function.
+ */
+struct JobWrapper {
+
+    /// The pointer type for instances of the class
+    typedef std::shared_ptr<JobWrapper> pointer;
+
+    /// Destructor
+    virtual ~JobWrapper() {}
+
+    /// This method will be called upon a completion of a request
+    /// to notify a subscriber on the event.
+    virtual void notify ()=0;
+
+    /// Return a pointer to the stored job object
+    virtual Job::pointer job () const=0;
+};
+
+/**
  * Base class ExclusiveMultiMasterLockI is an abstraction for operations with
  * the distributed multi-master lock.
  */
@@ -402,6 +425,11 @@ private:
     /// The thread will reset this flag when it finishes.
     std::atomic<bool> _stop;
  
+    /// Job wrappers registered by their unique identifiers for
+    /// to allow an efficient lookup and for type-specific ntifications
+    /// upon their completion.
+    std::map<std::string, JobWrapper::pointer> _registry;
+
     /// New unprocessed jobs
     PriorityQueueType _newJobs;
 

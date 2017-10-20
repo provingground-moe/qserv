@@ -84,6 +84,9 @@ struct DatabaseInfo {
     /// The name of a database
     std::string name;
 
+    /// The name of the database family
+    std::string family;
+
     /// The names of the partitioned tables
     std::vector<std::string> partitionedTables;
 
@@ -167,8 +170,27 @@ public:
         return workers (true, false);
     }
 
-    /// The names of known databases
-    std::vector<std::string> databases () const;
+    /// The names of known database families
+    std::vector<std::string> databaseFamilies () const;
+
+    /**
+     * Return the names of known databases. A reslt of the method may be
+     * limited to a subset of databases belonging ot the specified family.
+     *
+     * @param family - the optional name of a database family
+     *
+     * @throw std::invalid_argument - if the family is not known
+     */
+    std::vector<std::string> databases (std::string const& family=std::string()) const;
+
+    /**
+     * Return the minimum number of chunks for a database family
+     *
+     * @param family - the optional name of a database family
+     *
+     * @throw std::invalid_argument - if the family is not known
+     */
+    size_t replicationLevel (std::string const& family) const;
 
     /// The maximum size of the request buffers in bytes
     size_t requestBufferSizeBytes () const { return _requestBufferSizeBytes; }
@@ -308,6 +330,7 @@ protected:
     static std::string  const defaultDatabasePassword;
     static std::string  const defaultDatabaseName;
     static unsigned int const defaultJobSchedulerIvalSec;
+    static size_t       const defaultReplicationLevel;
 
     /**
      * Inplace translation of the the data directory string by finding an optional
@@ -343,6 +366,10 @@ protected:
     size_t _workerNumFsProcessingThreads;
     size_t _workerFsBufferSizeBytes;
     
+    /// The minimum number of replicas for members of each database family
+    /// Allowed values: 1..N
+    std::map<std::string, size_t> _replicationLevel;
+
     std::map<std::string, DatabaseInfo> _databaseInfo;
     std::map<std::string, WorkerInfo>   _workerInfo;
 

@@ -97,6 +97,12 @@ ConfigurationFile::loadConfiguration () {
         std::istream_iterator<std::string> begin(ss), end;
         workers = std::vector<std::string>(begin, end);
     }
+    std::vector<std::string> databaseFamilies;
+    {
+        std::istringstream ss(configStore.getRequired("common.database_families"));
+        std::istream_iterator<std::string> begin(ss), end;
+        databaseFamilies = std::vector<std::string>(begin, end);
+    }
     std::vector<std::string> databases;
     {
         std::istringstream ss(configStore.getRequired("common.databases"));
@@ -160,7 +166,19 @@ ConfigurationFile::loadConfiguration () {
 
         Configuration::translateDataDir(_workerInfo[name].dataDir, name);
     }
-    
+
+    // Parse mandatory database family-specific configuraton sections
+
+    for (std::string const& name: databaseFamilies) {
+        std::string const section = "database_family:" + name;
+        if (_replicationLevel.count(name))
+            throw std::range_error (
+                    "ConfigurationFile::loadConfiguration() duplicate database family entry: '" +
+                    name + "' in: [common] or ["+section+"], configuration file: " + _configFile);
+        ::parseKeyVal(configStore, section+".min_replication_level",   _replicationLevel[name], defaultReplicationLevel);
+        if (!_replicationLevel[name]) _replicationLevel[name] = defaultReplicationLevel;
+    }
+
     // Parse mandatory database-specific configuraton sections
 
     for (std::string const& name: databases) {
@@ -172,6 +190,11 @@ ConfigurationFile::loadConfiguration () {
                     name + "' in: [common] or ["+section+"], configuration file: " + _configFile);
 
         _databaseInfo[name].name = name;
+        _databaseInfo[name].family = configStore.getRequired(section+".family");
+        if (!_replicationLevel.count(_databaseInfo[name].family))
+            throw std::range_error (
+                    "ConfigurationFile::loadConfiguration() unknown database family: '" +
+                    _databaseInfo[name].family + "' in section ["+section+"], configuration file: " + _configFile);
         {
             std::istringstream ss(configStore.getRequired(section+".partitioned_tables"));
             std::istream_iterator<std::string> begin(ss), end;

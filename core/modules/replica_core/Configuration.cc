@@ -77,7 +77,8 @@ std::ostream& operator << (std::ostream& os, WorkerInfo const& info) {
 
 std::ostream& operator << (std::ostream& os, DatabaseInfo const& info) {
     os  << "DatabaseInfo ("
-        << "name:'"              <<                    info.name               << "',"
+        << "name:'" << info.name << "',"
+        << "family:'" << info.family << "',"
         << "partitionedTables:[";
     ::vector2stream (os, info.partitionedTables);
     os  << "],"
@@ -138,6 +139,7 @@ std::string  const Configuration::defaultDatabaseUser                {FileUtils:
 std::string  const Configuration::defaultDatabasePassword            {""};
 std::string  const Configuration::defaultDatabaseName                {"replica"};
 unsigned int const Configuration::defaultJobSchedulerIvalSec         {1};
+size_t       const Configuration::defaultReplicationLevel            {1};
 
 void
 Configuration::translateDataDir (std::string&       dataDir,
@@ -194,11 +196,42 @@ Configuration::workers (bool isEnabled,
 }
 
 std::vector<std::string>
-Configuration::databases () const {
+Configuration::databaseFamilies () const {
+
+    std::map<std::string, size_t> family2num;
+    for (auto const& elem: _databaseInfo)
+        family2num[elem.second.family]++;
+
+    std::vector<std::string> families;
+    for (auto const& elem: family2num)
+        families.emplace_back (elem.first);
+
+    return families;
+}
+
+std::vector<std::string>
+Configuration::databases (std::string const& family) const {
+
+    if (!family.empty() && !_replicationLevel.count (family))
+        throw std::invalid_argument (
+                "Configuration::databases  unknown database family name: '" +
+                family + "'");
+
     std::vector<std::string> names;
-    for (auto const& entry: _databaseInfo)
+    for (auto const& entry: _databaseInfo) {
+        if (!family.empty() && (family != entry.second.family)) continue;
         names.push_back (entry.first);
+    }        
     return names;
+}
+
+size_t
+Configuration::replicationLevel (std::string const& family) const {
+    if (!_replicationLevel.count (family))
+        throw std::invalid_argument (
+                "Configuration::replicationLevel  unknown database family name: '" +
+                family + "'");
+    return _replicationLevel.at (family);
 }
 
 bool
@@ -254,6 +287,7 @@ Configuration::dumpIntoLogger () {
     LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabasePassword:             " << "*****");
     LOGS (_log, LOG_LVL_DEBUG, context << "defaultDatabaseName:                 " << defaultDatabaseName);
     LOGS (_log, LOG_LVL_DEBUG, context << "defaultJobSchedulerIvalSec:          " << defaultJobSchedulerIvalSec);
+    LOGS (_log, LOG_LVL_DEBUG, context << "defaultReplicationLevel:             " << defaultReplicationLevel);
     LOGS (_log, LOG_LVL_DEBUG, context << "_requestBufferSizeBytes:             " << _requestBufferSizeBytes);
     LOGS (_log, LOG_LVL_DEBUG, context << "_retryTimeoutSec:                    " << _retryTimeoutSec);
     LOGS (_log, LOG_LVL_DEBUG, context << "_controllerHttpPort:                 " << _controllerHttpPort);
@@ -270,9 +304,9 @@ Configuration::dumpIntoLogger () {
     LOGS (_log, LOG_LVL_DEBUG, context << "_databasePassword:                   " << "*****");
     LOGS (_log, LOG_LVL_DEBUG, context << "_databaseName:                       " << _databaseName);
     LOGS (_log, LOG_LVL_DEBUG, context << "_jobSchedulerIvalSec:                " << _jobSchedulerIvalSec);
-    for (auto const& elem: _workerInfo)   LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
-    for (auto const& elem: _databaseInfo) LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
-
+    for (auto const& elem: _workerInfo)       LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
+    for (auto const& elem: _databaseInfo)     LOGS (_log, LOG_LVL_DEBUG, context << elem.second);
+    for (auto const& elem: _replicationLevel) LOGS (_log, LOG_LVL_DEBUG, context << "replicationLevel["<< elem.first << "]: " << elem.second);
 }
 
 }}} // namespace lsst::qserv::replica_core
