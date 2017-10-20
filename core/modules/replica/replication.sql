@@ -448,7 +448,7 @@ DROP TABLE IF EXISTS `config_database_family` ;
 
 CREATE TABLE IF NOT EXISTS `config_database_family` (
 
-  `name  `                 VARCHAR(255)  NOT NULL ,
+  `name`                   VARCHAR(255)  NOT NULL ,
   `min_replication_level`  INT UNSIGNED  NOT NULL ,    -- minimum number of replicas per chunk
 
   UNIQUE  KEY (`name`)
@@ -471,13 +471,15 @@ CREATE TABLE IF NOT EXISTS `config_database` (
   `database`     VARCHAR(255)  NOT NULL ,
   `family_name`  VARCHAR(255)  NOT NULL ,
 
-  UNIQUE  KEY (`database`)  -- each database can belong to one family only
+  -- Each database is allowed to belong to one family only
+  --
+  UNIQUE  KEY (`database`) ,
 
   CONSTRAINT `config_database_fk_1`
-    FOREIGN KEY (`family` )
-    REFERENCES `config_database_family` (`family_name` )
+    FOREIGN KEY (`family_name` )
+    REFERENCES `config_database_family` (`name` )
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE
 )
 ENGINE = InnoDB;
 
@@ -502,7 +504,8 @@ CREATE TABLE IF NOT EXISTS `config_database_table` (
     FOREIGN KEY (`database` )
     REFERENCES `config_database` (`database` )
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE
+)
 ENGINE = InnoDB;
 
 --------------------------------------------
