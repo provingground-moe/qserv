@@ -86,7 +86,6 @@ bool test () {
             );
 
         if (job) {
-            job->start();
             job->track (progressReport,
                         errorReport,
                         std::cout);

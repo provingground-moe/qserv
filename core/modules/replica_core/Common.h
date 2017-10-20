@@ -87,6 +87,7 @@ lsst::qserv::proto::ReplicationStatusExt translate (ExtendedCompletionStatus sta
  * The utility class for generating unique identifiers, etc.
  */
 class Generators {
+
 public:
     
     // No construction, copying or destruction

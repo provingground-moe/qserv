@@ -34,6 +34,7 @@
 
 // Qserv headers
 
+#include "replica_core/ChunkLocker.h"
 #include "replica_core/Configuration.h"
 #include "replica_core/DatabaseServices.h"
 
@@ -75,6 +76,8 @@ public:
      */
     DatabaseServices::pointer const& databaseServices () const { return _databaseServices; }
 
+    ChunkLocker& chunkLocker () { return _chunkLocker; }
+
     /**
      * Make sure this worker is known in the configuration. Throws exception
      * std::invalid_argument otherwise.
@@ -105,6 +108,10 @@ private:
 
     /// Database services
     DatabaseServices::pointer _databaseServices;
+
+    /// For claiming exclusive ownership over chunks during replication
+    /// operations to ensure consistency of the operations.
+    ChunkLocker _chunkLocker;
 };
 
 }}} // namespace lsst::qserv::replica_core

@@ -197,6 +197,8 @@ CREATE TABLE IF NOT EXISTS `request` (
   `name` ENUM ('REPLICA_CREATE',
                'REPLICA_DELETE') NOT NULL ,
 
+  `worker`   VARCHAR(255) NOT NULL ,
+  `priority` INT NOT NULL ,
 
   `state`          VARCHAR(255) NOT NULL ,
   `ext_state`      VARCHAR(255) DEFAULT '' ,
@@ -232,7 +234,6 @@ CREATE TABLE IF NOT EXISTS `request_replica_create` (
 
   `request_id`  VARCHAR(255) NOT NULL ,
 
-  `worker`   VARCHAR(255) NOT NULL ,
   `database` VARCHAR(255) NOT NULL ,
   `chunk`    INT UNSIGNED NOT NULL ,
   
@@ -259,7 +260,6 @@ CREATE TABLE IF NOT EXISTS `request_replica_delete` (
 
   `request_id`  VARCHAR(255) NOT NULL ,
 
-  `worker`   VARCHAR(255) NOT NULL ,
   `database` VARCHAR(255) NOT NULL ,
   `chunk`    INT UNSIGNED NOT NULL ,
 
@@ -425,7 +425,7 @@ CREATE TABLE IF NOT EXISTS `config_worker_ext` (
 
   UNIQUE  KEY (`worker_name`, `param`, `value`) ,
 
-  CONSTRAINT `rconfig_worker_ext_fk_1`
+  CONSTRAINT `config_worker_ext_fk_1`
     FOREIGN KEY (`worker_name` )
     REFERENCES `config_worker` (`name` )
     ON DELETE CASCADE
@@ -435,35 +435,104 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `config_database_family`
+-- -----------------------------------------------------
+--
+-- Groups of databases which require coordinated replication
+-- efforts (the number of replicas, chunk collocation)
+--
+-- NOTE: chunk collocation is implicitly determined
+--       by database membership within a family
+
+DROP TABLE IF EXISTS `config_database_family` ;
+
+CREATE TABLE IF NOT EXISTS `config_database_family` (
+
+  `name  `                 VARCHAR(255)  NOT NULL ,
+  `min_replication_level`  INT UNSIGNED  NOT NULL ,    -- minimum number of replicas per chunk
+
+  UNIQUE  KEY (`name`)
+)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
 -- Table `config_database`
 -- -----------------------------------------------------
 --
--- Databases and tables to be managed by the system
+-- Databases which are managd by the replication system
+--
+-- NOTE: Each database belongs to exctly one family, even
+--       if that family has the only members (that database).
 
 DROP TABLE IF EXISTS `config_database` ;
 
 CREATE TABLE IF NOT EXISTS `config_database` (
+
+  `database`     VARCHAR(255)  NOT NULL ,
+  `family_name`  VARCHAR(255)  NOT NULL ,
+
+  UNIQUE  KEY (`database`)  -- each database can belong to one family only
+
+  CONSTRAINT `config_database_fk_1`
+    FOREIGN KEY (`family` )
+    REFERENCES `config_database_family` (`family_name` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `config_database_table`
+-- -----------------------------------------------------
+--
+-- Database tables
+
+DROP TABLE IF EXISTS `config_database_table` ;
+
+CREATE TABLE IF NOT EXISTS `config_database_table` (
 
   `database`  VARCHAR(255)  NOT NULL ,
   `table`     VARCHAR(255)  NOT NULL ,
 
   `is_partitioned` BOOLEAN NOT NULL ,
 
-  UNIQUE  KEY (`database`, `table`)
-)
+  UNIQUE  KEY (`database`, `table`) ,
+
+  CONSTRAINT `config_database_table_fk_1`
+    FOREIGN KEY (`database` )
+    REFERENCES `config_database` (`database` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
-
+--------------------------------------------
 -- Preload parameters for testing purposes
+--------------------------------------------
 
-INSERT INTO `config_database` VALUES ('db1', 'Object',       1);
-INSERT INTO `config_database` VALUES ('db1', 'Source',       1);
-INSERT INTO `config_database` VALUES ('db1', 'ForcedSource', 1);
-INSERT INTO `config_database` VALUES ('db1', 'Filter',       0);
-INSERT INTO `config_database` VALUES ('db2', 'Main',         1);
-INSERT INTO `config_database` VALUES ('db3', 'Object',       1);
-INSERT INTO `config_database` VALUES ('db3', 'Source',       1);
-INSERT INTO `config_database` VALUES ('db3', 'ForcedSource', 1);
+-- This database lives witin its own family
+
+INSERT INTO `config_database_family` VALUES ('db1', 1);
+INSERT INTO `config_database`        VALUES ('db1', 'db1');
+INSERT INTO `config_database_table`  VALUES ('db1', 'Object',       1);
+INSERT INTO `config_database_table`  VALUES ('db1', 'Source',       1);
+INSERT INTO `config_database_table`  VALUES ('db1', 'ForcedSource', 1);
+INSERT INTO `config_database_table`  VALUES ('db1', 'Filter',       0);
+
+-- This family has two members for which the replication activities need
+-- to be coordinated.
+
+INSERT INTO `config_database_family` VALUES ('production', 3);
+INSERT INTO `config_database`        VALUES ('db2', 'production');
+INSERT INTO `config_database`        VALUES ('db3', 'production');
+
+INSERT INTO `config_database_table`  VALUES ('db2', 'Main', 1);
+
+INSERT INTO `config_database_table`  VALUES ('db3', 'Object',       1);
+INSERT INTO `config_database_table`  VALUES ('db3', 'Source',       1);
+INSERT INTO `config_database_table`  VALUES ('db3', 'ForcedSource', 1);
+
+
+
 
 SET SQL_MODE=@OLD_SQL_MODE ;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS ;

@@ -59,9 +59,49 @@ namespace qserv {
 namespace replica_core {
 
 
-// *******************************************************************
-//                      ExclusiveMultiMasterLock
-// *******************************************************************
+//////////////////////////////////////////////////////////////////////
+//////////////////////////  JobWrapperImpl  //////////////////////////
+//////////////////////////////////////////////////////////////////////
+
+/**
+ * Request-type specific wrappers
+ */
+template <class  T>
+struct JobWrapperImpl
+    :   JobWrapper {
+
+    /// The implementation of the vurtual method defined in the base class
+    virtual void notify () {
+        if (_onFinish == nullptr) return;
+        _onFinish (_job);
+    }
+
+    JobWrapperImpl (typename T::pointer const& job,
+                    typename T::callback_type  onFinish)
+
+        :   JobWrapper(),
+
+            _job      (job),
+            _onFinish (onFinish) {
+    }
+
+    /// Destructor
+    virtual ~JobWrapperImpl() {}
+
+    virtual Job::pointer job () const { return _job; }
+
+private:
+
+    // The context of the operation
+
+    typename T::pointer       _job;
+    typename T::callback_type _onFinish;
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+//////////////////////////  ExclusiveMultiMasterLock  //////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Class ExclusiveMultiMasterLock manages operations with the distributed
@@ -192,9 +232,9 @@ private:
 };
 
 
-// **********************************************************
-//                      JobScheduler
-// **********************************************************
+////////////////////////////////////////////////////////////////////
+//////////////////////////  JobScheduler  //////////////////////////
+////////////////////////////////////////////////////////////////////
 
 JobScheduler::pointer
 JobScheduler::create (ServiceProvider& serviceProvider,
@@ -322,6 +362,7 @@ JobScheduler::join () {
 
 void
 JobScheduler::requestMultiMasterLock () {
+    if (!isRunning()) return;
     if (_exclusive) {
         LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  requestMultiMasterLock  started");
         _multiMasterLock->request ();
@@ -331,6 +372,7 @@ JobScheduler::requestMultiMasterLock () {
 
 void
 JobScheduler::releaseMultiMasterLock () {
+    if (!isRunning()) return;
     if (_exclusive) {
         LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  releaseMultiMasterLock  started");
         _multiMasterLock->release ();
@@ -340,6 +382,7 @@ JobScheduler::releaseMultiMasterLock () {
 
 void
 JobScheduler::testMultiMasterLock () {
+    if (!isRunning()) return;
     if (_exclusive) {
         LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  testMultiMasterLock  started");
         _multiMasterLock->test ();
@@ -356,8 +399,36 @@ JobScheduler::findAll (std::string const&        database,
 
     LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  findAll");
 
-    FindAllJob::pointer ptr;
-    return ptr;
+    LOCK_GUARD;
+
+    JobScheduler::pointer self = shared_from_this();
+
+    FindAllJob::pointer job =
+        FindAllJob::create (database,
+                            _controller,
+                            [self] (FindAllJob::pointer job) {
+                                self->onFinish (job);
+                            },
+                            priority,
+                            exclusive,
+                            preemptable);
+
+    // Register the job (along with its callback) by its unique
+    // identifier in the local registry. Once it's complete it'll
+    // be automatically removed from the Registry.
+
+    _registry[job->id()] =
+        std::make_shared<JobWrapperImpl<FindAllJob>> (job, onFinish);  
+
+    // Initiate the job
+    //
+    // FIXME: don't start the job right away. Put the request into the priority queue
+    // and call the scheduler's method to evaluate jobs in the queue to
+    // to see which should be started next (if any).
+
+    job->start ();
+
+    return job;
 }
 
 PurgeJob::pointer
@@ -370,8 +441,35 @@ JobScheduler::purge (unsigned int            numReplicas,
     
     LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  purge");
 
-    PurgeJob::pointer ptr;
-    return ptr;
+    JobScheduler::pointer self = shared_from_this();
+
+    PurgeJob::pointer job =
+        PurgeJob::create (numReplicas,
+                          database,
+                          _controller,
+                          [self] (PurgeJob::pointer job) {
+                              self->onFinish (job);
+                          },
+                          priority,
+                          exclusive,
+                          preemptable);
+
+    // Register the job (along with its callback) by its unique
+    // identifier in the local registry. Once it's complete it'll
+    // be automatically removed from the Registry.
+
+    _registry[job->id()] =
+        std::make_shared<JobWrapperImpl<PurgeJob>> (job, onFinish);  
+
+    // Initiate the job
+    //
+    // FIXME: don't start the job right away. Put the request into the priority queue
+    // and call the scheduler's method to evaluate jobs in the queue to
+    // to see which should be started next (if any).
+
+    job->start ();
+
+    return job;
 }
 
 ReplicateJob::pointer
@@ -384,28 +482,81 @@ JobScheduler::replicate (unsigned int                numReplicas,
     
     LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  replicate");
 
-    ReplicateJob::pointer ptr;
-    return ptr;
+    LOCK_GUARD;
+
+    JobScheduler::pointer self = shared_from_this();
+
+    ReplicateJob::pointer job =
+        ReplicateJob::create (numReplicas,
+                              database,
+                              _controller,
+                              [self] (ReplicateJob::pointer job) {
+                                   self->onFinish (job);
+                              },
+                              priority,
+                              exclusive,
+                              preemptable);
+
+    // Register the job (along with its callback) by its unique
+    // identifier in the local registry. Once it's complete it'll
+    // be automatically removed from the Registry.
+
+    _registry[job->id()] =
+        std::make_shared<JobWrapperImpl<ReplicateJob>> (job, onFinish);  
+
+    // Initiate the job
+    //
+    // FIXME: don't start the job right away. Put the request into the priority queue
+    // and call the scheduler's method to evaluate jobs in the queue to
+    // to see which should be started next (if any).
+
+    job->start ();
+
+    return job;
 }
 
 void
 JobScheduler::runQueued () {
 
+    if (!isRunning()) return;
+
     LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  runQueued");
 
     LOCK_GUARD;
+    
+    // Go through the input queue and evaluate which jobs should star
+    // now based on their scheduling criteria and on the status of
+    // the in-progres jobs (if any).
 }
 
 void
 JobScheduler::runScheduled () {
 
+    if (!isRunning()) return;
+
     LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  runScheduled");
 
-    LOCK_GUARD;
+    // Load the scheduled jobs (if any) from the database to see which ones
+    // need to be injected into th einput queue.
+    //
+    // NOTE: don't prolifirate the lock's scope to avoid an imminent deadlock
+    //       when calling mehods which are called later.
+    {
+        LOCK_GUARD;
+    
+        // TODO:
+        ;
+    }
+
+    // Check the input (new jobs) queue to see if there are any requests
+    // to be run.
+    runQueued ();
 }
 
 void
 JobScheduler::cancelAll () {
+
+    if (!isRunning()) return;
 
     LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  cancelAll");
 
@@ -417,14 +568,27 @@ JobScheduler::onFinish (Job::pointer const& job) {
 
     LOGS(_log, LOG_LVL_DEBUG, "JobScheduler  onFinish  jobId=" << job->id());
 
-    LOCK_GUARD;
+    JobWrapper::pointer wrapper;
+    {
+        LOCK_GUARD;
+        wrapper = _registry[job->id()];
+        _registry.erase (job->id());
 
-    // Move the job from the in-progress queue into the completed one
-    ;
-    
+        // Move the job from the in-progress queue into the completed one
+        ;
+    }
+
     // Check the input (new jobs) queue to see if there are any requests
     // to be run.
-    ;
-}
+    runQueued ();
+
+    // IMPORTANT: calling the notification from th elock-free zone to
+    // avoid possible deadlocks in case if a client code will try to call
+    // back the Scheduler from the callback function. Another reason of
+    // doing this is to prevent locking the API in case of a prolonged
+    // execution of the callback function (which can run an arbitrary code
+    // not controlled from this implementation.).
+
+    wrapper->notify();}
 
 }}} // namespace lsst::qserv::replica_core
