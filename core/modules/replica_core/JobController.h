@@ -20,12 +20,12 @@
  * the GNU General Public License along with this program.  If not,
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
-#ifndef LSST_QSERV_REPLICA_CORE_JOB_SCHEDULER_H
-#define LSST_QSERV_REPLICA_CORE_JOB_SCHEDULER_H
+#ifndef LSST_QSERV_REPLICA_CORE_JOB_CONTROLLER_H
+#define LSST_QSERV_REPLICA_CORE_JOB_CONTROLLER_H
 
-/// JobScheduler.h declares:
+/// JobController.h declares:
 ///
-/// class JobScheduler
+/// class JobController
 /// (see individual class documentation for more information)
 
 // System headers
@@ -83,76 +83,16 @@ struct JobWrapper {
 };
 
 /**
- * Base class ExclusiveMultiMasterLockI is an abstraction for operations with
- * the distributed multi-master lock.
- */
-class ExclusiveMultiMasterLockI {
-
-public:
-
-    // Default construction and copy semantics are prohibited
-
-    ExclusiveMultiMasterLockI () = delete;
-    ExclusiveMultiMasterLockI (ExclusiveMultiMasterLockI const&) = delete;
-    ExclusiveMultiMasterLockI &operator= (ExclusiveMultiMasterLockI const&) = delete;
-
-    /// Destructor
-    virtual ~ExclusiveMultiMasterLockI () {}
-
-    /**
-     * Request the lock and block on it until it's obtained
-     */
-    virtual void request ()=0;
-
-    /**
-     * Release the previously request lock.
-     *
-     * @throws std::logic_error - if no locking attempt was previously made
-     */
-    virtual void release ()=0;
-
-    /**
-     * Ensure the connection is still alive (and the previously requested
-     * lock is still being held on behalf of the current session.)
-     *
-     * @throw std::runtime_error - if the connection was lost and no exclusive lock
-     *                             is available for the calling context.
-     */
-    virtual void test ()=0;
-
-protected:
-    
-    /**
-     * Normal constructor
-     * 
-     * @param serviceProvider - for configuration, other services
-     * @param controllerId    - a unique identifier of a Controller
-     */
-    ExclusiveMultiMasterLockI (ServiceProvider&   serviceProvider,
-                               std::string const& controllerId)
-        :   _serviceProvider (serviceProvider),
-            _controllerId    (controllerId) {
-    }
-
-protected:
-
-    // Prameters of the object
-    
-    ServiceProvider& _serviceProvider;
-    std::string      _controllerId;
-};
-
-/**
-  * Class JobScheduler is a front-end interface for processing
+  * Class JobController is a front-end interface for processing
   * jobs fro connected clients.
   */
-class JobScheduler
-    :   public std::enable_shared_from_this<JobScheduler> {
+class JobController
+    :   public std::enable_shared_from_this<JobController> {
 
 public:
 
     /// The pointer type for instances of the class
-    typedef std::shared_ptr<JobScheduler> pointer;
+    typedef std::shared_ptr<JobController> pointer;
 
     // Forward declarations for class-specific pointers
 
@@ -210,25 +150,17 @@ public:
      * low-level pointers).
      *
      * @param serviceProvider - for configuration, other services
-     * @param exclusive       - if set 'true' then the Scheduler at its start ime
-     *                          (@see method JobScheduler::start()) will always
-     *                          acquire an exclusive lock to guarantee that only
-     *                          one instance of the Schedule runs at a time.
-     *                          This mode should be used in the fault-tolerant
-     *                          setups when multiple instances of the Schedulers
-     *                          might be launched.
      */
-    static pointer create (ServiceProvider &serviceProvider,
-                           bool             exclusive=false);
+    static pointer create (ServiceProvider &serviceProvider);
 
     // Default construction and copy semantics are prohibited
 
-    JobScheduler () = delete;
-    JobScheduler (JobScheduler const&) = delete;
-    JobScheduler &operator= (JobScheduler const&) = delete;
+    JobController () = delete;
+    JobController (JobController const&) = delete;
+    JobController &operator= (JobController const&) = delete;
 
     /// Destructor
-    virtual ~JobScheduler ();
+    virtual ~JobController ();
 
     /**
      * Run the scheduler in a dedicated thread unless it's already running.
@@ -273,7 +205,7 @@ public:
      * @param priority    - set the desired job priority (larger values
      *                      mean higher priorities). A job with the highest
      *                      priority will be select from an input queue by
-     *                      the JobScheduler.
+     *                      the JobController.
      * @param exclusive   - set to 'true' to indicate that the job can't be
      *                      running simultaneously alongside other jobs.
      * @param preemptable - set to 'true' to indicate that this job can be
@@ -296,7 +228,7 @@ public:
      * @param priority    - set the desired job priority (larger values
      *                      mean higher priorities). A job with the highest
      *                      priority will be select from an input queue by
-     *                      the JobScheduler.
+     *                      the JobController.
      * @param exclusive   - set to 'true' to indicate that the job can't be
      *                      running simultaneously alongside other jobs.
      * @param preemptable - set to 'true' to indicate that this job can be
@@ -320,7 +252,7 @@ public:
      * @param priority    - set the desired job priority (larger values
      *                      mean higher priorities). A job with the highest
      *                      priority will be select from an input queue by
-     *                      the JobScheduler.
+     *                      the JobController.
      * @param exclusive   - set to 'true' to indicate that the job can't be
      *                      running simultaneously alongside other jobs.
      * @param preemptable - set to 'true' to indicate that this job can be
@@ -342,10 +274,9 @@ private:
     /**
      * The constructor of the class.
      *
-     * @see JobScheduler::create()
+     * @see JobController::create()
      */
-    JobScheduler (ServiceProvider& serviceProvider,
-                  bool             exclusive);
+    JobController (ServiceProvider& serviceProvider);
 
     /**
      * Check is there are any jobs in the input queue which are eligible
@@ -362,7 +293,7 @@ private:
      * The jobs of this type will be pulled from the database each time
      * the metghod is called. If there are the ones which are ready to run
      * the jobs will be put into the input queue and the previously
-     * defined method JobScheduler::runQueuedJobs() will be invoked.
+     * defined method JobController::runQueuedJobs() will be invoked.
      */
     void runScheduled ();
 
@@ -373,47 +304,19 @@ private:
 
     /**
      * The callback method to be called upon a completion of a job.
-     * This may also invoke method JobScheduler::runQueuedJobs()
+     * This may also invoke method JobController::runQueuedJobs()
      *
      * @param job - a reference to the job
      */
     void onFinish (Job::pointer const& job);
-
-    /**
-     * Request an exclusive distribured lock in the multi-master environment
-     * if the corresponding option ws passed into the constructor of the class.
-     */
-    void requestMultiMasterLock ();
-
-    /**
-     * Release the previously obtained exclusive distribured lock in the multi-master
-     * environment if the corresponding option ws passed into the constructor of
-     * the class.
-     */
-    void releaseMultiMasterLock ();
-
-   /**
-     * Make sure the poreviously requested exclusive distribured lock which
-     * is needed to run run this Scheduler in the multi-master environment is
-     * still available.
-     *
-     * @throw std::runtime_error - if the connection was lost and no exclusive lock
-     *                             is available for the calling context.
-     */
-    void testMultiMasterLock ();
 
 private:
 
     /// Services used by the processor
     ServiceProvider& _serviceProvider;
 
-    /// The multi-master synchronization option
-    bool _exclusive;
-
-    /// A dediated instance of the Controller for executing requests
+    /// A dedciated instance of the Controller for executing requests
     Controller::pointer _controller;
-
-    std::unique_ptr<ExclusiveMultiMasterLockI> _multiMasterLock;
 
     /// This thread will run the asynchronous prosessing of the jobs
     std::unique_ptr<std::thread> _thread;
@@ -442,4 +345,4 @@ private:
 
 }}} // namespace lsst::qserv::replica_core
 
-#endif // LSST_QSERV_REPLICA_CORE_JOB_SCHEDULER_H
+#endif // LSST_QSERV_REPLICA_CORE_JOB_CONTROLLER_H
