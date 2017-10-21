@@ -4,18 +4,6 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL' ;
 
 
 -- -----------------------------------------------------
--- Table `master_lock`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `master_lock` ;
-
-CREATE TABLE IF NOT EXISTS `master_lock` (
-
-  `controller_id`  VARCHAR(255)    NOT NULL ,
-  `lock_time`      BIGINT UNSIGNED NOT NULL
-)
-ENGINE = InnoDB; 
-
--- -----------------------------------------------------
 -- Table `controller`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `controller` ;

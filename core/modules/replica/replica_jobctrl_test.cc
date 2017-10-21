@@ -34,7 +34,7 @@
 
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
-#include "replica_core/JobScheduler.h"
+#include "replica_core/JobController.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/ReplicateJob.h"
 #include "replica_core/ServiceProvider.h"
@@ -48,7 +48,6 @@ namespace {
 
 std::string  databaseName;
 unsigned int numReplicas;
-bool         exclusive;
 bool         progressReport;
 bool         errorReport;
 std::string  configUrl;
@@ -58,24 +57,23 @@ bool test () {
 
     try {
 
-        ///////////////////////////////////////////////////////////////////////
-        // Start the Scheduler in its own thread before ininitating any jobs
+        ///////////////////////////////////////////////////////////////////////////
+        // Start the JobbController in its own thread before ininitating any jobs
         // Note that omFinish callbak which are activated upon a completion
-        // of the job will be run in a thread wich will differ from the curret obe
+        // of the job will be run in a thread wich will differ from the current one
 
         rc::ServiceProvider provider (configUrl);
 
-        rc::JobScheduler::pointer scheduler =
-            rc::JobScheduler::create (provider,
-                                      exclusive);
+        rc::JobController::pointer jobCtrl =
+            rc::JobController::create (provider);
 
-        scheduler->run();
+        jobCtrl->run();
 
         ////////////////////
         // Start replication
 
         auto job =
-            scheduler->replicate (
+            jobCtrl->replicate (
                 numReplicas,
                 databaseName,
                 [](rc::ReplicateJob::pointer job) {
@@ -94,8 +92,8 @@ bool test () {
         ///////////////////////////////////////////////////
         // Shutdown the Scheduler and join with its thread
 
-        scheduler->stop();
-        scheduler->join();
+        jobCtrl->stop();
+        jobCtrl->join();
 
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
@@ -118,7 +116,7 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database> <num-replicas> [--exclusive] [--progress-report] [--error-report]\n"
+            "  <database> <num-replicas> [--progress-report] [--error-report]\n"
             "                            [--config=<url>]\n"
             "\n"
             "Parameters:\n"
@@ -126,7 +124,6 @@ int main (int argc, const char* const argv[]) {
             "  <num-replicas>     - increase the number of chunk replicas to this level\n"
             "\n"
             "Flags and options:\n"
-            "  --exclusive        - enable support for multi-master node\n"
             "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
             "  --error-report     - the flag triggering detailed report on failed requests\n"
             "  --config           - a configuration URL (a configuration file or a set of the database\n"
@@ -134,7 +131,6 @@ int main (int argc, const char* const argv[]) {
 
         ::databaseName   = parser.parameter<std::string>(1);
         ::numReplicas    = parser.parameter<int>        (2);
-        ::exclusive      = parser.flag                  ("exclusive");
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");
         ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");
