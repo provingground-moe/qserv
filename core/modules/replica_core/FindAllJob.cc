@@ -50,14 +50,14 @@ namespace qserv {
 namespace replica_core {
 
 FindAllJob::pointer
-FindAllJob::create (std::string const&         database,
+FindAllJob::create (std::string const&         databaseFamily,
                     Controller::pointer const& controller,
                     callback_type              onFinish,
                     int                        priority,
                     bool                       exclusive,
                     bool                       preemptable) {
     return FindAllJob::pointer (
-        new FindAllJob (database,
+        new FindAllJob (databaseFamily,
                         controller,
                         onFinish,
                         priority,
@@ -65,7 +65,7 @@ FindAllJob::create (std::string const&         database,
                         preemptable));
 }
 
-FindAllJob::FindAllJob (std::string const&         database,
+FindAllJob::FindAllJob (std::string const&         databaseFamily,
                         Controller::pointer const& controller,
                         callback_type              onFinish,
                         int                        priority,
@@ -78,8 +78,9 @@ FindAllJob::FindAllJob (std::string const&         database,
              exclusive,
              preemptable),
 
-        _database (database),
-        _onFinish (onFinish),
+        _databaseFamily (databaseFamily),
+        _databases      (controller->serviceProvider().config()->databases(databaseFamily)),
+        _onFinish       (onFinish),
 
         _numLaunched (0),
         _numFinished (0),
@@ -137,19 +138,21 @@ FindAllJob::startImpl () {
     auto self = shared_from_base<FindAllJob>();
 
     for (auto const& worker: _controller->serviceProvider().config()->workers()) {
-        _requests.push_back (
-            _controller->findAllReplicas (
-                worker,
-                _database,
-                [self] (FindAllRequest::pointer request) {
-                    self->onRequestFinish(request);
-                },
-                0,      /* priority */
-                true,   /* keepTracking*/
-                _id     /* jobId */
-            )
-        );
-        _numLaunched++;
+        for (auto const& database: _databases) {
+            _requests.push_back (
+                _controller->findAllReplicas (
+                    worker,
+                    database,
+                    [self] (FindAllRequest::pointer request) {
+                        self->onRequestFinish (request);
+                    },
+                    0,      /* priority */
+                    true,   /* keepTracking*/
+                    _id     /* jobId */
+                )
+            );
+            _numLaunched++;
+        }
     }
     setState(State::IN_PROGRESS);
 }
@@ -197,7 +200,7 @@ void
 FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
 
     LOGS(_log, LOG_LVL_DEBUG, context()
-         << "onRequestFinish  database=" << request->database()
+         << "onRequestFinish  databaseFamily=" << request->database()
          << " worker=" << request->worker());
 
     // Ignore the callback if the job was cancelled   
@@ -211,7 +214,11 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
         _numFinished++;
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             _numSuccess++;
-            _replicaData.replicas.emplace_back(request->responseData());
+            ReplicaInfoCollection const& infoCollection = request->responseData();
+            _replicaData.replicas.emplace_back (infoCollection);
+            for (auto const& info: infoCollection) {
+                _replicaData.chunks[info.chunk()][info.database()][info.worker()] = info;
+            }
             _replicaData.workers[request->worker()] = true;
         } else {
             _replicaData.workers[request->worker()] = false;
@@ -227,8 +234,51 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
     // notifying a caller (if the callback function was povided) in order to avoid
     // the circular deadlocks.
 
-    if (_state == State::FINISHED)
+    if (_state == State::FINISHED) {
+
+        // Compute the 'co-location' status of chunks to see if the chunk has replicas
+        // on the same set of workers of each participating database
+        //
+        // ATTENTION: this algorithm won't conider the actual status of
+        //            chunk replicas (if they're complete, corrupts, etc.).
+ 
+        for (auto const& chunkEntry: _replicaData.chunks) {
+
+            unsigned int const& chunk        = chunkEntry.first;
+            size_t       const  numDatabases = chunkEntry.second.size();
+
+            _replicaData.colocation[chunk] = true;
+
+            if (numDatabases > 1) {
+
+                std::string              prevDatabase;
+                std::vector<std::string> prevDatabaseWorkers;
+
+                for (auto const& databaseEntry: chunkEntry.second) {
+
+                    std::string const&       database = databaseEntry.first;
+                    std::vector<std::string> workers;
+
+                    for (auto const& replicaEntry: databaseEntry.second) {
+                        std::string const& worker = replicaEntry.first;
+                        workers.push_back (worker);
+                    }
+                    std::sort(workers.begin(), workers.end());
+                    
+                    // Compare two vectors unless this is the very first
+                    // iteration of the loop.
+                    
+                    if (!prevDatabase.empty()) {
+                        _replicaData.colocation[chunk] = _replicaData.colocation[chunk] && (prevDatabaseWorkers == workers);
+                    }
+                    prevDatabase        = database;
+                    prevDatabaseWorkers = workers;
+                }
+            }
+        }
+
         notify ();
+    }
 }
 
 }}} // namespace lsst::qserv::replica_core

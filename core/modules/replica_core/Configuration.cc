@@ -209,6 +209,20 @@ Configuration::databaseFamilies () const {
     return families;
 }
 
+bool
+Configuration::isKnownDatabaseFamily (std::string const& name) const {
+    return _replicationLevel.count (name);
+}
+
+size_t
+Configuration::replicationLevel (std::string const& family) const {
+    if (!_replicationLevel.count (family))
+        throw std::invalid_argument (
+                "Configuration::replicationLevel  unknown database family name: '" +
+                family + "'");
+    return _replicationLevel.at (family);
+}
+
 std::vector<std::string>
 Configuration::databases (std::string const& family) const {
 
@@ -223,15 +237,6 @@ Configuration::databases (std::string const& family) const {
         names.push_back (entry.first);
     }        
     return names;
-}
-
-size_t
-Configuration::replicationLevel (std::string const& family) const {
-    if (!_replicationLevel.count (family))
-        throw std::invalid_argument (
-                "Configuration::replicationLevel  unknown database family name: '" +
-                family + "'");
-    return _replicationLevel.at (family);
 }
 
 bool
