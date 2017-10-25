@@ -49,7 +49,7 @@ namespace {
 
 // Command line parameters
 
-std::string databaseName;
+std::string databaseFamily;
 bool        progressReport;
 bool        errorReport;
 std::string configUrl;
@@ -75,7 +75,7 @@ bool test () {
 
         auto job =
             rc::FindAllJob::create (
-                databaseName,
+                databaseFamily,
                 controller,
                 [](rc::FindAllJob::pointer job) {
                     // Not using the callback because the completion of
@@ -109,13 +109,10 @@ bool test () {
         for (auto const& entry: replicaData.workers)
             if (!entry.second) failedWorkers.insert(entry.first);
 
-        std::map<unsigned int, std::vector<std::string>> chunk2workers;     // Workers hosting a chunk    
         std::map<std::string, std::vector<unsigned int>> worker2chunks;     // Chunks hosted by a worker
 
         for (rc::ReplicaInfoCollection const& replicaCollection: replicaData.replicas)
             for (rc::ReplicaInfo const& replica: replicaCollection) {
-                chunk2workers[replica.chunk()].push_back (
-                    replica.worker() + (replica.status() == rc::ReplicaInfo::Status::COMPLETE ? "" : "(!)"));
                 worker2chunks[replica.worker()].push_back(replica.chunk());
             }
 
@@ -137,22 +134,51 @@ bool test () {
 
         std::cout
             << "REPLICAS:\n"
-            << "----------+--------------+---------------------------------------------\n"
-            << "    chunk | num.replicas | worker(s)  \n"
-            << "----------+--------------+---------------------------------------------\n";
+            << "----------+----------+-----+-----+-----+-----------------------------------------\n"
+            << "    chunk | database | rep | r+- | clc | workers\n";
 
-        for (auto const& entry: chunk2workers) {
-            auto const& chunk    = entry.first;
-            auto const& replicas = entry.second;
-            std::cout
-                << " " << std::setw(8) << chunk << " | " << std::setw(12) << replicas.size() << " |";
-            for (auto const& replica: replicas) {
-                std::cout << " " << replica;
+        size_t const replicationLevel = provider.config()->replicationLevel(databaseFamily);
+
+        unsigned int prevChunk  = (unsigned int) -1;
+
+        for (auto const& chunkEntry: replicaData.chunks) {
+
+            unsigned int const& chunk = chunkEntry.first;
+            for (auto const& databaseEntry: chunkEntry.second) {
+
+                std::string const& database = databaseEntry.first;
+
+                size_t      const  numReplicas        = databaseEntry.second.size();
+                long long   const  numReplicasDiff    = numReplicas - replicationLevel;
+                std::string const  numReplicasDiffStr = numReplicasDiff ? std::to_string(numReplicasDiff) : "";
+                std::string const  colocationStatus   = replicaData.colocation.at(chunk) ? "" : " - ";
+
+                if (chunk != prevChunk)
+                    std::cout
+                        << "----------+----------+-----+-----+-----+-----------------------------------------\n";
+
+                prevChunk = chunk;
+
+                std::cout
+                    << " "   << std::setw(8) << chunk
+                    << " | " << std::setw(8) << database
+                    << " | " << std::setw(3) << numReplicas
+                    << " | " << std::setw(3) << numReplicasDiffStr
+                    << " | " << std::setw(3) << colocationStatus
+                    << " | ";
+
+                for (auto const& replicaEntry: databaseEntry.second) {
+
+                    std::string     const& worker = replicaEntry.first;
+                    rc::ReplicaInfo const& info   = replicaEntry.second;
+
+                    std::cout << worker << (info.status() != rc::ReplicaInfo::Status::COMPLETE ? "(!)" : "") << " ";
+                }
+                std::cout << "\n";
             }
-            std::cout << "\n";
         }
         std::cout
-            << "----------+--------------+---------------------------------------------\n"
+            << "----------+----------+-----+-----+-----+-----------------------------------------\n"
             << std::endl;
 
         ///////////////////////////////////////////////////
@@ -182,10 +208,10 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database> [--progress-report] [--error-report] [--config=<url>]\n"
+            "  <database-family> [--progress-report] [--error-report] [--config=<url>]\n"
             "\n"
             "Parameters:\n"
-            "  <database>         - the name of a database to inspect\n"
+            "  <database-family>  - the name of a database family to inspect\n"
             "\n"
             "Flags and options:\n"
             "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
@@ -193,7 +219,7 @@ int main (int argc, const char* const argv[]) {
             "  --config           - a configuration URL (a configuration file or a set of the database\n"
             "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
-        ::databaseName   = parser.parameter<std::string>(1);
+        ::databaseFamily = parser.parameter<std::string>(1);
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");
         ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");

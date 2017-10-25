@@ -39,6 +39,7 @@
 
 // Qserv headers
 
+#include "replica_core/ChunkLocker.h"
 #include "replica_core/Job.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/ReplicaInfo.h"
@@ -61,9 +62,19 @@ struct FindAllJobResult {
     /// of the corresponidng requests
     std::list<ReplicaInfoCollection> replicas;
 
+    /// Results groupped by: chunk number, database, worker
+    std::map<unsigned int,                  // chunk
+             std::map<std::string,          // database
+                      std::map<std::string, // worker
+                               ReplicaInfo>>> chunks;
+
     /// Per-worker flags indicating if the corresponidng replica retreival
     /// request succeeded.
     std::map<std::string, bool> workers;
+    
+    /// Per-chunk flags indicating if the chunk co-location requirements
+    /// was met ('true').
+    std::map<unsigned int,bool> colocation;
 };
 
 /**
@@ -86,21 +97,21 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param database    - the name of a database
-     * @param controller  - for launching requests
-     * @param onFinish    - a callback function to be called upon a completion of
-     *                      the job
-     * @param priority    - set the desired job priority (larger values
-     *                      mean higher priorities). A job with the highest
-     *                      priority will be select from an input queue by
-     *                      the JobScheduler.
-     * @param exclusive   - set to 'true' to indicate that the job can't be
-     *                      running simultaneously alongside other jobs.
-     * @param preemptable - set to 'true' to indicate that this job can be
-     *                      interrupted to give a way to some other job of
-     *                      high importancy.
+     * @param databaseFamily - the name of a database family
+     * @param controller     - for launching requests
+     * @param onFinish       - a callback function to be called upon a completion of
+     *                         the job
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobScheduler.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
      */
-    static pointer create (std::string const&         database,
+    static pointer create (std::string const&         databaseFamily,
                            Controller::pointer const& controller,
                            callback_type              onFinish,
                            int                        priority    = 0,
@@ -116,8 +127,8 @@ public:
     /// Destructor
     ~FindAllJob () override;
 
-    /// Return the name of a database defining a scope of the operation
-    std::string const& database () const { return _database; }
+    /// Return the name of a database family defining a scope of the operation
+    std::string const& databaseFamily () const { return _databaseFamily; }
 
     /**
      * Return the result of the operation.
@@ -154,7 +165,7 @@ protected:
      *
      * @see FindAllJob::create()
      */
-    FindAllJob (std::string const&         database,
+    FindAllJob (std::string const&         databaseFamily,
                 Controller::pointer const& controller,
                 callback_type              onFinish,
                 int                        priority,
@@ -191,8 +202,11 @@ protected:
 
 protected:
 
-    /// The name of the database
-    std::string _database;
+    /// The name of the database family
+    std::string _databaseFamily;
+
+    /// Members of the family
+    std::vector<std::string> _databases;
 
     /// Client-defined function to be called upon the completion of the job
     callback_type _onFinish;

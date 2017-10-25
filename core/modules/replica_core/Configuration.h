@@ -170,27 +170,6 @@ public:
         return workers (true, false);
     }
 
-    /// The names of known database families
-    std::vector<std::string> databaseFamilies () const;
-
-    /**
-     * Return the names of known databases. A reslt of the method may be
-     * limited to a subset of databases belonging ot the specified family.
-     *
-     * @param family - the optional name of a database family
-     *
-     * @throw std::invalid_argument - if the family is not known
-     */
-    std::vector<std::string> databases (std::string const& family=std::string()) const;
-
-    /**
-     * Return the minimum number of chunks for a database family
-     *
-     * @param family - the optional name of a database family
-     *
-     * @throw std::invalid_argument - if the family is not known
-     */
-    size_t replicationLevel (std::string const& family) const;
 
     /// The maximum size of the request buffers in bytes
     size_t requestBufferSizeBytes () const { return _requestBufferSizeBytes; }
@@ -237,6 +216,35 @@ public:
     // ---------------------------------------------------
     // -- Configuration parameters related to databases --
     // ---------------------------------------------------
+
+    /// The names of known database families
+    std::vector<std::string> databaseFamilies () const;
+
+    /**
+     * Return 'true' if the specified database family is known to the configuraion
+     *
+     * @param name - the name of a family
+     */
+    bool isKnownDatabaseFamily (std::string const& name) const;
+
+    /**
+     * Return the minimum number of chunks for a database family
+     *
+     * @param family - the optional name of a database family
+     *
+     * @throw std::invalid_argument - if the family is not known
+     */
+    size_t replicationLevel (std::string const& family) const;
+
+    /**
+     * Return the names of known databases. A reslt of the method may be
+     * limited to a subset of databases belonging ot the specified family.
+     *
+     * @param family - the optional name of a database family
+     *
+     * @throw std::invalid_argument - if the family is not known
+     */
+    std::vector<std::string> databases (std::string const& family=std::string()) const;
 
     /**
      * Return 'true' if the specified database is known to the configuraion
