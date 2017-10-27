@@ -35,9 +35,9 @@
 #include "lsst/log/Log.h"
 #include "replica_core/Controller.h"
 #include "replica_core/DeleteRequest.h"
-#include "replica_core/FindAllJob.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/FindRequest.h"
+#include "replica_core/FixUpJob.h"
 #include "replica_core/PurgeJob.h"
 #include "replica_core/ReplicateJob.h"
 #include "replica_core/ReplicationRequest.h"
@@ -289,7 +289,8 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
 
     LOCK_GUARD;
 
-    if (!::found_in (job->type(), {"REPLICATE",
+    if (!::found_in (job->type(), {"FIXUP",
+                                   "REPLICATE",
                                    "PURGE",
                                    "REBALANCE",
                                    "DELETE_WORKER",
@@ -311,18 +312,27 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
                                job->beginTime(),
                                job->endTime());
 
-        if ("REPLICATE" == job->type()) {
+        if ("FIXUP" == job->type()) {
+            auto ptr = safeAssign<FixUpJob>(job);
+            _conn->executeInsertQuery (
+                "job_fixup",
+                ptr->id(),
+                ptr->databaseFamily());
+
+        } else if ("REPLICATE" == job->type()) {
             auto ptr = safeAssign<ReplicateJob>(job);
             _conn->executeInsertQuery (
                 "job_replicate",
-                job->id(),
+                ptr->id(),
+                ptr->database(),
                 ptr->numReplicas());
 
         } else if ("PURGE" == job->type()) {
             auto ptr = safeAssign<PurgeJob>(job);
             _conn->executeInsertQuery (
                 "job_purge",
-                job->id(),
+                ptr->id(),
+                ptr->database(),
                 ptr->numReplicas());
 
         } else if ("REBALANCE" == job->type()) {

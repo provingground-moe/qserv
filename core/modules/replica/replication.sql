@@ -54,6 +54,27 @@ CREATE TABLE IF NOT EXISTS `job` (
 )
 ENGINE = InnoDB;
 
+-- -----------------------------------------------------
+-- Table `job_fixup`
+-- -----------------------------------------------------
+--
+-- Extended parameters of the 'FIXUP' jobs
+--
+DROP TABLE IF EXISTS `job_fixup` ;
+
+CREATE TABLE IF NOT EXISTS `job_fixup` (
+
+  `job_id`  VARCHAR(255) NOT NULL ,
+
+  `database_family`  VARCHAR(255) NOT NULL ,
+
+  CONSTRAINT `job_fixup_fk_1`
+    FOREIGN KEY (`job_id` )
+    REFERENCES `job` (`id` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+)
+ENGINE = InnoDB;
 
 -- -----------------------------------------------------
 -- Table `job_replicate`
@@ -67,7 +88,8 @@ CREATE TABLE IF NOT EXISTS `job_replicate` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
-  `num_replicas`  INT NOT NULL ,
+  `database_family`  VARCHAR(255) NOT NULL ,
+  `num_replicas`     INT          NOT NULL ,
 
   CONSTRAINT `job_replicate_fk_1`
     FOREIGN KEY (`job_id` )
@@ -90,7 +112,8 @@ CREATE TABLE IF NOT EXISTS `job_purge` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
-  `num_replicas`  INT NOT NULL ,
+  `database_family`  VARCHAR(255) NOT NULL ,
+  `num_replicas`     INT          NOT NULL ,
 
   CONSTRAINT `job_purge_fk_1`
     FOREIGN KEY (`job_id` )
@@ -113,7 +136,8 @@ CREATE TABLE IF NOT EXISTS `job_rebalance` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
-  `num_replicas`  INT NOT NULL ,
+  `database_family`  VARCHAR(255) NOT NULL ,
+  `num_replicas`     INT NOT NULL ,
 
   CONSTRAINT `job_rebalance_fk_1`
     FOREIGN KEY (`job_id` )
@@ -137,7 +161,7 @@ CREATE TABLE IF NOT EXISTS `job_delete_worker` (
   `job_id`  VARCHAR(255) NOT NULL ,
 
   `worker`        VARCHAR(255) NOT NULL ,
-  `num_replicas`  INT NOT NULL ,
+  `num_replicas`  INT          NOT NULL ,
 
   CONSTRAINT `job_delete_worker_fk_1`
     FOREIGN KEY (`job_id` )

@@ -20,8 +20,9 @@
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
 
-/// replica_job_chunks.cc implements a command-line tool which analyzes
-/// and reports chunk disposition in the specified database family.
+/// replica_job_fixup.cc implements a command-line tool which analyzes
+/// chunk disposition within the specified database family and tries
+/// to fix chunk co-location problems if found.
 
 // System headers
 
@@ -38,8 +39,7 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/Controller.h"
-#include "replica_core/FindAllJob.h"
-#include "replica_core/ReplicaInfo.h"
+#include "replica_core/FixUpJob.h"
 #include "replica_core/ServiceProvider.h"
 
 namespace r  = lsst::qserv::replica;
@@ -74,10 +74,10 @@ bool test () {
         // Find all replicas accross all workers
 
         auto job =
-            rc::FindAllJob::create (
+            rc::FixUpJob::create (
                 databaseFamily,
                 controller,
-                [](rc::FindAllJob::pointer job) {
+                [](rc::FixUpJob::pointer job) {
                     // Not using the callback because the completion of
                     // the request will be caught by the tracker below
                     ;
@@ -92,7 +92,7 @@ bool test () {
         //////////////////////////////
         // Analyse and display results
 
-        rc::FindAllJobResult const& replicaData = job->getReplicaData();
+        rc::FixUpJobResult const& replicaData = job->getReplicaData();
 
         std::cout
             << "\n"
@@ -111,10 +111,8 @@ bool test () {
 
         std::map<std::string, std::vector<unsigned int>> worker2chunks;     // Chunks hosted by a worker
 
-        for (rc::ReplicaInfoCollection const& replicaCollection: replicaData.replicas)
-            for (rc::ReplicaInfo const& replica: replicaCollection) {
-                worker2chunks[replica.worker()].push_back(replica.chunk());
-            }
+        for (rc::ReplicaInfo const& replica: replicaData.replicas)
+            worker2chunks[replica.worker()].push_back(replica.chunk());
 
         std::cout
             << "\n"
@@ -134,28 +132,22 @@ bool test () {
 
         std::cout
             << "REPLICAS:\n"
-            << "----------+----------+-----+-----+-----+-----------------------------------------\n"
-            << "    chunk | database | rep | r+- | clc | workers\n";
+            << "----------+----------+-----+-----------------------------------------\n"
+            << "    chunk | database | rep | workers\n";
 
-        size_t const replicationLevel = provider.config()->replicationLevel(databaseFamily);
-
-        unsigned int prevChunk  = (unsigned int) -1;
+        unsigned int prevChunk = (unsigned int) -1;
 
         for (auto const& chunkEntry: replicaData.chunks) {
 
             unsigned int const& chunk = chunkEntry.first;
             for (auto const& databaseEntry: chunkEntry.second) {
 
-                std::string const& database = databaseEntry.first;
-
-                size_t      const  numReplicas        = databaseEntry.second.size();
-                long long   const  numReplicasDiff    = numReplicas - replicationLevel;
-                std::string const  numReplicasDiffStr = numReplicasDiff ? std::to_string(numReplicasDiff) : "";
-                std::string const  colocationStatus   = replicaData.colocation.at(chunk) ? "" : " - ";
+                std::string const& database    = databaseEntry.first;
+                size_t      const  numReplicas = databaseEntry.second.size();
 
                 if (chunk != prevChunk)
                     std::cout
-                        << "----------+----------+-----+-----+-----+-----------------------------------------\n";
+                        << "----------+----------+-----+-----------------------------------------\n";
 
                 prevChunk = chunk;
 
@@ -163,8 +155,6 @@ bool test () {
                     << " "   << std::setw(8) << chunk
                     << " | " << std::setw(8) << database
                     << " | " << std::setw(3) << numReplicas
-                    << " | " << std::setw(3) << numReplicasDiffStr
-                    << " | " << std::setw(3) << colocationStatus
                     << " | ";
 
                 for (auto const& replicaEntry: databaseEntry.second) {
@@ -178,7 +168,7 @@ bool test () {
             }
         }
         std::cout
-            << "----------+----------+-----+-----+-----+-----------------------------------------\n"
+            << "----------+----------+-----+-----------------------------------------\n"
             << std::endl;
 
         ///////////////////////////////////////////////////
