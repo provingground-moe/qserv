@@ -135,7 +135,6 @@ public:
     bool lock (Chunk const&       chunk,
                std::string const& owner);
 
-
     /**
      * Release a chunk and return 'true' if the operation was successfull
      *

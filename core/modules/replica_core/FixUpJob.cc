@@ -358,6 +358,9 @@ FixUpJob::onPrecursorJobFinish () {
             setState (State::FINISHED,
                       ExtendedState::SUCCESS);
         } else {
+            // Some of the chuks were locked and yet, no sigle request was
+            // lunched. Hence we should start another iteration by requesting
+            // the fresh state of the chunks within the family.
             restart ();
         }
     }
@@ -418,7 +421,7 @@ FixUpJob::onRequestFinish (ReplicationRequest::pointer request) {
         }
     }
 
-    // Note that access to the job's public API shoul not be locked while
+    // Note that access to the job's public API should not be locked while
     // notifying a caller (if the callback function was povided) in order to avoid
     // the circular deadlocks.
 

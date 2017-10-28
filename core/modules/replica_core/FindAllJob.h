@@ -60,9 +60,11 @@ struct FindAllJobResult {
 
     /// Results reported by workers upon the successfull completion
     /// of the corresponidng requests
+    ///
     std::list<ReplicaInfoCollection> replicas;
 
     /// Results groupped by: chunk number, database, worker
+    ///
     std::map<unsigned int,                  // chunk
              std::map<std::string,          // database
                       std::map<std::string, // worker
@@ -70,11 +72,27 @@ struct FindAllJobResult {
 
     /// Per-worker flags indicating if the corresponidng replica retreival
     /// request succeeded.
+    ///
     std::map<std::string, bool> workers;
     
     /// Per-chunk flags indicating if the chunk co-location requirements
     /// was met ('true').
+    ///
     std::map<unsigned int,bool> colocation;
+
+    /// This map of a subset of all chunks which have have at least one good
+    /// (complete) replica for each participating database. In that case the map
+    /// will provide the names of those workers.
+    ///
+    /// NOTES:
+    /// - this map has no corelation with the one for the co-located chunks
+    /// - not finding a chunk in this map means this chunk may be completelly
+    ///   lost within a particular Qserv deployment and it may need to be
+    ///  either rapaired or restored from scratch.
+    ///
+    std::map<unsigned int,                                  // chunk
+             std::map<std::string,                          // database
+                      std::list<std::string>>> complete;    // workers
 };
 
 /**

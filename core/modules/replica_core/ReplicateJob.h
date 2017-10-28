@@ -62,6 +62,12 @@ struct ReplicateJobResult {
     /// of the corresponidng requests
     std::list<ReplicaInfo> replicas;
 
+    /// Results groupped by: chunk number, database, worker
+    std::map<unsigned int,                  // chunk
+             std::map<std::string,          // database
+                      std::map<std::string, // worker
+                               ReplicaInfo>>> chunks;
+
     /// Per-worker flags indicating if the corresponidng replica retreival
     /// request succeeded.
     std::map<std::string, bool> workers;
@@ -87,25 +93,27 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param numReplicas - the minimum number of replicas for each chunk
-     * @param database    - the name of a database
-     * @param controller  - for launching requests
-     * @param onFinish    - a callback function to be called upon a completion of the job
-     * @param bestEffort  - the flag (if set) allowing to proceed with the replication effort
-     *                      when some workers fail to report their cunk disposition.
-     *                      ATTENTION: do *NOT* use this in production!
-     * @param priority    - set the desired job priority (larger values
-     *                      mean higher priorities). A job with the highest
-     *                      priority will be select from an input queue by
-     *                      the JobScheduler.
-     * @param exclusive   - set to 'true' to indicate that the job can't be
-     *                      running simultaneously alongside other jobs.
-     * @param preemptable - set to 'true' to indicate that this job can be
-     *                      interrupted to give a way to some other job of
-     *                      high importancy.
+     * @param databaseFamily - the name of a database family
+     * @param numReplicas    - the optional (if not 0) override for the minimum number of replicas
+     *                         for each chunk. If the parameter is set to 0 then the corresponding
+     *                         configuration option for the database family will be assumed.
+     * @param controller     - for launching requests
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param bestEffort     - the flag (if set) allowing to proceed with the replication effort
+     *                         when some workers fail to report their cunk disposition.
+     *                         ATTENTION: do *NOT* use this in production!
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobScheduler.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
      */
-    static pointer create (unsigned int               numReplicas,
-                           std::string const&         database,
+    static pointer create (std::string const&         databaseFamily,
+                           unsigned int               numReplicas,
                            Controller::pointer const& controller,
                            callback_type              onFinish,
                            bool                       bestEffort  = false,
@@ -126,8 +134,8 @@ public:
     /// the job successfully finishes.
     unsigned int numReplicas () const { return _numReplicas; }
 
-    /// Return the name of a database defining a scope of the operation
-    std::string const& database () const { return _database; }
+    /// Return the name of a database family defining a scope of the operation
+    std::string const& databaseFamily () const { return _databaseFamily; }
 
     /**
      * Return the result of the operation.
@@ -164,8 +172,8 @@ protected:
      *
      * @see ReplicateJob::create()
      */
-    ReplicateJob (unsigned int               numReplicas,
-                  std::string const&         database,
+    ReplicateJob (std::string const&         databaseFamily,
+                  unsigned int               numReplicas,
                   Controller::pointer const& controller,
                   callback_type              onFinish,
                   bool                       bestEffort,
@@ -207,13 +215,27 @@ protected:
      */
     void onRequestFinish (ReplicationRequest::pointer request);
 
+    /**
+     * Restart the job from scratch. This method will reset object context
+     * to a state it was before method Job::startImpl() called and then call
+     * Job::startImpl() again.
+     */
+    void restart ();
+
+    /**
+     * Unconditionally release the specified chunk
+     *
+     * @param chunk - the chunk number
+     */
+    void release (unsigned int chunk);
+
 protected:
+
+    /// The name of the database family
+    std::string _databaseFamily;
 
     /// The minimum number of replicas for each chunk
     unsigned int _numReplicas;
-
-    /// The name of the database
-    std::string _database;
 
     /// Client-defined function to be called upon the completion of the job
     callback_type _onFinish;
@@ -225,6 +247,25 @@ protected:
     /// The chained job to be completed first in order to figure out
     /// replica disposition.
     FindAllJob::pointer _findAllJob;
+
+    /// The total number of iterations the job has gone so far
+    size_t _numIterations;
+
+    /// The number of chunks which require the fix-up but couldn't be locked
+    /// in the exclusive mode. The counter will be analyzed upon a completion
+    /// of the last request, and if it were found not empty another iteraton
+    /// of the job will be undertaken
+    size_t _numFailedLocks;
+
+    /// A collection of requests groupped by the corresponidng chunk
+    /// number. The main idea is simplify tracking the completion status
+    /// of the operation on each chunk. Requests will be added to the
+    /// corresponding group as they're launched, and removed when they
+    /// finished. This allows releasing (unlocking) chunks before
+    /// the whole job finishes.
+    std::map<unsigned int,
+             std::map<std::string,
+                      ReplicationRequest::pointer>> _chunk2worker2request;
 
     /// A collection of requests implementing the operation
     std::list<ReplicationRequest::pointer> _requests;

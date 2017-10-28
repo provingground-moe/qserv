@@ -244,8 +244,8 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
  
         for (auto const& chunkEntry: _replicaData.chunks) {
 
-            unsigned int const& chunk        = chunkEntry.first;
-            size_t       const  numDatabases = chunkEntry.second.size();
+            unsigned int const chunk        = chunkEntry.first;
+            size_t       const numDatabases = chunkEntry.second.size();
 
             _replicaData.colocation[chunk] = true;
 
@@ -276,7 +276,34 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
                 }
             }
         }
+        
+        // Compute the 'completeness' status of each chunk
 
+        for (auto const& chunkEntry: _replicaData.chunks) {
+
+            unsigned int const chunk        = chunkEntry.first;
+            size_t       const numDatabases = chunkEntry.second.size();
+
+            for (auto const& databaseEntry: chunkEntry.second) {
+                std::string const& database = databaseEntry.first;
+
+                for (auto const& replicaEntry: databaseEntry.second) {
+                    std::string const& worker  = replicaEntry.first;
+                    auto const&        replica = replicaEntry.second;
+                    
+                    if (replica.status() == ReplicaInfo::Status::COMPLETE)
+                        _replicaData.complete[chunk][database].push_back(worker);
+                }
+            }
+            
+            // Remove this chunk from the collection if not all databases
+            // were populated with workers
+            //
+            if (_replicaData.complete[chunk].size() != numDatabases)
+                replicaData.erase(chunk);
+        }
+
+        // Finally, notify a caller
         notify ();
     }
 }
