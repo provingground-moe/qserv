@@ -52,8 +52,8 @@ namespace qserv {
 namespace replica_core {
 
 PurgeJob::pointer
-PurgeJob::create (unsigned int               numReplicas,
-                  std::string const&         database,
+PurgeJob::create (std::string const&         database,
+                  unsigned int               numReplicas,
                   Controller::pointer const& controller,
                   callback_type              onFinish,
                   bool                       bestEffort,
@@ -61,8 +61,8 @@ PurgeJob::create (unsigned int               numReplicas,
                   bool                       exclusive,
                   bool                       preemptable) {
     return PurgeJob::pointer (
-        new PurgeJob (numReplicas,
-                      database,
+        new PurgeJob (database,
+                      numReplicas,
                       controller,
                       onFinish,
                       bestEffort,
@@ -71,8 +71,8 @@ PurgeJob::create (unsigned int               numReplicas,
                       preemptable));
 }
 
-PurgeJob::PurgeJob (unsigned int               numReplicas,
-                    std::string const&         database,
+PurgeJob::PurgeJob (std::string const&         database,
+                    unsigned int               numReplicas,
                     Controller::pointer const& controller,
                     callback_type              onFinish,
                     bool                       bestEffort,
@@ -86,8 +86,8 @@ PurgeJob::PurgeJob (unsigned int               numReplicas,
              exclusive,
              preemptable),
 
-        _numReplicas (numReplicas),
         _database    (database),
+        _numReplicas (numReplicas),
         _onFinish    (onFinish),
         _bestEffort (bestEffort),
 

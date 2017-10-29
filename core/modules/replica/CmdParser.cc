@@ -114,6 +114,21 @@ CmdParser::optionImpl (std::string const& name,
     }
 }
 
+unsigned int
+CmdParser::optionImpl (std::string const&  name,
+                       unsigned int const& defaultValue) const {
+
+    std::string const str = optionImpl(name, std::string());
+    if (str.empty()) return defaultValue;
+
+    try {
+        return std::stoul(str);
+    } catch (std::exception const&) {
+        throw std::invalid_argument (
+            "CmdParser::optionImpl<uint>: failed to parse a value of option: " + name);
+    }
+}
+
 std::string
 CmdParser::optionImpl (std::string const& name,
                        std::string const& defaultValue) const {
@@ -150,6 +165,21 @@ CmdParser::parameterImpl (unsigned int  pos,
     }
 }
 
+void
+CmdParser::parameterImpl (unsigned int  pos,
+                          unsigned int& val) const {
+    std::string str;
+    parameterImpl(pos, str);
+    
+    try {
+        val = std::stoul(str);
+        return;
+    } catch (std::exception const&) {
+        throw std::invalid_argument (
+            "CmdParser::parameterImpl<uint>(" + std::to_string(pos) +
+            "): failed to parse a value of argument: " + str);
+    }
+}
 void
 CmdParser::parameterImpl (unsigned int pos,
                           std::string& val) const {

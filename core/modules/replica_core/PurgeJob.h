@@ -87,8 +87,8 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param numReplicas - the maximum number of replicas allowed for each chunk
      * @param database    - the name of a database
+     * @param numReplicas - the maximum number of replicas allowed for each chunk
      * @param controller  - for launching requests
      * @param onFinish    - a callback function to be called upon a completion of the job
      * @param bestEffort  - the flag (if set) allowing to proceed with the replication effort
@@ -104,8 +104,8 @@ public:
      *                      interrupted to give a way to some other job of
      *                      high importancy.
      */
-    static pointer create (unsigned int               numReplicas,
-                           std::string const&         database,
+    static pointer create (std::string const&         database,
+                           unsigned int               numReplicas,
                            Controller::pointer const& controller,
                            callback_type              onFinish,
                            bool                       bestEffort  = false,
@@ -164,8 +164,8 @@ protected:
      *
      * @see PurgeJob::create()
      */
-    PurgeJob (unsigned int               numReplicas,
-              std::string const&         database,
+    PurgeJob (std::string const&         database,
+              unsigned int               numReplicas,
               Controller::pointer const& controller,
               callback_type              onFinish,
               bool                       bestEffort,
@@ -209,11 +209,11 @@ protected:
 
 protected:
 
-    /// The minimum number of replicas for each chunk
-    unsigned int _numReplicas;
-
     /// The name of the database
     std::string _database;
+
+    /// The minimum number of replicas for each chunk
+    unsigned int _numReplicas;
 
     /// Client-defined function to be called upon the completion of the job
     callback_type _onFinish;

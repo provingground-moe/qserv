@@ -300,7 +300,7 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
             // were populated with workers
             //
             if (_replicaData.complete[chunk].size() != numDatabases)
-                replicaData.erase(chunk);
+                _replicaData.complete.erase(chunk);
         }
 
         // Finally, notify a caller
