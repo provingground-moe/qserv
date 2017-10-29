@@ -207,11 +207,11 @@ JobController::join () {
 }
 
 FindAllJob::pointer
-JobController::findAll (std::string const&        database,
-                       FindAllJob::callback_type onFinish,
-                       int                       priority,
-                       bool                      exclusive,
-                       bool                      preemptable) {
+JobController::findAll (std::string const&        databaseFamily,
+                        FindAllJob::callback_type onFinish,
+                        int                       priority,
+                        bool                      exclusive,
+                        bool                      preemptable) {
 
     LOGS(_log, LOG_LVL_DEBUG, "JobController  findAll");
 
@@ -220,7 +220,7 @@ JobController::findAll (std::string const&        database,
     JobController::pointer self = shared_from_this();
 
     FindAllJob::pointer job =
-        FindAllJob::create (database,
+        FindAllJob::create (databaseFamily,
                             _controller,
                             [self] (FindAllJob::pointer job) {
                                 self->onFinish (job);
@@ -248,20 +248,20 @@ JobController::findAll (std::string const&        database,
 }
 
 PurgeJob::pointer
-JobController::purge (unsigned int            numReplicas,
-                     std::string const&      database,
-                     PurgeJob::callback_type onFinish,
-                     int                     priority,
-                     bool                    exclusive,
-                     bool                    preemptable) {
+JobController::purge (std::string const&      databaseFamily,
+                      unsigned int            numReplicas,
+                      PurgeJob::callback_type onFinish,
+                      int                     priority,
+                      bool                    exclusive,
+                      bool                    preemptable) {
     
     LOGS(_log, LOG_LVL_DEBUG, "JobController  purge");
 
     JobController::pointer self = shared_from_this();
 
     PurgeJob::pointer job =
-        PurgeJob::create (numReplicas,
-                          database,
+        PurgeJob::create (databaseFamily,
+                          numReplicas,
                           _controller,
                           [self] (PurgeJob::pointer job) {
                               self->onFinish (job);
@@ -289,12 +289,12 @@ JobController::purge (unsigned int            numReplicas,
 }
 
 ReplicateJob::pointer
-JobController::replicate (unsigned int                numReplicas,
-                         std::string const&          database,
-                         ReplicateJob::callback_type onFinish,
-                         int                         priority,
-                         bool                        exclusive,
-                         bool                        preemptable) {
+JobController::replicate (std::string const&          databaseFamily,
+                          unsigned int                numReplicas,
+                          ReplicateJob::callback_type onFinish,
+                          int                         priority,
+                          bool                        exclusive,
+                          bool                        preemptable) {
     
     LOGS(_log, LOG_LVL_DEBUG, "JobController  replicate");
 
@@ -303,8 +303,8 @@ JobController::replicate (unsigned int                numReplicas,
     JobController::pointer self = shared_from_this();
 
     ReplicateJob::pointer job =
-        ReplicateJob::create (numReplicas,
-                              database,
+        ReplicateJob::create (databaseFamily,
+                              numReplicas,
                               _controller,
                               [self] (ReplicateJob::pointer job) {
                                    self->onFinish (job);

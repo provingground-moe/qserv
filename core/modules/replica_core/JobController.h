@@ -197,22 +197,21 @@ public:
     
     /**
      * Submit a job for finding all replicas and updating replica status
-     * in the database.
+     * in the database family.
      *
-     * @param numReplicas - the maximum number of replicas allowed for each chunk
-     * @param database    - the name of a database
-     * @param onFinish    - a callback function to be called upon a completion of the job
-     * @param priority    - set the desired job priority (larger values
-     *                      mean higher priorities). A job with the highest
-     *                      priority will be select from an input queue by
-     *                      the JobController.
-     * @param exclusive   - set to 'true' to indicate that the job can't be
-     *                      running simultaneously alongside other jobs.
-     * @param preemptable - set to 'true' to indicate that this job can be
-     *                      interrupted to give a way to some other job of
-     *                      high importancy.
+     * @param databaseFamily - the name of a database family
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobController.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
      */
-    FindAllJob_pointer findAll (std::string const&       database,
+    FindAllJob_pointer findAll (std::string const&       databaseFamily,
                                 FindAllJob_callback_type onFinish    = nullptr,
                                 int                      priority    = 0,
                                 bool                     exclusive   = false,
@@ -222,21 +221,23 @@ public:
      * Submit a job for bringing the number of each chunk's replicas down
      * to a desired level.
      * 
-     * @param numReplicas - the maximum number of replicas allowed for each chunk
-     * @param database    - the name of a database
-     * @param onFinish    - a callback function to be called upon a completion of the job
-     * @param priority    - set the desired job priority (larger values
-     *                      mean higher priorities). A job with the highest
-     *                      priority will be select from an input queue by
-     *                      the JobController.
-     * @param exclusive   - set to 'true' to indicate that the job can't be
-     *                      running simultaneously alongside other jobs.
-     * @param preemptable - set to 'true' to indicate that this job can be
-     *                      interrupted to give a way to some other job of
-     *                      high importancy.
+     * @param databaseFamily - the name of a database family
+     * @param numReplicas    - the maximum number of replicas allowed for each chunk
+     *                         (if set to 0 then the value of the parameter will be pulled
+     *                         from the Configuration)
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobController.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
      */
-    PurgeJob_pointer purge (unsigned int           numReplicas,
-                            std::string const&     database,
+    PurgeJob_pointer purge (std::string const&     databaseFamily,
+                            unsigned int           numReplicas,
                             PurgeJob_callback_type onFinish    = nullptr,
                             int                    priority    = -1,
                             bool                   exclusive   = false,
@@ -246,21 +247,23 @@ public:
      * Submit a job for bringing the number of each chunk's replicas up
      * to a desired level.
      * 
-     * @param numReplicas - the minimum number of replicas required for each chunk
-     * @param database    - the name of a database
-     * @param onFinish    - a callback function to be called upon a completion of the job
-     * @param priority    - set the desired job priority (larger values
-     *                      mean higher priorities). A job with the highest
-     *                      priority will be select from an input queue by
-     *                      the JobController.
-     * @param exclusive   - set to 'true' to indicate that the job can't be
-     *                      running simultaneously alongside other jobs.
-     * @param preemptable - set to 'true' to indicate that this job can be
-     *                      interrupted to give a way to some other job of
-     *                      high importancy.
+     * @param databaseFamily - the name of a database family
+     * @param numReplicas    - the maximum number of replicas allowed for each chunk
+     *                         (if set to 0 then the value of the parameter will be pulled
+     *                         from the Configuration)
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobController.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
      */
-    ReplicateJob_pointer replicate (unsigned int               numReplicas,
-                                    std::string const&         database,
+    ReplicateJob_pointer replicate (std::string const&         databaseFamily,
+                                    unsigned int               numReplicas,
                                     ReplicateJob_callback_type onFinish    = nullptr,
                                     int                        priority    = 1,
                                     bool                       exclusive   = true,

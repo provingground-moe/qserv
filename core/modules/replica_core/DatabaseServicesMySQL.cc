@@ -324,7 +324,7 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
             _conn->executeInsertQuery (
                 "job_replicate",
                 ptr->id(),
-                ptr->database(),
+                ptr->databaseFamily(),
                 ptr->numReplicas());
 
         } else if ("PURGE" == job->type()) {

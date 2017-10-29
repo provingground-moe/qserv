@@ -21,8 +21,8 @@
  */
 
 /// replica_job_replicate.cc implements a command-line tool which analyzes
-/// chunk disposition in the specified databasae and (if needed) increases 
-/// the number of chunk replicas to the desider level.
+/// chunk disposition in the specified database family and (if needed) increases 
+/// the number of chunk replicas to the required level.
 
 // System headers
 
@@ -46,7 +46,7 @@ namespace {
 
 // Command line parameters
 
-std::string  databaseName;
+std::string  databaseFamily;
 unsigned int numReplicas;
 bool         progressReport;
 bool         errorReport;
@@ -74,8 +74,8 @@ bool test () {
 
         auto job =
             jobCtrl->replicate (
+                databaseFamily,
                 numReplicas,
-                databaseName,
                 [](rc::ReplicateJob::pointer job) {
                     // Not using the callback because the completion of
                     // the request will be caught by the tracker below
@@ -116,21 +116,24 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database> <num-replicas> [--progress-report] [--error-report]\n"
-            "                            [--config=<url>]\n"
+            "  <database-family> [--replicas=<number>]\n"
+            "                    [--progress-report] [--error-report]\n"
+            "                    [--config=<url>]\n"
             "\n"
             "Parameters:\n"
-            "  <database>         - the name of a database to inspect\n"
-            "  <num-replicas>     - increase the number of chunk replicas to this level\n"
+            "  <database-family>  - the name of a database family to inspect\n"
             "\n"
             "Flags and options:\n"
+            "  --replicas         - the minimum number of replicas\n"
+            "                       [ DEFAULT: '0' which will tell the application to pull the corresponding\n"
+            "                       parameter from the Configuration]\n"
             "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
             "  --error-report     - the flag triggering detailed report on failed requests\n"
             "  --config           - a configuration URL (a configuration file or a set of the database\n"
             "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
-        ::databaseName   = parser.parameter<std::string>(1);
-        ::numReplicas    = parser.parameter<int>        (2);
+        ::databaseFamily = parser.parameter<std::string>(1);
+        ::numReplicas    = parser.option  <unsigned int>("replicas", 0);
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");
         ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");

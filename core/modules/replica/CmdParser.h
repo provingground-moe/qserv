@@ -189,6 +189,14 @@ private:
                     int const&         defaultValue) const;
 
     /**
+     * Implement option lookup for the integer type
+     *
+     * @see method CmdParser::option()
+     */
+    unsigned int optionImpl (std::string const&  name,
+                             unsigned int const& defaultValue) const;
+ 
+    /**
      * Implement option lookup for the string type
      *
      * @see method CmdParser::option()
@@ -219,6 +227,18 @@ private:
      */
     void parameterImpl (unsigned int pos,
                         int&         val) const;
+
+    /**
+     * Implement positional parameter lookup for the unsigned integer type
+     *
+     * @param pos - position number starting with 0
+     * @param val - a value to be set upon the successfull completion
+     *              of the method
+     * 
+     * @see method CmdParser::parameter()
+     */
+    void parameterImpl (unsigned int  pos,
+                        unsigned int& val) const;
 
     /**
      * Implement positional parameter lookup for the string type

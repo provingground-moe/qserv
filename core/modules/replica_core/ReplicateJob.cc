@@ -91,7 +91,7 @@ ReplicateJob::ReplicateJob (std::string const&         databaseFamily,
 
         _numReplicas (numReplicas ?
                       numReplicas :
-                      controller->serviceProvider()->config()->replicationLevel(databaseFamily)),
+                      controller->serviceProvider().config()->replicationLevel(databaseFamily)),
 
         _onFinish    (onFinish),
         _bestEffort  (bestEffort),
@@ -329,11 +329,10 @@ ReplicateJob::onPrecursorJobFinish () {
         unsigned int const chunk = chunkEntry.first;
 
         for (auto const& databaseEntry: chunkEntry.second) {
-            std::string const& database = databaseEntry.first;
+            auto const& replicas = databaseEntry.second;
 
             for (auto const& workerEntry: databaseEntry.second) {
                 std::string const& worker  = workerEntry.first;
-                auto const&        replica = workerEntry.second;
 
                 // Update worker's occupancy regardless of the chunk status
                 worker2occupancy[worker]++;
@@ -353,7 +352,7 @@ ReplicateJob::onPrecursorJobFinish () {
                     // NOTE: Chunks which meet the 'colocaton' requirement should
                     //       have the same number of replicas in each database.
 
-                    size_t const numReplicas = databaseEntry.second.size();
+                    size_t const numReplicas = replicas.size();
                     if (numReplicas < _numReplicas) {
                         chunk2numReplicas2create[chunk] = _numReplicas - numReplicas;
                     }
@@ -367,9 +366,9 @@ ReplicateJob::onPrecursorJobFinish () {
     // for the new replicas.
 
     std::vector<std::string> workers;
-    for (auto const& worker: _controller->serviceProvider()->config().workers())
-        if (replicaData.workers[worker])
-            workers.insert(worker);
+    for (auto const& worker: _controller->serviceProvider().config()->workers())
+        if (replicaData.workers.at(worker))
+            workers.push_back(worker);
 
     if (!workers.size()) {
         LOGS(_log, LOG_LVL_ERROR, context() << "onPrecursorJobFinish  not workers are available for new replicas");
@@ -385,8 +384,8 @@ ReplicateJob::onPrecursorJobFinish () {
 
     for (auto const& chunkEntry: chunk2numReplicas2create) {
 
-        unsigned int const chunk              = entry.first;
-        int          const numReplicas2create = entry.second;
+        unsigned int const chunk              = chunkEntry.first;
+        int          const numReplicas2create = chunkEntry.second;
 
         // Chunk locking is mandatory. If it's not possible to do this now then
         // the job will need to make another attempt later.
@@ -434,7 +433,7 @@ ReplicateJob::onPrecursorJobFinish () {
                 if (worker2chunks[worker].count(chunk)) continue;
 
                 // Evaluate the occupancy
-                if (destinationWorker.empty() or minNumChunks < worker2occupancy[worker]) {
+                if (destinationWorker.empty() or worker2occupancy[worker] < minNumChunks) {
                     destinationWorker = worker;
                     minNumChunks = worker2occupancy[worker];
                 }
@@ -449,12 +448,19 @@ ReplicateJob::onPrecursorJobFinish () {
 
             // Finally, launch and register for further tracking and replication
             // request for all participating databases
+            //
+            // NOTE: sources may vary from one database to another one, depending
+            //       on the availability of good chunks. Meanwhile the destination
+            //       is always stays the same in order to preserve the chunk colocation.
 
-            for (auto const& database: databases) {
+            for (auto const& databaseEntry: database2sourceWorker) {
+                std::string const& database     = databaseEntry.first;
+                std::string const& sourceWorker = databaseEntry.second;
+
                 ReplicationRequest::pointer ptr =
                     _controller->replicate (
                         destinationWorker,
-                        database2sourceWorker[database],
+                        sourceWorker,
                         database,
                         chunk,
                         [self] (ReplicationRequest::pointer ptr) {
@@ -495,13 +501,21 @@ ReplicateJob::onPrecursorJobFinish () {
 void
 ReplicateJob::onRequestFinish (ReplicationRequest::pointer request) {
 
+    std::string  const database = request->database(); 
+    std::string  const worker   = request->worker(); 
+    unsigned int const chunk    = request->chunk();
+
     LOGS(_log, LOG_LVL_DEBUG, context()
-         << "onRequestFinish  database=" << request->database()
-         << " worker=" << request->worker()
-         << " chunk=" << request->chunk());
+         << "onRequestFinish"
+         << "  database=" << database
+         << "  worker="   << worker
+         << "  chunk="    << chunk);
 
     // Ignore the callback if the job was cancelled   
-    if (_state == State::FINISHED) return;
+    if (_state == State::FINISHED) {
+        release (chunk);
+        return;
+    }
 
     // Update counters and object state if needed.
     {
@@ -511,14 +525,31 @@ ReplicateJob::onRequestFinish (ReplicationRequest::pointer request) {
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             _numSuccess++;
             _replicaData.replicas.emplace_back(request->responseData());
-            _replicaData.workers[request->worker()] = true;
+            _replicaData.chunks[chunk][database][worker] = request->responseData();
+            _replicaData.workers[worker] = true;
         } else {
-            _replicaData.workers[request->worker()] = false;
+            _replicaData.workers[worker] = false;
         }
+        
+        // Make sure the chunk is released if this was the last replication request
+        // in its scope.
+        _chunk2worker2request.at(chunk).erase(worker);
+        if (not _chunk2worker2request.count(chunk)) release (chunk);
+
         if (_numFinished == _numLaunched) {
-            setState (
-                State::FINISHED,
-                _numSuccess == _numLaunched ? ExtendedState::SUCCESS : ExtendedState::FAILED);
+            if (_numSuccess == _numLaunched) {
+                if (_numFailedLocks) {
+                    // Make another iteration (and another one, etc. as many as needed)
+                    // before it succeeds or fails.
+                    restart ();
+                } else {
+                    setState (State::FINISHED,
+                              ExtendedState::SUCCESS);
+                }
+            } else {
+                setState (State::FINISHED,
+                          ExtendedState::FAILED);
+            }
         }
     }
 
@@ -528,6 +559,13 @@ ReplicateJob::onRequestFinish (ReplicationRequest::pointer request) {
 
     if (_state == State::FINISHED)
         notify ();
+}
+
+void
+ReplicateJob::release (unsigned int chunk) {
+    LOGS(_log, LOG_LVL_DEBUG, context() << "release  chunk=" << chunk);
+    Chunk chunkObj {_databaseFamily, chunk};
+    _controller->serviceProvider().chunkLocker().release(chunkObj);
 }
 
 }}} // namespace lsst::qserv::replica_core
