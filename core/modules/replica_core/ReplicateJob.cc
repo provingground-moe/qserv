@@ -273,7 +273,8 @@ ReplicateJob::onPrecursorJobFinish () {
     // IMPORTANT:
     //
     // 1) chunks for which the 'co-location' requirement was not met (as reported
-    //    by the precursor job) will not be replicated
+    //    by the precursor job) will not be replicated. These chunks need to be
+    //    "fixed-up" beforehand.
     // 
     // 2) the chunk co-location within the database family will be preserved for
     //    new replicas
@@ -316,11 +317,8 @@ ReplicateJob::onPrecursorJobFinish () {
     //
     std::map<std::string, std::set<unsigned int>> worker2chunks;
 
-    // Good sources of replicas for chunks of each database. This map will be
-    // evaluated in the ed of the chunk "eligibility" loop to ensure that
-    // each database of a chunk has at least one such good source. Otherwise
-    // the chunk will need to be skipped and repaired.
-
+    // The number of replicas to be created for eligible chunks
+    //
     std::map<unsigned int,int> chunk2numReplicas2create;
 
     // Now initialize in those data structires
