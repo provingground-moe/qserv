@@ -332,7 +332,7 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
             _conn->executeInsertQuery (
                 "job_purge",
                 ptr->id(),
-                ptr->database(),
+                ptr->databaseFamily(),
                 ptr->numReplicas());
 
         } else if ("REBALANCE" == job->type()) {

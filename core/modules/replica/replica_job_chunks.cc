@@ -134,8 +134,8 @@ bool test () {
 
         std::cout
             << "REPLICAS:\n"
-            << "----------+----------+-----+-----+-----+-----------------------------------------\n"
-            << "    chunk | database | rep | r+- | clc | workers\n";
+            << "----------+----------+-----+-----+-----------------------------------------\n"
+            << "    chunk | database | rep | r+- | workers\n";
 
         size_t const replicationLevel = provider.config()->replicationLevel(databaseFamily);
 
@@ -151,11 +151,10 @@ bool test () {
                 size_t      const  numReplicas        = databaseEntry.second.size();
                 long long   const  numReplicasDiff    = numReplicas - replicationLevel;
                 std::string const  numReplicasDiffStr = numReplicasDiff ? std::to_string(numReplicasDiff) : "";
-                std::string const  colocationStatus   = replicaData.colocation.at(chunk) ? "" : " - ";
 
                 if (chunk != prevChunk)
                     std::cout
-                        << "----------+----------+-----+-----+-----+-----------------------------------------\n";
+                        << "----------+----------+-----+-----+-----------------------------------------\n";
 
                 prevChunk = chunk;
 
@@ -164,7 +163,6 @@ bool test () {
                     << " | " << std::setw(8) << database
                     << " | " << std::setw(3) << numReplicas
                     << " | " << std::setw(3) << numReplicasDiffStr
-                    << " | " << std::setw(3) << colocationStatus
                     << " | ";
 
                 for (auto const& replicaEntry: databaseEntry.second) {
@@ -178,7 +176,7 @@ bool test () {
             }
         }
         std::cout
-            << "----------+----------+-----+-----+-----+-----------------------------------------\n"
+            << "----------+----------+-----+-----+-----------------------------------------\n"
             << std::endl;
 
         ///////////////////////////////////////////////////

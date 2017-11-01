@@ -96,8 +96,6 @@ FixUpJob::FixUpJob (std::string const&         databaseFamily,
 }
 
 FixUpJob::~FixUpJob () {
-
-    // Make sure all chunks are released
     for (auto const& chunkEntry: _chunk2worker2request) {
         unsigned int chunk = chunkEntry.first;
         release (chunk);
@@ -268,64 +266,46 @@ FixUpJob::onPrecursorJobFinish () {
 
     auto self = shared_from_base<FixUpJob>();
 
-    for (auto const& entry: replicaData.colocation) {
+    for (auto const& chunk2workers: replicaData.isColocated) {
+        unsigned int chunk = chunk2workers.first;
 
-        unsigned int chunk = entry.first;
-        if (replicaData.colocation.at(chunk)) continue;
+        for (auto const& worker2colocated: chunk2workers.second) {
+            std::string const& destinationWorker = worker2colocated.first;
+            bool        const  isColocated       = worker2colocated.second;
 
-        // Chunk locking is mandatory. If it's not possible to do this now then
-        // the job will need to make another attempt later.
+            if (isColocated) continue;
 
-        if (not _controller->serviceProvider().chunkLocker().lock({_databaseFamily, chunk}, _id)) {
-            ++_numFailedLocks;
-            continue;
-        }
-
-        // Prepare the fix up plan
-        
-        std::vector<std::string> databases;
-
-        std::map<std::string,bool> mergedWorkers;   // the merged collection of all workers
-                                                    // accross all databases
-
-        for (auto const& databaseEntry: replicaData.chunks.at(chunk)) {
-            std::string const& database = databaseEntry.first;
-            databases.emplace_back (database);
-            for (auto const& workerEntry: databaseEntry.second) {
-                std::string const& worker = workerEntry.first;
-                mergedWorkers[worker] = true;
+            // Chunk locking is mandatory. If it's not possible to do this now then
+            // the job will need to make another attempt later.
+    
+            if (not _controller->serviceProvider().chunkLocker().lock({_databaseFamily, chunk}, _id)) {
+                ++_numFailedLocks;
+                continue;
             }
-        }
-        
-        // For each database go over all workers from the merged list and
-        // make extra replicas as needed
-        
-        for (auto const& database: databases) {
 
-            // worker -> replica
-            std::map<std::string, ReplicaInfo> const& replicas =
-                replicaData.chunks.at(chunk).at(database);
+            // Iterate over all participating databases, find the ones which aren't
+            // represented on the worker, find a suitable source worker which has
+            // a complete chunk for the database and which (the worker) is not the same
+            // as the current one and submite the replication request.
 
-            for (auto const& entry: mergedWorkers) {
-
-                // If the destination worker doesn't have a chunk then find  the first available
-                // (ther must be at lest one) source worker and launch the replication request.
-                //
-                // FIXME: in case if there will be a choice for the source worker
-                // the algorithm could be improved to balance load accross
-                // workers. This may speed up the fix-up for multiple chunks.
-                // One way to do so would be to maintain a collection of 'engaged'
-                // source workers on top of the outer loop of this algorithm.
-
-                std::string const& destinationWorker = entry.first;
-                if (not replicas.count (destinationWorker)) {
+            for (auto const& database: replicaData.databases.at(chunk)) {
+                if (not replicaData.chunks.at(chunk).count(database)) {
+ 
+                    // Finding a source worker first
                     std::string sourceWorker;
-                    for (auto const& replicaEntry: replicas) {
-                        sourceWorker = replicaEntry.second.worker();
-                        break;
+                    for (auto const& worker: replicaData.complete.at(chunk).at(database)) {
+                        if (worker != destinationWorker) {
+                            sourceWorker = worker;
+                            break;
+                        }
                     }
-                    if (sourceWorker.empty())
-                        throw std::logic_error ("FixUpJob::onPrecursorJobFinish()  no source worker found");
+                    if (sourceWorker.empty()) {
+                        LOGS(_log, LOG_LVL_ERROR, context()
+                             << "onPrecursorJobFinish  failed to find a source worker for chunk: "
+                             << chunk << " and database: " << database);
+                        release(chunk);
+                        setState (State::FINISHED, ExtendedState::FAILED);
+                    }
 
                     // Finally, launch the replication request and register it for further
                     // tracking (or cancellation, should the one be requested)
@@ -355,8 +335,7 @@ FixUpJob::onPrecursorJobFinish () {
     // Finish right away if no problematic chunks found
     if (not _requests.size()) {
         if (not _numFailedLocks) {
-            setState (State::FINISHED,
-                      ExtendedState::SUCCESS);
+            setState (State::FINISHED, ExtendedState::SUCCESS);
         } else {
             // Some of the chuks were locked and yet, no sigle request was
             // lunched. Hence we should start another iteration by requesting
@@ -411,12 +390,10 @@ FixUpJob::onRequestFinish (ReplicationRequest::pointer request) {
                     // before it succeeds or fails.
                     restart ();
                 } else {
-                    setState (State::FINISHED,
-                              ExtendedState::SUCCESS);
+                    setState (State::FINISHED, ExtendedState::SUCCESS);
                 }
             } else {
-                setState (State::FINISHED,
-                          ExtendedState::FAILED);
+                setState (State::FINISHED, ExtendedState::FAILED);
             }
         }
     }
