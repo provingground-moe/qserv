@@ -58,41 +58,65 @@ namespace replica_core {
  */
 struct FindAllJobResult {
 
+    /// Per-worker flags indicating if the corresponidng replica retreival
+    /// request succeeded.
+    ///
+    std::map<std::string, bool> workers;
+
     /// Results reported by workers upon the successfull completion
     /// of the corresponidng requests
     ///
     std::list<ReplicaInfoCollection> replicas;
 
-    /// Results groupped by: chunk number, database, worker
+    /// [ALL CHUNKS]  Results groupped by:
     ///
-    std::map<unsigned int,                  // chunk
-             std::map<std::string,          // database
-                      std::map<std::string, // worker
+    ///      [chunk][database][worker]
+    ///
+    std::map<unsigned int,
+             std::map<std::string,
+                      std::map<std::string,
                                ReplicaInfo>>> chunks;
 
-    /// Per-worker flags indicating if the corresponidng replica retreival
-    /// request succeeded.
+    /// [ALL CHUNKS]  The participating databases for a chunk.
     ///
-    std::map<std::string, bool> workers;
-    
-    /// Per-chunk flags indicating if the chunk co-location requirements
-    /// was met ('true').
+    /// NOTE: chunks don't have be present in all databases because databases
+    ///       may have different spatial coverage.
     ///
-    std::map<unsigned int,bool> colocation;
+    ///      [chunk]
+    ///
+    std::map<unsigned int,
+             std::list<std::string>> databases;
 
-    /// This map of a subset of all chunks which have have at least one good
-    /// (complete) replica for each participating database. In that case the map
-    /// will provide the names of those workers.
+    /// [SUBSET OF CHUNKS]  Workers hosting complete chunks
     ///
-    /// NOTES:
-    /// - this map has no corelation with the one for the co-located chunks
-    /// - not finding a chunk in this map means this chunk may be completelly
-    ///   lost within a particular Qserv deployment and it may need to be
-    ///  either rapaired or restored from scratch.
+    ///      [chunk][database]->(worker,worker,,,)
     ///
-    std::map<unsigned int,                                  // chunk
-             std::map<std::string,                          // database
-                      std::list<std::string>>> complete;    // workers
+    std::map<unsigned int,
+             std::map<std::string,
+                      std::list<std::string>>> complete;
+
+    /// [ALL CHUNKS]  The 'colocated' replicas are the ones in which all
+    ///               participating databases are represented on the replica's
+    ///               worker.
+    ///
+    /// NOTE: this doesn't guarantee that there may be problems with
+    ///       database-specific chunks. Please, consider using 'isGood'
+    ///       if that's a requirement.
+    ///
+    ///      [chunk][worker]
+    ///
+    std::map<unsigned int,
+             std::map<std::string,
+                      bool>> isColocated;
+
+    /// [ALL CHUNKS]  The 'good' replicas are the 'colocated' one in which
+    ///               all database-specific chunks are also complete (healthy).
+    ///
+    ///      [chunk][worker]
+    ///
+    std::map<unsigned int,
+             std::map<std::string,
+                      bool>> isGood;
 };
 
 /**

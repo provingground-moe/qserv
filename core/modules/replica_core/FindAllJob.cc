@@ -236,71 +236,102 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
 
     if (_state == State::FINISHED) {
 
-        // Compute the 'co-location' status of chunks to see if the chunk has replicas
-        // on the same set of workers of each participating database
+        // Databases participating in a chunk
         //
-        // ATTENTION: this algorithm won't conider the actual status of
-        //            chunk replicas (if they're complete, corrupts, etc.).
- 
-        for (auto const& chunkEntry: _replicaData.chunks) {
+        for (auto const& chunk2databases: _replicaData.chunks) {
+            unsigned int const chunk = chunk2databases.first;
 
-            unsigned int const chunk        = chunkEntry.first;
-            size_t       const numDatabases = chunkEntry.second.size();
+            for (auto const& database2workers: chunk2databases.second) {
+                std::string const& database = database2workers.first;
 
-            _replicaData.colocation[chunk] = true;
-
-            if (numDatabases > 1) {
-
-                std::string              prevDatabase;
-                std::vector<std::string> prevDatabaseWorkers;
-
-                for (auto const& databaseEntry: chunkEntry.second) {
-
-                    std::string const&       database = databaseEntry.first;
-                    std::vector<std::string> workers;
-
-                    for (auto const& replicaEntry: databaseEntry.second) {
-                        std::string const& worker = replicaEntry.first;
-                        workers.push_back (worker);
-                    }
-                    std::sort(workers.begin(), workers.end());
-                    
-                    // Compare two vectors unless this is the very first
-                    // iteration of the loop.
-                    
-                    if (!prevDatabase.empty()) {
-                        _replicaData.colocation[chunk] = _replicaData.colocation[chunk] && (prevDatabaseWorkers == workers);
-                    }
-                    prevDatabase        = database;
-                    prevDatabaseWorkers = workers;
-                }
+                _replicaData.databases[chunk].push_back(database);
             }
         }
-        
-        // Compute the 'completeness' status of each chunk
 
-        for (auto const& chunkEntry: _replicaData.chunks) {
+        // Workers hosting complete chunks
+        //
+        for (auto const& chunk2databases: _replicaData.chunks) {
+            unsigned int const chunk = chunk2databases.first;
 
-            unsigned int const chunk        = chunkEntry.first;
-            size_t       const numDatabases = chunkEntry.second.size();
+            for (auto const& database2workers: chunk2databases.second) {
+                std::string const& database = database2workers.first;
 
-            for (auto const& databaseEntry: chunkEntry.second) {
-                std::string const& database = databaseEntry.first;
+                for (auto const& worker2info: database2workers.second) {
+                    std::string const& worker  = worker2info.first;
+                    ReplicaInfo const& replica = worker2info.second;
 
-                for (auto const& replicaEntry: databaseEntry.second) {
-                    std::string const& worker  = replicaEntry.first;
-                    auto const&        replica = replicaEntry.second;
-                    
                     if (replica.status() == ReplicaInfo::Status::COMPLETE)
                         _replicaData.complete[chunk][database].push_back(worker);
                 }
             }
-            
-            // Remove this chunk from the collection if not all databases
-            // were populated with workers
+        }
+
+        // Compute the 'co-location' status of chunks on all participating workers
+        //
+        // ATTENTION: this algorithm won't conider the actual status of
+        //            chunk replicas (if they're complete, corrupts, etc.).
+        //
+        for (auto const& chunk2databases: _replicaData.chunks) {
+            unsigned int const chunk = chunk2databases.first;
+
+            // Build a list of participating databases for this chunk,
+            // and build a list of databases for each worker where the chunk
+            // is present.
             //
-            if (_replicaData.complete[chunk].size() != numDatabases)
-                _replicaData.complete.erase(chunk);
+            // NOTE: Single-database chunks are always colocated. Note that
+            //       the loop over databases below has exactly one iteration.
+
+            std::map<std::string, size_t> worker2numDatabases;
+
+            for (auto const& database2workers: chunk2databases.second) {
+                for (auto const& worker2info: database2workers.second) {
+                    std::string const& worker = worker2info.first;
+                    worker2numDatabases[worker]++;
+                }
+            }
+            
+            // Crosscheck the number of databases present on each worker
+            // against the number of all databases participated within
+            // the chunk and decide for which of those workers the 'colocation'
+            // requirement is met.
+
+            for (auto const& entry: worker2numDatabases) {
+                std::string const& worker       = entry.first;
+                size_t      const  numDatabases = entry.second;
+
+                _replicaData.isColocated[chunk][worker] = _replicaData.databases[chunk].size() == numDatabases;
+            }
+        }
+        
+        // Compute the 'goodness' status of each chunk
+
+        for (auto const& chunk2workers: _replicaData.isColocated) {
+            unsigned int const chunk = chunk2workers.first;
+
+            for (auto const& worker2collocated: chunk2workers.second) {
+                std::string const& worker      = worker2collocated.first;
+                bool        const  isColocated = worker2collocated.second;
+                
+                // Start with the "as good as colocated" assumption, then drill down
+                // into chunk participation in all databases on that worker to see
+                // if this will change.
+                //
+                // NOTE: watch for a little optimization if the replica is not
+                //       colocated.
+
+                bool isGood = isColocated;
+                if (isGood) {
+                    for (auto const& chunk2databases: _replicaData.chunks[chunk]) {
+                        for (auto const& database2workers: chunk2databases.second) {
+                            if (worker == database2workers.first) {
+                                ReplicaInfo const& replica = database2workers.second;
+                                isGood = isGood && (replica.status() == ReplicaInfo::Status::COMPLETE);
+                            }
+                        }
+                    }
+                }
+                _replicaData.isGood[chunk][worker] = isGood;
+            }
         }
 
         // Finally, notify a caller
