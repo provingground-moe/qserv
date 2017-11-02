@@ -52,7 +52,28 @@ namespace {
 std::string databaseFamily;
 bool        progressReport;
 bool        errorReport;
+bool        detailedReport;
 std::string configUrl;
+
+void dump (rc::FindAllJobResult const& replicaData) {
+    std::cout << "*** DETAILED REPORTS ***\n";
+
+    std::cout << "\nCO-LOCATION:\n";
+    for (auto const& chunk2workers: replicaData.isColocated) {
+        unsigned int chunk = chunk2workers.first;
+
+        for (auto const& worker2colocated: chunk2workers.second) {
+            std::string const& destinationWorker = worker2colocated.first;
+            bool        const  isColocated       = worker2colocated.second;
+            
+            std::cout << "  "
+                      << "  chunk: "  << std::setw(6) << chunk
+                      << "  worker: " << std::setw(12) << destinationWorker
+                      << "  isColocated: " << (isColocated ? "YES" : "NO")
+                      << "\n";
+        }
+    }
+}
 
 /// Run the test
 bool test () {
@@ -93,6 +114,8 @@ bool test () {
         // Analyse and display results
 
         rc::FindAllJobResult const& replicaData = job->getReplicaData();
+
+        if (detailedReport) dump(replicaData);
 
         std::cout
             << "\n"
@@ -206,20 +229,23 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database-family> [--progress-report] [--error-report] [--config=<url>]\n"
+            "  <database-family> [--progress-report] [--error-report] [--detailed-report]\n"
+            "                    [--config=<url>]\n"
             "\n"
             "Parameters:\n"
             "  <database-family>  - the name of a database family to inspect\n"
             "\n"
             "Flags and options:\n"
-            "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
-            "  --error-report     - the flag triggering detailed report on failed requests\n"
+            "  --progress-report  - progress report when executing batches of requests\n"
+            "  --error-report     - detailed report on failed requests\n"
+            "  --detailed-report  - detailed report on results\n"
             "  --config           - a configuration URL (a configuration file or a set of the database\n"
             "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
 
         ::databaseFamily = parser.parameter<std::string>(1);
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");
+        ::detailedReport = parser.flag                  ("detailed-report");
         ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");
 
     } catch (std::exception const& ex) {
