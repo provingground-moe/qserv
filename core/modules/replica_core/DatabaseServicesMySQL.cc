@@ -387,12 +387,15 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
     if (::found_in (request->type(), {"REPLICA_CREATE",
                                       "REPLICA_DELETE"})) {
         
-        // Requests which aren't associated with any job should
-        // be ignored.
+        // Requests which haven't started yet or the ones which aren't associated
+        // with any job should be ignored.
         try {
-            request->jobId();
+            if (request->jobId().empty()) {
+                LOGS(_log, LOG_LVL_DEBUG, context << "ignoring the request with no job set, id=" << request->id());
+                return;
+            }
         } catch (std::logic_error const&) {
-            LOGS(_log, LOG_LVL_DEBUG, context << "ignoring the request with no job set, id=" << request->id());
+            LOGS(_log, LOG_LVL_DEBUG, context << "ignoring the request which hasn't yet started, id=" << request->id());
             return;
         }
 

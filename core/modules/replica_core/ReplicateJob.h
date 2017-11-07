@@ -263,9 +263,13 @@ protected:
     /// corresponding group as they're launched, and removed when they
     /// finished. This allows releasing (unlocking) chunks before
     /// the whole job finishes.
+    ///
+    /// [chunk][worker][database]
+    //
     std::map<unsigned int,
              std::map<std::string,
-                      ReplicationRequest::pointer>> _chunk2worker2request;
+                      std::map<std::string,
+                               ReplicationRequest::pointer>>> _chunk2requests;
 
     /// A collection of requests implementing the operation
     std::list<ReplicationRequest::pointer> _requests;

@@ -50,9 +50,10 @@ namespace {
 // Command line parameters
 
 std::string databaseFamily;
+std::string configUrl;
 bool        progressReport;
 bool        errorReport;
-std::string configUrl;
+bool        chunkLocksReport;
 
 /// Run the test
 bool test () {
@@ -89,9 +90,12 @@ bool test () {
                     errorReport,
                     std::cout);
 
+        if (chunkLocksReport)
+            std::cout << "CHUNK LOCKER REPORT:\n" << provider.chunkLocker().locked ();
+
         //////////////////////////////
         // Analyse and display results
-
+    
         rc::FixUpJobResult const& replicaData = job->getReplicaData();
 
         std::cout
@@ -198,21 +202,26 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database-family> [--progress-report] [--error-report] [--config=<url>]\n"
+            "  <database-family> [--config=<url>]\n"
+            "                    [--progress-report]\n"
+            "                    [--error-report]\n"
+            "                    [--chunk-locks-report]\n"
             "\n"
             "Parameters:\n"
-            "  <database-family>  - the name of a database family to inspect\n"
+            "  <database-family>    - the name of a database family to inspect\n"
             "\n"
             "Flags and options:\n"
-            "  --progress-report  - the flag triggering progress report when executing batches of requests\n"
-            "  --error-report     - the flag triggering detailed report on failed requests\n"
-            "  --config           - a configuration URL (a configuration file or a set of the database\n"
-            "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
+            "  --config             - a configuration URL (a configuration file or a set of the database\n"
+            "                         connection parameters [ DEFAULT: file:replication.cfg ]\n"
+            "  --progress-report    - progress report when executing batches of requests\n"
+            "  --error-report       - detailed report on failed requests\n"
+            "  --chunk-locks-report - report chunks which are locked\n");
 
-        ::databaseFamily = parser.parameter<std::string>(1);
-        ::progressReport = parser.flag                  ("progress-report");
-        ::errorReport    = parser.flag                  ("error-report");
-        ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");
+        ::databaseFamily   = parser.parameter<std::string>(1);
+        ::configUrl        = parser.option   <std::string>("config", "file:replication.cfg");
+        ::progressReport   = parser.flag                  ("progress-report");
+        ::errorReport      = parser.flag                  ("error-report");
+        ::chunkLocksReport = parser.flag                  ("chunk-locks-report");
 
     } catch (std::exception const& ex) {
         return 1;
