@@ -204,9 +204,10 @@ WorkerRequest::cancel () {
             setStatus(STATUS_IS_CANCELLING);
             break;
 
-        default:
-            throw std::logic_error("WorkerRequest::cancel not allowed while in status: " +
-                                    WorkerRequest::status2string(status()));
+        /* Nothing to be done to completed requests */
+        case WorkerRequest::STATUS_SUCCEEDED:
+        case WorkerRequest::STATUS_FAILED:
+            break;
     }
 }
 

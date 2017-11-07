@@ -91,6 +91,9 @@ class ChunkLocker {
 
 public:
 
+    /// The type for a collection of locked chunks groupped by owners
+    typedef std::map<std::string, std::list<Chunk>> ChunksByOwners;
+
     /// The default constructor
     ChunkLocker ();
     
@@ -119,6 +122,18 @@ public:
      */
     bool isLocked (Chunk const& chunk,
                    std::string& ownerId) const;
+
+
+    /**
+     * Return chunks which are loacked by a particular owner (if provided),
+     * or by all owners.
+     *
+     * @param owner - an optional owner. If the owner is not provided then
+     *                a;; chunks will be returned
+     *
+     * @return a collection of chunks groupped by owners
+     */
+    ChunksByOwners locked (std::string const& owner=std::string()) const;
 
     /**
      * Lock a chunk to a specific owner and return 'true' of the operation
@@ -179,7 +194,7 @@ private:
      *                at a time of the method call if the chunk was found locked
      */
     bool releaseImpl (Chunk const& chunk,
-                      std::string& ownerI);
+                      std::string& owner);
 
 private:
 
@@ -189,12 +204,18 @@ private:
     /// Mapping an owner to a list of chunks "clamed" by that owner
     /// NOTE: using the list container for the better performance of
     ///       the insert/erase operations over the lists of chunks
-    std::map<std::string, std::list<Chunk>> _owner2chunks;
+    ChunksByOwners _owner2chunks;
 
     /// For thread safety where it's required
     mutable std::mutex _mtx;
 
 };
+
+
+/// Overloaded streaming operator for a collection of locked chunks
+/// groupped by owners
+
+std::ostream& operator << (std::ostream& os, ChunkLocker::ChunksByOwners const& chunks);
 
 }}} // namespace lsst::qserv::replica_core
 

@@ -423,8 +423,22 @@ WorkerProcessor::dequeueOrCancelImpl (std::string const& id) {
 
             switch (ptr->status()) {
 
+                // These are the most typical states for request in this queue
+
                 case WorkerRequest::STATUS_CANCELLED:
                 case WorkerRequest::STATUS_IS_CANCELLING:
+
+                // The following two states are also allowed here because
+                // in-progress requests are still alowed to progress to the completed
+                // states before reporting their new state via method:
+                //    WorkerProcessor::processingFinished()
+                // Sometimes, the request just can't finish this in time due to
+                // LOCK_GUARD held by the current method. We shouldn't worry
+                // about this situation here. The request will be moved into the next
+                // queue as soon as LOCK_GUAR will be released.
+
+                case WorkerRequest::STATUS_SUCCEEDED:
+                case WorkerRequest::STATUS_FAILED:
                     return ptr;
 
                 default:
@@ -474,8 +488,11 @@ WorkerProcessor::checkStatusImpl (std::string const& id) {
     for (auto ptr : _newRequests)
         if (ptr->id() == id)
             switch (ptr->status()) {
+
+                /* This state requirement is strict for the non-active requsts */
                 case WorkerRequest::STATUS_NONE:
                     return ptr;
+
                 default:
                     throw std::logic_error (
                         "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
@@ -486,11 +503,28 @@ WorkerProcessor::checkStatusImpl (std::string const& id) {
     // Is it already being processed?
 
     for (auto ptr : _inProgressRequests)
-        if (ptr->id() == id)
+        if (ptr->id() == id) 
             switch (ptr->status()) {
+
+                // These are the most typical states for request in this queue
+
                 case WorkerRequest::STATUS_IS_CANCELLING:
                 case WorkerRequest::STATUS_IN_PROGRESS:
+
+                // The following three states are also allowed here because
+                // in-progress requests are still alowed to progress to the completed
+                // states before reporting their new state via method:
+                //    WorkerProcessor::processingFinished()
+                // Sometimes, the request just can't finish this in time due to
+                // LOCK_GUARD held by the current method. We shouldn't worry
+                // about this situation here. The request will be moved into the next
+                // queue as soon as LOCK_GUAR will be released.
+
+                case WorkerRequest::STATUS_CANCELLED:
+                case WorkerRequest::STATUS_SUCCEEDED:
+                case WorkerRequest::STATUS_FAILED:
                     return ptr;
+
                 default:
                     throw std::logic_error (
                         "unexpected request status " + WorkerRequest::status2string(ptr->status()) +
@@ -503,10 +537,13 @@ WorkerProcessor::checkStatusImpl (std::string const& id) {
     for (auto ptr : _finishedRequests)
         if (ptr->id() == id)
             switch (ptr->status()) {
+
+                /* This state requirement is strict for the completed requsts */
                 case WorkerRequest::STATUS_CANCELLED:
                 case WorkerRequest::STATUS_SUCCEEDED:
                 case WorkerRequest::STATUS_FAILED:
                     return ptr;
+
                 default:
                     throw std::logic_error (
                         "unexpected request status " + WorkerRequest::status2string(ptr->status()) +

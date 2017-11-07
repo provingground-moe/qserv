@@ -107,11 +107,8 @@ PurgeJob::PurgeJob (std::string const&         databaseFamily,
 }
 
 PurgeJob::~PurgeJob () {
-    // Make sure all chunks are released
-    for (auto const& chunkEntry: _chunk2worker2request) {
-        unsigned int chunk = chunkEntry.first;
-        release (chunk);
-    }
+    // Make sure all chuks locked by this job are released
+    _controller->serviceProvider().chunkLocker().release(_id);
 }
 
 PurgeJobResult const&
@@ -209,7 +206,7 @@ PurgeJob::cancelImpl () {
                 true,       /* keepTracking */
                 _id         /* jobId */);
     }
-    _chunk2worker2request.clear();
+    _chunk2requests.clear();
     _requests.clear();
 
     _numFailedLocks = 0;
@@ -394,7 +391,7 @@ PurgeJob::onPrecursorJobFinish () {
                         _id     /* jobId */
                     );
 
-                _chunk2worker2request[chunk][targetWorker] = ptr;
+                _chunk2requests[chunk][targetWorker][database] = ptr;
                 _requests.push_back (ptr);
 
                 _numLaunched++;
@@ -453,11 +450,22 @@ PurgeJob::onRequestFinish (DeleteRequest::pointer request) {
         } else {
             _replicaData.workers[request->worker()] = false;
         }
-        // Make sure the chunk is released if this was the last deletion request
-        // in its scope.
-        _chunk2worker2request.at(chunk).erase(worker);
-        if (not _chunk2worker2request.count(chunk)) release (chunk);
 
+        // Make sure the chunk is released if this was the last
+        // request in its scope.
+        //
+        _chunk2requests.at(chunk).at(worker).erase(database);
+        if (_chunk2requests.at(chunk).at(worker).empty()) {
+            _chunk2requests.at(chunk).erase(worker);
+            if (_chunk2requests.at(chunk).empty()) {
+                _chunk2requests.erase(chunk);
+                release(chunk);
+            }
+        }
+        
+        // Evaluate the status of on-going operations to see if the job
+        // has finished.
+        //
         if (_numFinished == _numLaunched) {
             if (_numSuccess == _numLaunched) {
                 if (_numFailedLocks) {

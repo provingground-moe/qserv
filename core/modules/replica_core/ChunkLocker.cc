@@ -90,6 +90,17 @@ ChunkLocker::isLocked (Chunk const& chunk,
     return false;
 }
 
+ChunkLocker::ChunksByOwners
+ChunkLocker::locked (std::string const& owner) const {
+
+    if (owner.empty()) return _owner2chunks;
+    
+    ChunksByOwners owner2chunks;
+    if (_owner2chunks.count(owner)) owner2chunks[owner] = _owner2chunks.at(owner);
+
+    return owner2chunks;
+}
+
 bool
 ChunkLocker::lock (Chunk const&       chunk,
                    std::string const& owner) {
@@ -154,12 +165,35 @@ ChunkLocker::release (std::string const& owner) {
     if (owner.empty())
         throw std::invalid_argument ("ChunkLocker::release  empty owner");
 
+    // First get all chunks claimed by the specified owner.
+    // This list s also going to be returned o teh cller.
     std::vector<Chunk> chunks;
     if (_owner2chunks.count(owner))
         for (auto const& chunk: _owner2chunks.at(owner))
             chunks.emplace_back(chunk);
 
+    // Then release the select chunks
+    for (auto const& chunk: chunks)
+        release (chunk);
+
     return chunks;
 }
+
+
+
+//////////////////////////////////////
+//               misc               //
+//////////////////////////////////////
+
+std::ostream& operator << (std::ostream& os, ChunkLocker::ChunksByOwners const& chunks) {
+    for (auto const& entry: chunks) {
+        std::string const& owner = entry.first;
+        os  << "Chunk owner: " << owner << "\n";
+        for (Chunk const& chunk: entry.second)
+            os  << "    " << chunk.databaseFamily << ":" << chunk.number << "\n";
+    }
+    return os;
+}
+
 
 }}} // namespace lsst::qserv::replica_core
