@@ -47,6 +47,7 @@ RequestMessenger::RequestMessenger (ServiceProvider&                  servicePro
                                     const std::string&                worker,
                                     int                               priority,
                                     bool                              keepTracking,
+                                    bool                              allowDuplicate,
                                     std::shared_ptr<Messenger> const& messenger)
 
     :   Request (serviceProvider,
@@ -54,7 +55,8 @@ RequestMessenger::RequestMessenger (ServiceProvider&                  servicePro
                  type,
                  worker,
                  priority,
-                 keepTracking),
+                 keepTracking,
+                 allowDuplicate),
 
         _messenger (messenger) {
 }

@@ -119,6 +119,7 @@ public:
      * @param onFinish        - an optional callback function to be called upon a completion of the request.
      * @param priority        - a priority level of the request
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param allowDuplicate  - follow a previously made request if the current one duplicates it
      */
     static pointer create (ServiceProvider&         serviceProvider,
                            boost::asio::io_service& io_service,
@@ -128,7 +129,8 @@ public:
                            unsigned int             chunk,
                            callback_type            onFinish,
                            int                      priority,
-                           bool                     keepTracking);
+                           bool                     keepTracking,
+                           bool                     allowDuplicate);
 
 private:
 
@@ -143,7 +145,8 @@ private:
                          unsigned int             chunk,
                          callback_type            onFinish,
                          int                      priority,
-                         bool                     keepTracking);
+                         bool                     keepTracking,
+                         bool                     allowDuplicate);
 
     /**
       * This method is called when a connection is established and
@@ -271,6 +274,8 @@ public:
      * @param onFinish        - an optional callback function to be called upon a completion of the request.
      * @param priority        - a priority level of the request
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param allowDuplicate  - follow a previously made request if the current one duplicates it
+     * @param messenger       - worker messenging service
      */
     static pointer create (ServiceProvider&                  serviceProvider,
                            boost::asio::io_service&          io_service,
@@ -281,6 +286,7 @@ public:
                            callback_type                     onFinish,
                            int                               priority,
                            bool                              keepTracking,
+                           bool                              allowDuplicate,
                            std::shared_ptr<Messenger> const& messenger);
 
 private:
@@ -297,6 +303,7 @@ private:
                          callback_type                     onFinish,
                          int                               priority,
                          bool                              keepTracking,
+                         bool                              allowDuplicate,
                          std::shared_ptr<Messenger> const& messenger);
 
     /**

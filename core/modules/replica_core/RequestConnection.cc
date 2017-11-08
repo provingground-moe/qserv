@@ -46,19 +46,21 @@ namespace qserv {
 namespace replica_core {
 
 
-RequestConnection::RequestConnection (ServiceProvider         &serviceProvider,
-                                      boost::asio::io_service &io_service,
-                                      const std::string       &type,
-                                      const std::string       &worker,
+RequestConnection::RequestConnection (ServiceProvider&         serviceProvider,
+                                      boost::asio::io_service& io_service,
+                                      std::string const&       type,
+                                      std::string const&       worker,
                                       int                      priority,
-                                      bool                     keepTracking)
+                                      bool                     keepTracking,
+                                      bool                     allowDuplicate)
 
     :   Request (serviceProvider,
                  io_service,
                  type,
                  worker,
                  priority,
-                 keepTracking),
+                 keepTracking,
+                 allowDuplicate),
 
         _resolver (io_service),
         _socket   (io_service) {

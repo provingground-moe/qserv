@@ -39,6 +39,7 @@ uint32_t    chunk;
 //
 int  priority        = 0;
 bool keepTracking    = true;
+bool allowDuplicate  = false;
 bool computeCheckSum = false;
 
 /// Report result of the operation
@@ -87,7 +88,8 @@ bool test () {
                     printRequest<rc::ReplicationRequest>(request);
                 },
                 priority,
-                keepTracking);
+                keepTracking,
+                allowDuplicate);
 
         } else if ("REPLICA_CREATE,CANCEL" == operation) {
             request = controller->replicate (
@@ -110,7 +112,8 @@ bool test () {
                     printRequest<rc::DeleteRequest>(request);
                 },
                 priority,
-                keepTracking);
+                keepTracking,
+                allowDuplicate);
 
         } else if ("REPLICA_FIND" == operation) {
             request = controller->findReplica (
@@ -278,6 +281,7 @@ int main (int argc, const char* const argv[]) {
             "Usage:\n"
             "  <operation> [<parameter> [<parameter> [...]]]\n"
             "              [--check-sum] [--do-not-track]\n"
+            "              [--allow-duplicate]\n"
             "              [--priority=<level>] [--config=<url>]\n"
             "\n"
             "Supported operations and mandatory parameters:\n"
@@ -366,6 +370,7 @@ int main (int argc, const char* const argv[]) {
         }
         ::computeCheckSum =   parser.flag                ("check-sum");
         ::keepTracking    = ! parser.flag                ("do-not-track");
+        ::allowDuplicate  =   parser.flag                ("allow-duplicate");
         ::priority        =   parser.option<int>         ("priority", 1);
         ::configUrl       =   parser.option<std::string> ("config",   "file:replication.cfg");
 

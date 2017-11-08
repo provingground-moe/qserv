@@ -208,6 +208,9 @@ public:
      * @param chunk            - the chunk number
      * @param onFinish         - an optional callback function to be called upon the completion of the request
      * @param priority         - a priority level of the request
+     * @param keepTracking     - keep tracking the request before it finishes or fails
+     * @param allowDuplicate   - follow a previously made request if the current one duplicates it
+     * @param jobId            - an optional identifier of a job issed the request
      *
      * @return a pointer to the replication request
      */
@@ -218,16 +221,20 @@ public:
                                           ReplicationRequest_callback_type onFinish=nullptr,
                                           int                              priority=0,
                                           bool                             keepTracking=true,
+                                          bool                             allowDuplicate=true,
                                           std::string const&               jobId="");
 
     /**
      * Initiate a new replica deletion request.
      *
-     * @param workerName - the name of a worker node where the replica will be deleted
-     * @param database   - database name
-     * @param chunk      - the chunk number
-     * @param onFinish   - an optional callback function to be called upon the completion of the request
-     * @param priority   - a priority level of the request
+     * @param workerName     - the name of a worker node where the replica will be deleted
+     * @param database       - database name
+     * @param chunk          - the chunk number
+     * @param onFinish       - an optional callback function to be called upon the completion of the request
+     * @param priority       - a priority level of the request
+     * @param keepTracking   - keep tracking the request before it finishes or fails
+     * @param allowDuplicate - follow a previously made request if the current one duplicates it
+     * @param jobId            - an optional identifier of a job issed the request
      *
      * @return a pointer to the replication request
      */
@@ -237,6 +244,7 @@ public:
                                          DeleteRequest_callback_type onFinish=nullptr,
                                          int                         priority=0,
                                          bool                        keepTracking=true,
+                                         bool                        allowDuplicate=true,
                                          std::string const&          jobId="");
 
     /**
@@ -253,6 +261,8 @@ public:
      * @param onFinish        - an optional callback function to be called upon the completion of the request
      * @param priority        - a priority level of the request
      * @param computeCheckSum - tell a worker server to compute check/control sum on each file
+     * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the replication request
      */
@@ -272,6 +282,8 @@ public:
      * @param database        - database name
      * @param onFinish        - an optional callback function to be called upon the completion of the request
      * @param priority        - a priority level of the request
+     * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the replication request
      */
@@ -290,6 +302,7 @@ public:
      * @param targetRequestId - an identifier of a request to be stopped
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the stop request
      */
@@ -307,6 +320,7 @@ public:
      * @param targetRequestId - an identifier of a request to be stopped
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the stop request
      */
@@ -324,6 +338,7 @@ public:
      * @param targetRequestId - an identifier of a request to be stopped
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the stop request
      */
@@ -341,6 +356,7 @@ public:
      * @param targetRequestId - an identifier of a request to be stopped
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the stop request
      */
@@ -358,6 +374,7 @@ public:
      * @param targetRequestId - an identifier of a request to be inspected
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the status inquery request
      */
@@ -375,6 +392,7 @@ public:
      * @param targetRequestId - an identifier of a request to be inspected
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the status inquery request
      */
@@ -392,6 +410,7 @@ public:
      * @param targetRequestId - an identifier of a request to be inspected
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the status inquery request
      */
@@ -409,6 +428,7 @@ public:
      * @param targetRequestId - an identifier of a request to be inspected
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the status inquery request
      */
@@ -424,6 +444,7 @@ public:
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
+     * @param jobId           - an optional identifier of a job issed the request
      *
      * @return a pointer to the request
      */
@@ -437,6 +458,7 @@ public:
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
+     * @param jobId      - an optional identifier of a job issed the request
      *
      * @return a pointer to the request
      */
@@ -449,6 +471,7 @@ public:
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
+     * @param jobId      - an optional identifier of a job issed the request
      *
      * @return a pointer to the request
      */
@@ -463,6 +486,7 @@ public:
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
+     * @param jobId      - an optional identifier of a job issed the request
      *
      * @return a pointer to the request
      */
@@ -477,6 +501,7 @@ public:
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
+     * @param jobId      - an optional identifier of a job issed the request
      *
      * @return a pointer to the request
      */

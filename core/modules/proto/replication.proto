@@ -301,16 +301,19 @@ message ReplicationResponseReplicate {
     /// Extended status of this operation
     optional ReplicationStatusExt status_ext = 2 [default = NONE];
 
+    /// The field is set for duplicate requests only
+    optional string duplicate_request_id = 3 [default = ""];
+
     /// The performance of this operation
-    required ReplicationPerformance performance = 3;
+    required ReplicationPerformance performance = 4;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica creation request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 4;
+    optional ReplicationPerformance target_performance = 5;
 
     /// Extended information on the replica
-    optional ReplicationReplicaInfo replica_info = 5;
+    optional ReplicationReplicaInfo replica_info = 6;
 }
 
 message ReplicationResponseDelete {
@@ -321,16 +324,19 @@ message ReplicationResponseDelete {
     /// Extended status of this operation
     optional ReplicationStatusExt status_ext = 2 [default = NONE];
 
+    /// The field is set for duplicate requests only
+    optional string duplicate_request_id = 3 [default = ""];
+
     /// The performance of this operation
-    required ReplicationPerformance performance = 3;
+    required ReplicationPerformance performance = 4;
 
     /// The performance of the target operation. This field represents
     /// stats of the replica deletion request obtained by the request
     /// management operations
-    optional ReplicationPerformance target_performance = 4;
+    optional ReplicationPerformance target_performance = 5;
     
     /// Extended information on the request
-    optional ReplicationReplicaInfo replica_info = 5;
+    optional ReplicationReplicaInfo replica_info = 6;
 }
 
 message ReplicationResponseFind {

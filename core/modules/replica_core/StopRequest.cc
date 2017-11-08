@@ -70,7 +70,8 @@ StopRequestBaseC::StopRequestBaseC (ServiceProvider&                            
                            requestTypeName,
                            worker,
                            0,
-                           keepTracking),
+                           keepTracking,
+                           false /* allowDuplicate */),
 
         _targetRequestId (targetRequestId),
         _requestType     (requestType) {
@@ -406,6 +407,7 @@ StopRequestBaseM::StopRequestBaseM (ServiceProvider&                            
                           worker,
                           0,    /* priority */
                           keepTracking,
+                          false /* allowDuplicate */,
                           messenger),
 
         _targetRequestId (targetRequestId),

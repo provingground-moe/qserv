@@ -75,11 +75,13 @@ bool ifDuplicateRequest (PROTOCOL_RESPONSE_TYPE&                     response,
             (ptr->database() == request.database()) &&
             (ptr->chunk   () == request.chunk   ());
 
-    if (isDuplicate)
+    if (isDuplicate) {
         replica_core::WorkerProcessor::setDefaultResponse (
             response,
             proto::ReplicationStatus::BAD,
             proto::ReplicationStatusExt::DUPLICATE);
+        response.set_duplicate_request_id(p->id());
+    }
 
     return isDuplicate;
 }
