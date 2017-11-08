@@ -453,6 +453,7 @@ ReplicateJob::onPrecursorJobFinish () {
                         },
                         0,      /* priority */
                         true,   /* keepTracking */
+                        true,   /* allowDuplicate */
                         _id     /* jobId */
                     );
 

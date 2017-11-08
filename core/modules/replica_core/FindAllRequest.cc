@@ -89,7 +89,8 @@ FindAllRequestC::FindAllRequestC (ServiceProvider&         serviceProvider,
                            "REPLICA_FIND_ALL",
                            worker,
                            priority,
-                           keepTracking),
+                           keepTracking,
+                           false /* allowDuplicate */),
 
         _database              (database),
         _onFinish              (onFinish),
@@ -487,6 +488,7 @@ FindAllRequestM::FindAllRequestM (ServiceProvider&                  serviceProvi
                           worker,
                           priority,
                           keepTracking,
+                          false, /* allowDuplicate */
                           messenger),
 
         _database              (database),

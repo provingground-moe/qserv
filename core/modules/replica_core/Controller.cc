@@ -366,6 +366,7 @@ Controller::replicate (std::string const&                workerName,
                        ReplicationRequest::callback_type onFinish,
                        int                               priority,
                        bool                              keepTracking,
+                       bool                              allowDuplicate,
                        std::string const&                jobId) {
     LOCK_GUARD;
 
@@ -385,7 +386,8 @@ Controller::replicate (std::string const&                workerName,
                 controller->finish(request->id());
             },
             priority,
-            keepTracking
+            keepTracking,
+            allowDuplicate
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
             ,_messenger
 #endif
@@ -412,6 +414,7 @@ Controller::deleteReplica (std::string const&           workerName,
                            DeleteRequest::callback_type onFinish,
                            int                          priority,
                            bool                         keepTracking,
+                           bool                         allowDuplicate,
                            std::string const&           jobId) {
     LOCK_GUARD;
 
@@ -430,7 +433,8 @@ Controller::deleteReplica (std::string const&           workerName,
                 controller->finish(request->id());
             },
             priority,
-            keepTracking
+            keepTracking,
+            allowDuplicate
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
             ,_messenger
 #endif

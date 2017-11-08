@@ -65,7 +65,8 @@ DeleteRequestC::create (ServiceProvider&         serviceProvider,
                         unsigned int             chunk,
                         callback_type            onFinish,
                         int                      priority,
-                        bool                     keepTracking) {
+                        bool                     keepTracking,
+                        bool                     allowDuplicate) {
 
     return DeleteRequestC::pointer (
         new DeleteRequestC (
@@ -76,7 +77,8 @@ DeleteRequestC::create (ServiceProvider&         serviceProvider,
             chunk,
             onFinish,
             priority,
-            keepTracking));
+            keepTracking,
+            allowDuplicate));
 }
 
 DeleteRequestC::DeleteRequestC (ServiceProvider&         serviceProvider,
@@ -86,14 +88,16 @@ DeleteRequestC::DeleteRequestC (ServiceProvider&         serviceProvider,
                                 unsigned int             chunk,
                                 callback_type            onFinish,
                                 int                      priority,
-                                bool                     keepTracking)
+                                bool                     keepTracking,
+                                bool                     allowDuplicate)
 
     :   RequestConnection (serviceProvider,
                            io_service,
                            "REPLICA_DELETE",
                            worker,
                            priority,
-                           keepTracking),
+                           keepTracking,
+                           allowDuplicate),
  
         _database     (database),
         _chunk        (chunk),
@@ -457,6 +461,7 @@ DeleteRequestM::create (ServiceProvider&                  serviceProvider,
                         callback_type                     onFinish,
                         int                               priority,
                         bool                              keepTracking,
+                        bool                              allowDuplicate,
                         std::shared_ptr<Messenger> const& messenger) {
 
     return DeleteRequestM::pointer (
@@ -469,6 +474,7 @@ DeleteRequestM::create (ServiceProvider&                  serviceProvider,
             onFinish,
             priority,
             keepTracking,
+            allowDuplicate,
             messenger));
 }
 
@@ -480,6 +486,7 @@ DeleteRequestM::DeleteRequestM (ServiceProvider&                  serviceProvide
                                 callback_type                     onFinish,
                                 int                               priority,
                                 bool                              keepTracking,
+                                bool                              allowDuplicate,
                                 std::shared_ptr<Messenger> const& messenger)
 
     :   RequestMessenger (serviceProvider,
@@ -488,6 +495,7 @@ DeleteRequestM::DeleteRequestM (ServiceProvider&                  serviceProvide
                           worker,
                           priority,
                           keepTracking,
+                          allowDuplicate,
                           messenger),
  
         _database     (database),

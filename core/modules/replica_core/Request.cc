@@ -82,12 +82,13 @@ Request::state2string (ExtendedState state) {
     throw std::logic_error("incomplete implementation of method Request::state2string(ExtendedState)");
 }
 
-Request::Request (ServiceProvider         &serviceProvider,
-                  boost::asio::io_service &io_service,
-                  const std::string       &type,
-                  const std::string       &worker,
+Request::Request (ServiceProvider&         serviceProvider,
+                  boost::asio::io_service& io_service,
+                  std::string const& type,
+                  std::string const&       worker,
                   int                      priority,
-                  bool                     keepTracking)
+                  bool                     keepTracking,
+                  bool                     allowDuplicate)
 
     :   _serviceProvider (serviceProvider),
 
@@ -95,8 +96,9 @@ Request::Request (ServiceProvider         &serviceProvider,
         _id     (Generators::uniqueId()),
         _worker (worker),
 
-        _priority     (priority),
-        _keepTracking (keepTracking),
+        _priority       (priority),
+        _keepTracking   (keepTracking),
+        _allowDuplicate (allowDuplicate),
 
         _state                (CREATED),
         _extendedState        (NONE),
@@ -165,7 +167,7 @@ Request::jobId () const {
 }
 
 void
-Request::expired (const boost::system::error_code &ec) {
+Request::expired (boost::system::error_code const& ec) {
 
     LOCK_GUARD;
 
@@ -221,7 +223,7 @@ Request::finish (ExtendedState extendedState) {
 
 
 bool
-Request::isAborted (const boost::system::error_code &ec) const {
+Request::isAborted (boost::system::error_code const& ec) const {
 
     if (ec == boost::asio::error::operation_aborted) {
         LOGS(_log, LOG_LVL_DEBUG, context() << "isAborted  ** ABORTED **");

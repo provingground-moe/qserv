@@ -69,7 +69,8 @@ StatusRequestBaseC::StatusRequestBaseC (ServiceProvider&                        
                            requestTypeName,
                            worker,
                            0,   /* priority */
-                           keepTracking),
+                           keepTracking,
+                           false /* allowDuplicate */),
 
         _targetRequestId (targetRequestId),
         _requestType     (requestType) {
@@ -405,6 +406,7 @@ StatusRequestBaseM::StatusRequestBaseM (ServiceProvider&                        
                           worker,
                           0,    /* priority */
                           keepTracking,
+                          false /* allowDuplicate */,
                           messenger),
 
         _targetRequestId (targetRequestId),

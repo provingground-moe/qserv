@@ -76,6 +76,9 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      *
+     * NOTE: options 'keepTracking' and 'allowDuplicate' have effect for
+     *       specific request only.
+     *
      * @param serviceProvider - a provider of various services
      * @param type            - its type name (used informally for debugging)
      * @param worker          - the name of a worker
@@ -84,15 +87,15 @@ protected:
      *                          the worker service. Higher number means higher
      *                          priority.
      * @param keepTracking    - keep tracking the request before it finishes or fails
-     *                          NOTE: an availability and an implementation of this option
-     *                          depends on a specific request.
+     * @param allowDuplicate  - follow a previously made request if the current one duplicates it
      */
-    RequestConnection (ServiceProvider         &serviceProvider,
-                       boost::asio::io_service &io_service,
-                       const std::string       &type,
-                       const std::string       &worker,
+    RequestConnection (ServiceProvider&         serviceProvider,
+                       boost::asio::io_service& io_service,
+                       std::string const&       type,
+                       std::string const&       worker,
                        int                      priority,
-                       bool                     keepTracking);
+                       bool                     keepTracking,
+                       bool                     allowDuplicate);
 
     /**
      * Implement a method defined in the base class.

@@ -186,7 +186,8 @@ ServiceManagementRequestBaseC::ServiceManagementRequestBaseC (
                            requestTypeName,
                            worker,
                            0,       /* priority */
-                           false    /* keepTracking */
+                           false,   /* keepTracking */
+                           false    /* allowDuplicate */
                            ),
 
         _requestType (requestType) {
@@ -375,6 +376,7 @@ ServiceManagementRequestBaseM::ServiceManagementRequestBaseM (
                           worker,
                           0,        /* priority */
                           false,    /* keepTracking */
+                          false,    /* allowDuplicate */
                           messenger),
 
         _requestType (requestType) {

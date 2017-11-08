@@ -66,7 +66,8 @@ ReplicationRequestC::create (ServiceProvider&         serviceProvider,
                              unsigned int             chunk,
                              callback_type            onFinish,
                              int                      priority,
-                             bool                     keepTracking) {
+                             bool                     keepTracking,
+                             bool                     allowDuplicate) {
 
     return ReplicationRequestC::pointer (
         new ReplicationRequestC (
@@ -78,7 +79,8 @@ ReplicationRequestC::create (ServiceProvider&         serviceProvider,
             chunk,
             onFinish,
             priority,
-            keepTracking));
+            keepTracking,
+            allowDuplicate));
 }
 
 ReplicationRequestC::ReplicationRequestC (ServiceProvider&         serviceProvider,
@@ -89,14 +91,16 @@ ReplicationRequestC::ReplicationRequestC (ServiceProvider&         serviceProvid
                                           unsigned int             chunk,
                                           callback_type            onFinish,
                                           int                      priority,
-                                          bool                     keepTracking)
+                                          bool                     keepTracking,
+                                          bool                     allowDuplicate)
 
     :   RequestConnection (serviceProvider,
                            io_service,
                            "REPLICA_CREATE",
                            worker,
                            priority,
-                           keepTracking),
+                           keepTracking,
+                           allowDuplicate),
  
         _database     (database),
         _chunk        (chunk),
@@ -460,6 +464,7 @@ ReplicationRequestM::create (ServiceProvider&                  serviceProvider,
                              callback_type                     onFinish,
                              int                               priority,
                              bool                              keepTracking,
+                             bool                              allowDuplicate,
                              std::shared_ptr<Messenger> const& messenger) {
 
     return ReplicationRequestM::pointer (
@@ -473,6 +478,7 @@ ReplicationRequestM::create (ServiceProvider&                  serviceProvider,
             onFinish,
             priority,
             keepTracking,
+            allowDuplicate,
             messenger));
 }
 
@@ -485,6 +491,7 @@ ReplicationRequestM::ReplicationRequestM (ServiceProvider&                  serv
                                           callback_type                     onFinish,
                                           int                               priority,
                                           bool                              keepTracking,
+                                          bool                              allowDuplicate,
                                           std::shared_ptr<Messenger> const& messenger)
 
     :   RequestMessenger (serviceProvider,
@@ -493,6 +500,7 @@ ReplicationRequestM::ReplicationRequestM (ServiceProvider&                  serv
                           worker,
                           priority,
                           keepTracking,
+                          allowDuplicate,
                           messenger),
  
         _database     (database),

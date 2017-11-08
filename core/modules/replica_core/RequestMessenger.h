@@ -77,6 +77,9 @@ protected:
     /**
      * Construct the request with the pointer to the services provider.
      *
+     * NOTE: options 'keepTracking' and 'allowDuplicate' have effect for
+     *       specific request only.
+     *
      * @param serviceProvider - a provider of various services
      * @param type            - its type name (used informally for debugging)
      * @param worker          - the name of a worker
@@ -85,8 +88,7 @@ protected:
      *                          the worker service. Higher number means higher
      *                          priority.
      * @param keepTracking    - keep tracking the request before it finishes or fails
-     *                          NOTE: an availability and an implementation of this option
-     *                          depends on a specific request.
+     * @param allowDuplicate  - follow a previously made request if the current one duplicates it
      * @param messenger       - an interface for communicating with workers
      */
     RequestMessenger (ServiceProvider&                  serviceProvider,
@@ -95,6 +97,7 @@ protected:
                       std::string const&                worker,
                       int                               priority,
                       bool                              keepTracking,
+                      bool                              allowDuplicate,
                       std::shared_ptr<Messenger> const& messenger);
 
     /**
