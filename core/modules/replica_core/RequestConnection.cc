@@ -254,10 +254,10 @@ RequestConnection::syncReadVerifyHeader (const size_t bytes) {
     proto::ReplicationResponseHeader hdr;
     boost::system::error_code ec = syncReadMessage (bytes, hdr);
     if (!ec)
-        if (id() != hdr.id())
+        if (remoteId() != hdr.id())
             throw std::logic_error (
                     "RequestConnection::syncReadVerifyHeader()  got unexpected id: " + hdr.id() +
-                    " instead of: " + id());
+                    " instead of: " + remoteId());
     return ec;
 }
     
