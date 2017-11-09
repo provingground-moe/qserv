@@ -284,7 +284,7 @@ ReplicationRequestC::sendStatus () {
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
-    message.set_id  (id());
+    message.set_id  (remoteId());
     message.set_type(proto::ReplicationReplicaRequestType::REPLICA_CREATE);
 
     _bufferPtr->serialize(message);
@@ -411,18 +411,34 @@ ReplicationRequestC::analyze (proto::ReplicationResponseReplicate const& message
             finish (SUCCESS);
             break;
 
-        case proto::ReplicationStatus::QUEUED:
-        case proto::ReplicationStatus::IN_PROGRESS:
-        case proto::ReplicationStatus::IS_CANCELLING:
+            case proto::ReplicationStatus::QUEUED:
+                if (_keepTracking) wait();
+                else               finish (SERVER_QUEUED);
+                break;
+    
+            case proto::ReplicationStatus::IN_PROGRESS:
+                if (_keepTracking) wait();
+                else               finish (SERVER_IN_PROGRESS);
+                break;
+    
+            case proto::ReplicationStatus::IS_CANCELLING:
+                if (_keepTracking) wait();
+                else               finish (SERVER_IS_CANCELLING);
+                break;
+    
+            case proto::ReplicationStatus::BAD:
 
-            // Go wait until a definitive response from the worker is received.
+                // Special treatment of the duplicate requests if allowed
 
-            wait();
-            return;
-
-        case proto::ReplicationStatus::BAD:
-            finish (SERVER_BAD);
-            break;
+                if (_extendedServerStatus == ExtendedCompletionStatus::EXT_STATUS_DUPLICATE) {
+                    Request::_duplicateRequestId = message.duplicate_request_id();
+                    if (_allowDuplicate && _keepTracking) {
+                        wait();
+                        return;
+                    }
+                }
+                finish (SERVER_BAD);
+                break;
 
         case proto::ReplicationStatus::FAILED:
             finish (SERVER_ERROR);
@@ -587,7 +603,7 @@ ReplicationRequestM::awaken (boost::system::error_code const& ec) {
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
-    message.set_id  (id());
+    message.set_id  (remoteId());
     message.set_type(proto::ReplicationReplicaRequestType::REPLICA_CREATE);
 
     _bufferPtr->serialize(message);
@@ -650,18 +666,34 @@ ReplicationRequestM::analyze (bool                                       success
                 break;
     
             case proto::ReplicationStatus::QUEUED:
-            case proto::ReplicationStatus::IN_PROGRESS:
-            case proto::ReplicationStatus::IS_CANCELLING:
-    
-                // Go wait until a definitive response from the worker is received.
-    
-                wait();
-                return;
-    
-            case proto::ReplicationStatus::BAD:
-                finish (SERVER_BAD);
+                if (_keepTracking) wait();
+                else               finish (SERVER_QUEUED);
                 break;
     
+            case proto::ReplicationStatus::IN_PROGRESS:
+                if (_keepTracking) wait();
+                else               finish (SERVER_IN_PROGRESS);
+                break;
+    
+            case proto::ReplicationStatus::IS_CANCELLING:
+                if (_keepTracking) wait();
+                else               finish (SERVER_IS_CANCELLING);
+                break;
+    
+            case proto::ReplicationStatus::BAD:
+
+                // Special treatment of the duplicate requests if allowed
+
+                if (_extendedServerStatus == ExtendedCompletionStatus::EXT_STATUS_DUPLICATE) {
+                    Request::_duplicateRequestId = message.duplicate_request_id();
+                    if (_allowDuplicate && _keepTracking) {
+                        wait();
+                        return;
+                    }
+                }
+                finish (SERVER_BAD);
+                break;
+
             case proto::ReplicationStatus::FAILED:
                 finish (SERVER_ERROR);
                 break;

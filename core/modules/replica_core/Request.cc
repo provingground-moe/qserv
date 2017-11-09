@@ -120,6 +120,11 @@ Request::Request (ServiceProvider&         serviceProvider,
 Request::~Request () { 
 }
 
+std::string const&
+Request::remoteId () const {
+    return _duplicateRequestId.empty() ? _id : _duplicateRequestId;
+}
+
 void
 Request::start (std::shared_ptr<Controller> const& controller,
                 std::string const&                 jobId) {

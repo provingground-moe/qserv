@@ -151,6 +151,14 @@ public:
     /// Return a unique identifier of the request
     std::string const& id () const { return _id; }
 
+    /**
+     * An effective identifier of a remote (worker-side) requst. Normally this is
+     * the same request as the one a request object is created with unless allowing
+     * to track duplicate requests (see constructor'x options: 'keepTracking' and
+     * 'allowDuplicate') and after the one is found.
+     */
+    std::string const& remoteId () const;
+
     /// Return the priority level of the request
     int priority () const { return _priority; }
 
@@ -326,7 +334,8 @@ protected:
     ServiceProvider& _serviceProvider;
 
     std::string _type;
-    std::string _id;
+    std::string _id;                    ///< own identifier
+    std::string _duplicateRequestId;    ///< effective identifier of a remote (worker-side) request where applies
     std::string _worker;
 
     int  _priority;

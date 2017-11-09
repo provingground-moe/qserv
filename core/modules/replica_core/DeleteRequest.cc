@@ -276,7 +276,7 @@ DeleteRequestC::sendStatus () {
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
-    message.set_id  (id());
+    message.set_id  (remoteId());
     message.set_type(proto::ReplicationReplicaRequestType::REPLICA_DELETE);
 
     _bufferPtr->serialize(message);
@@ -418,6 +418,16 @@ DeleteRequestC::analyze (proto::ReplicationResponseDelete const& message) {
             break;
 
         case proto::ReplicationStatus::BAD:
+
+            // Special treatment of the duplicate requests if allowed
+
+            if (_extendedServerStatus == ExtendedCompletionStatus::EXT_STATUS_DUPLICATE) {
+                Request::_duplicateRequestId = message.duplicate_request_id();
+                if (_allowDuplicate && _keepTracking) {
+                    wait();
+                    return;
+                }
+            }
             finish (SERVER_BAD);
             break;
 
@@ -578,7 +588,7 @@ DeleteRequestM::awaken (boost::system::error_code const& ec) {
     _bufferPtr->serialize(hdr);
 
     proto::ReplicationRequestStatus message;
-    message.set_id  (id());
+    message.set_id  (remoteId());
     message.set_type(proto::ReplicationReplicaRequestType::REPLICA_DELETE);
 
     _bufferPtr->serialize(message);
@@ -656,6 +666,16 @@ DeleteRequestM::analyze (bool                                                 su
                 break;
     
             case proto::ReplicationStatus::BAD:
+
+                // Special treatment of the duplicate requests if allowed
+
+                if (_extendedServerStatus == ExtendedCompletionStatus::EXT_STATUS_DUPLICATE) {
+                    Request::_duplicateRequestId = message.duplicate_request_id();
+                    if (_allowDuplicate && _keepTracking) {
+                        wait();
+                        return;
+                    }
+                }
                 finish (SERVER_BAD);
                 break;
     
