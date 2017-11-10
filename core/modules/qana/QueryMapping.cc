@@ -116,6 +116,10 @@ public:
         //if (!e.isDynamic()) {return newE; }
 
         for(auto i=_tupleDeque.begin(); i != _tupleDeque.end(); ++i) {
+            if (i->param == QueryMapping::SUBCHUNK) {
+                // don't do subchunk replacement here; the worker will take care of it.
+                continue;
+            }
             newE->s = replace(newE->s, i->pat, i->tgt);
             if (i->param == QueryMapping::SUBCHUNK) {
                 // Remember that we mapped a subchunk,
