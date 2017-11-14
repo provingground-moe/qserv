@@ -75,7 +75,6 @@ namespace qserv {
 namespace qana {
 
 std::string const TableInfo::CHUNK_TAG("%CC%");
-std::string const TableInfo::SUBCHUNK_TAG("%SS%");
 
 
 std::ostream& operator<<(std::ostream& os, TableInfo const& ti) {
