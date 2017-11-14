@@ -48,6 +48,7 @@
 
 // Qserv headers
 #include "global/Bug.h"
+#include "global/constants.h"
 #include "global/DbTable.h"
 #include "global/debugUtil.h"
 #include "global/UnsupportedError.h"
@@ -74,6 +75,7 @@ LOG_LOGGER _log = LOG_GET("lsst.qserv.wdb.QueryRunner");
 namespace lsst {
 namespace qserv {
 namespace wdb {
+
 
 QueryRunner::Ptr QueryRunner::newQueryRunner(wbase::Task::Ptr const& task,
                                              ChunkResourceMgr::Ptr const& chunkResourceMgr,
@@ -398,11 +400,31 @@ bool QueryRunner::_dispatchChannel() {
                 break;
             }
             proto::TaskMsg_Fragment const& fragment(m.fragment(i));
+            std::vector<std::string> queries;
+            for(int qi=0, qe=fragment.query_size(); qi != qe; ++qi) {
+                if (fragment.has_subchunks()) {
+                    for (auto subchunkIdItr = fragment.subchunks().id().begin();
+                            subchunkIdItr != fragment.subchunks().id().end();
+                            ++subchunkIdItr) {
+                        std::string queryStr = fragment.query(qi);
+                        for (auto loc = queryStr.find(SUBCHUNK_TAG);
+                                loc != std::string::npos;
+                                loc = queryStr.find(SUBCHUNK_TAG)) {
+                            queryStr.replace(loc, SUBCHUNK_TAG.length(),
+                                             std::to_string(*subchunkIdItr));
+                        }
+                        queries.push_back(queryStr);
+                    }
+                } else {
+                    queries.push_back(fragment.query(qi));
+                }
+            }
+
             ChunkResource cr(req.getResourceFragment(i));
             // Use query fragment as-is, funnel results.
-            for(int qi=0, qe=fragment.query_size(); qi != qe; ++qi) {
-                LOGS(_log, LOG_LVL_DEBUG, "running fragment=" << fragment.query(qi));
-                MYSQL_RES* res = _primeResult(fragment.query(qi)); // This runs the SQL query.
+            for(std::vector<std::string>::iterator qItr = queries.begin(); qItr != queries.end(); ++qItr) {
+                LOGS(_log, LOG_LVL_DEBUG, "running fragment=" << *qItr);
+                MYSQL_RES* res = _primeResult(*qItr); // This runs the SQL query.
                 if (!res) {
                     erred = true;
                     continue;
