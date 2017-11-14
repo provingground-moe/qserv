@@ -32,6 +32,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/FileUtils.h"
+#include "replica_core/Performance.h"
 #include "replica_core/ServiceProvider.h"
 
 
@@ -94,6 +95,7 @@ WorkerDeleteRequest::WorkerDeleteRequest (ServiceProvider   &serviceProvider,
                       worker,
                       database,
                       chunk,
+                      PerformanceUtils::now(),
                       ReplicaInfo::FileInfoCollection{}) {
 }
 

@@ -584,7 +584,8 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
                 info.database (),
                 info.chunk    (),
                 info.beginTransferTime (),
-                info.endTransferTime   ());
+                info.endTransferTime   (),
+                info.verifyTime        ());
 
             for (auto const& f: info.fileInfo()) {
                 _conn->executeInsertQuery (
@@ -592,8 +593,9 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
                     database::mysql::Function::LAST_INSERT_ID,  /* FK -> PK of the above insert row */
                  // database::mysql::Function("LAST_INSERT_ID()"),
                     f.name,
-                    f.cs,
                     f.size,
+                    f.mtime,
+                    f.cs,
                     f.beginTransferTime,
                     f.endTransferTime);
             }
@@ -644,11 +646,19 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
                 _conn->sqlEqual ("id",              replicaId),
                 std::make_pair  ("end_create_time", endTransferTime));
 
+        uint64_t const verifyTime = info.verifyTime ();
+        if (verifyTime)
+            _conn->executeSimpleUpdateQuery (
+                "replica",
+                _conn->sqlEqual ("id",          replicaId),
+                std::make_pair  ("verify_time", verifyTime));
+
         for (auto const& f: info.fileInfo()) {
             ::updateFileAttr (_conn, replicaId, f.name, "begin_create_time", f.beginTransferTime);
             ::updateFileAttr (_conn, replicaId, f.name, "end_create_time",   f.endTransferTime);
-            ::updateFileAttr (_conn, replicaId, f.name, "cs",                f.cs);
             ::updateFileAttr (_conn, replicaId, f.name, "size",              f.size);
+            ::updateFileAttr (_conn, replicaId, f.name, "mtime",             f.mtime);
+            ::updateFileAttr (_conn, replicaId, f.name, "cs",                f.cs);
         }
     }
 }

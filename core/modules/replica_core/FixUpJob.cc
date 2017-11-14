@@ -114,6 +114,7 @@ FixUpJob::getReplicaData () const {
 void
 FixUpJob::track (bool          progressReport,
                  bool          errorReport,
+                 bool          chunkLocksReport,
                  std::ostream& os) const {
 
     if (_state == State::FINISHED) return;
@@ -121,28 +122,39 @@ FixUpJob::track (bool          progressReport,
     if (_findAllJob)
         _findAllJob->track (progressReport,
                             errorReport,
+                            chunkLocksReport,
                             os);
     
     BlockPost blockPost (1000, 2000);
 
     while (_numFinished < _numLaunched) {
         blockPost.wait();
+
         if (progressReport)
-            os << "FixUpJob::track()  "
+            os  << "FixUpJob::track()  "
                 << "launched: " << _numLaunched << ", "
                 << "finished: " << _numFinished << ", "
                 << "success: "  << _numSuccess
                 << std::endl;
+
+        if (chunkLocksReport)
+            os  << "FixUpJob::track()  <LOCKED CHUNKS>  jobId: " << _id << "\n"
+                << _controller->serviceProvider().chunkLocker().locked (_id);
     }
     if (progressReport)
-        os << "FixUpJob::track()  "
+        os  << "FixUpJob::track()  "
             << "launched: " << _numLaunched << ", "
             << "finished: " << _numFinished << ", "
             << "success: "  << _numSuccess
             << std::endl;
 
+    if (chunkLocksReport)
+        os  << "FixUpJob::track()  <LOCKED CHUNKS>  jobId: " << _id << "\n"
+            << _controller->serviceProvider().chunkLocker().locked (_id);
+
     if (errorReport && _numLaunched - _numSuccess)
         replica_core::reportRequestState (_requests, os);
+
 }
 
 void

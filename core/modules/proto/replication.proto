@@ -251,6 +251,7 @@ enum ReplicationStatusExt {
     NO_FILE       = 20;
     NO_ACCESS     = 21;
     NO_SPACE      = 22;
+    FILE_MTIME    = 23;
 }
 
 message ReplicationFileInfo {
@@ -264,17 +265,20 @@ message ReplicationFileInfo {
     /// Control sum (if available)
     required string cs = 3;
 
+    /// The file content modification time in seconds (since UNIX Epoch)
+    required uint32 mtime = 4;
+
     // The following parameters are set in the relevant contexts only.
     // Otherwise they'll be set to some default value)
   
     /// When the file migration started (where applies)
-    optional uint64 begin_transfer_time = 4 [default = 0];
+    optional uint64 begin_transfer_time = 5 [default = 0];
 
     /// When the file migration finished (where applies)
-    optional uint64 end_transfer_time = 5 [default = 0];
+    optional uint64 end_transfer_time = 6 [default = 0];
 
     /// The size of an input file (where applies)
-    optional uint64 in_size = 6 [default = 0] ;
+    optional uint64 in_size = 7 [default = 0] ;
 }
 
 message ReplicationReplicaInfo {
@@ -291,6 +295,9 @@ message ReplicationReplicaInfo {
 
     /// File-specific information (if available)
     repeated ReplicationFileInfo file_info_many = 5;
+
+    /// When the replica status was obtained by a worker
+    required uint64 verify_time = 6;
 }
 
 message ReplicationResponseReplicate {
@@ -463,4 +470,8 @@ message ReplicationFileResponse {
 
     /// The file size (bytes)
     required uint64 size = 2;
+
+    /// The file content modification time in seconds (since UNIX Epoch)
+    required uint32 mtime = 3;
+
 }

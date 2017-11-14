@@ -176,9 +176,12 @@ public:
      *                         to see the overall progress of the operation
      * @param errorReport    - trigger detailed error reporting after the completion
      *                         of the operation
+     * @chunkLocksReport     - print a report on chunks which are still allocated by
+     *                         the job as the operation progresses.
      */
     virtual void track (bool          progressReport,
                         bool          errorReport,
+                        bool          chunkLocksReport,
                         std::ostream& os) const=0;
 
     /// Return the context string for debugging and diagnostic printouts

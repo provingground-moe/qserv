@@ -39,7 +39,6 @@
 
 // Qserv headers
 
-#include "replica_core/ChunkLocker.h"
 #include "replica_core/Job.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/ReplicaInfo.h"
@@ -198,6 +197,7 @@ public:
       */
     void track (bool          progressReport,
                 bool          errorReport,
+                bool          chunkLocksReport,
                 std::ostream& os) const override;
 
 protected:

@@ -145,6 +145,7 @@ WorkerReplicationRequest::execute () {
                                     worker(),
                                     database(),
                                     chunk(),
+                                    PerformanceUtils::now(),
                                     ReplicaInfo::FileInfoCollection());
     }
     return complete;
@@ -241,6 +242,8 @@ WorkerReplicationRequestPOSIX::execute () {
     std::map<std::string,fs::path> file2tmpFile;
     std::map<std::string,fs::path> file2outFile;
 
+    std::map<fs::path,std::time_t> inFile2mtime;
+
     for (auto const& file: files) {
 
         fs::path const inFile = inDir / file;
@@ -285,6 +288,13 @@ WorkerReplicationRequestPOSIX::execute () {
                         ec,
                         ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
                         "failed to get the size of input file: " + file.string());
+
+            inFile2mtime[file] = fs::last_write_time(file, ec);
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME,
+                        "failed to get the mtime of input file: " + file.string());
         }
 
         // Check and sanitize the output directory
@@ -392,6 +402,7 @@ WorkerReplicationRequestPOSIX::execute () {
 
         for (auto const& file: files) {
 
+            fs::path const inFile  = file2inFile [file];
             fs::path const tmpFile = file2tmpFile[file];
             fs::path const outFile = file2outFile[file];
 
@@ -401,6 +412,13 @@ WorkerReplicationRequestPOSIX::execute () {
                         ec,
                         ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME,
                         "failed to rename file: " + tmpFile.string());
+
+            fs::last_write_time(outFile, inFile2mtime[inFile], ec);
+            errorContext = errorContext
+                || reportErrorIf (
+                        ec,
+                        ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME,
+                        "failed to set the mtime of output file: " + outFile.string());
         }
     }
     if (errorContext.failed) {
@@ -531,6 +549,7 @@ WorkerReplicationRequestFS::execute () {
 
             _file2descr[file].inSizeBytes       = 0;
             _file2descr[file].outSizeBytes      = 0;
+            _file2descr[file].mtime             = 0;
             _file2descr[file].cs                = 0;
             _file2descr[file].tmpFile           = tmpFile;
             _file2descr[file].outFile           = outFile;
@@ -573,6 +592,7 @@ WorkerReplicationRequestFS::execute () {
                 totalBytes     += inFilePtr->size();
                 
                 _file2descr[file].inSizeBytes = inFilePtr->size();
+                _file2descr[file].mtime       = inFilePtr->mtime();
             }
     
             // Check and sanitize the output directory
@@ -864,6 +884,13 @@ WorkerReplicationRequestFS::finalize () {
                     ec,
                     ExtendedCompletionStatus::EXT_STATUS_FILE_RENAME,
                     "failed to rename file: " + tmpFile.string());
+
+        fs::last_write_time(outFile, _file2descr[file].mtime, ec);
+        errorContext = errorContext
+            || reportErrorIf (
+                    ec,
+                    ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME,
+                    "failed to change 'mtime' of file: " + tmpFile.string());
     }
 
     if (errorContext.failed) {
@@ -887,6 +914,7 @@ WorkerReplicationRequestFS::updateInfo () {
             ReplicaInfo::FileInfo ({
                 file,
                 _file2descr[file].outSizeBytes,
+                _file2descr[file].mtime,
                 std::to_string(_file2descr[file].cs),
                 _file2descr[file].beginTransferTime,
                 _file2descr[file].endTransferTime,
@@ -913,6 +941,7 @@ WorkerReplicationRequestFS::updateInfo () {
         worker(),
         database(),
         chunk(),
+        PerformanceUtils::now(),
         fileInfoCollection);
 }
 

@@ -32,6 +32,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/FileUtils.h"
+#include "replica_core/Performance.h"
 #include "replica_core/ServiceProvider.h"
 
 // This macro to appear witin each block which requires thread safety
@@ -118,6 +119,7 @@ WorkerFindRequest::execute () {
                      worker(),
                      database(),
                      chunk(),
+                     PerformanceUtils::now(),
                      ReplicaInfo::FileInfoCollection());
     return completed;
 }
@@ -197,15 +199,15 @@ WorkerFindRequestPOSIX::execute () {
     // Both methods are combined witghin the same code block to avoid
     // code duplication.
 
+    WorkerRequest::ErrorContext errorContext;
+    boost::system::error_code   ec;
+
     if (!_computeCheckSum || !_csComputeEnginePtr) {
 
         const WorkerInfo   &workerInfo   = _serviceProvider.config()->workerInfo  (worker  ());
         const DatabaseInfo &databaseInfo = _serviceProvider.config()->databaseInfo(database());
     
         // Check if the data directory exists and it can be read
-        
-        WorkerRequest::ErrorContext errorContext;
-        boost::system::error_code   ec;
     
         LOCK_DATA_FOLDER;
     
@@ -257,18 +259,27 @@ WorkerFindRequestPOSIX::execute () {
 
                 if (!_computeCheckSum) {
 
-                    // Get file size right away
+                    // Get file size & mtime right away
+
                     const uint64_t size = fs::file_size(path, ec);
                     errorContext = errorContext
                         || reportErrorIf (
                                 ec,
                                 ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
                                 "failed to read file size: " + path.string());
+
+                    const std::time_t mtime = fs::last_write_time(path, ec);
+                    errorContext = errorContext
+                        || reportErrorIf (
+                                ec,
+                                ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME,
+                                "failed to read file mtime: " + path.string());
                         
                     fileInfoCollection.emplace_back (
                         ReplicaInfo::FileInfo ({
                             file,
                             size,
+                            mtime,
                             "",     /* cs */
                             0,      /* beginTransferTime */
                             0,      /* endTransferTime */
@@ -302,6 +313,7 @@ WorkerFindRequestPOSIX::execute () {
                 worker(),
                 database(),
                 chunk(),
+                PerformanceUtils::now(),
                 fileInfoCollection);
         
             setStatus(STATUS_SUCCEEDED);
@@ -324,14 +336,35 @@ WorkerFindRequestPOSIX::execute () {
             ReplicaInfo::FileInfoCollection fileInfoCollection;
 
             auto const fileNames = _csComputeEnginePtr->fileNames();
-            for (auto const& file: fileNames)
+            for (auto const& file: fileNames) {
+
+                const fs::path path(file); 
+
+                const uint64_t size = _csComputeEnginePtr->bytes(file);
+
+                const std::time_t mtime = fs::last_write_time(path, ec);
+                errorContext = errorContext
+                    || reportErrorIf (
+                            ec,
+                            ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME,
+                            "failed to read file mtime: " + path.string());
+                        
                 fileInfoCollection.emplace_back (
                     ReplicaInfo::FileInfo ({
-                        fs::path(file).filename().string(),
-                        _csComputeEnginePtr->bytes(file),
-                        std::to_string(_csComputeEnginePtr->cs(file))
+                        path.filename().string(),
+                        size,
+                        mtime,
+                        std::to_string(_csComputeEnginePtr->cs(file)),
+                        0,      /* beginTransferTime */
+                        0,      /* endTransferTime */
+                        size    /* inSize */
                     })
                 );
+            }
+            if (errorContext.failed) {
+                setStatus(STATUS_FAILED, errorContext.extendedStatus);
+                return true;
+            }
 
             // Fnalize the operation
 
@@ -349,6 +382,7 @@ WorkerFindRequestPOSIX::execute () {
                 worker(),
                 database(),
                 chunk(),
+                PerformanceUtils::now(),
                 fileInfoCollection);
         
             setStatus(STATUS_SUCCEEDED);

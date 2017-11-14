@@ -300,6 +300,7 @@ CREATE TABLE IF NOT EXISTS `replica` (
 
   `begin_create_time`  BIGINT UNSIGNED NOT NULL ,
   `end_create_time`    BIGINT UNSIGNED NOT NULL ,
+  `verify_time`        BIGINT UNSIGNED NOT NULL ,
 
   PRIMARY KEY           (`id`) ,
   UNIQUE  KEY `replica` (`worker`,`database`,`chunk`)
@@ -316,9 +317,10 @@ CREATE TABLE IF NOT EXISTS `replica_file` (
 
   `replica_id`  INT NOT NULL ,
 
-  `name`  VARCHAR(255) NOT NULL ,
-  `cs`    VARCHAR(255) NOT NULL ,
+  `name`  VARCHAR(255)    NOT NULL ,
   `size`  BIGINT UNSIGNED NOT NULL ,
+  `mtime` INT    UNSIGNED BIT NULL,
+  `cs`    VARCHAR(255)    NOT NULL ,
 
   `begin_create_time`  BIGINT UNSIGNED NOT NULL ,
   `end_create_time`    BIGINT UNSIGNED NOT NULL ,

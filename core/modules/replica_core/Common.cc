@@ -67,6 +67,7 @@ status2string (ExtendedCompletionStatus status) {
         case ExtendedCompletionStatus::EXT_STATUS_NO_FILE:          return "EXT_STATUS_NO_FILE";
         case ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS:        return "EXT_STATUS_NO_ACCESS";
         case ExtendedCompletionStatus::EXT_STATUS_NO_SPACE:         return "EXT_STATUS_NO_SPACE";
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME:       return "EXT_STATUS_FILE_MTIME";
     }
     throw std::logic_error("Common::status2string(ExtendedCompletionStatus) - unhandled status: " + std::to_string(status));
 }
@@ -97,6 +98,7 @@ translate (proto::ReplicationStatusExt status) {
         case proto::ReplicationStatusExt::NO_FILE:          return ExtendedCompletionStatus::EXT_STATUS_NO_FILE;
         case proto::ReplicationStatusExt::NO_ACCESS:        return ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS;
         case proto::ReplicationStatusExt::NO_SPACE:         return ExtendedCompletionStatus::EXT_STATUS_NO_SPACE;
+        case proto::ReplicationStatusExt::FILE_MTIME:       return ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME;
     }
     throw std::logic_error("Common::translate(proto::ReplicationStatusExt) - unhandled status: " + std::to_string(status));
 }
@@ -127,6 +129,7 @@ translate (ExtendedCompletionStatus status) {
         case ExtendedCompletionStatus::EXT_STATUS_NO_FILE:          return proto::ReplicationStatusExt::NO_FILE;
         case ExtendedCompletionStatus::EXT_STATUS_NO_ACCESS:        return proto::ReplicationStatusExt::NO_ACCESS;
         case ExtendedCompletionStatus::EXT_STATUS_NO_SPACE:         return proto::ReplicationStatusExt::NO_SPACE;
+        case ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME:       return proto::ReplicationStatusExt::FILE_MTIME;
     }
     throw std::logic_error("Common::translate(ExtendedCompletionStatus) - unhandled status: " + std::to_string(status));
 }

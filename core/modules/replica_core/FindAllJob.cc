@@ -104,6 +104,7 @@ FindAllJob::getReplicaData () const {
 void
 FindAllJob::track (bool          progressReport,
                    bool          errorReport,
+                   bool          chunkLocksReport,
                    std::ostream& os) const {
 
     if (_state == State::FINISHED) return;
@@ -112,22 +113,32 @@ FindAllJob::track (bool          progressReport,
 
     while (_numFinished < _numLaunched) {
         blockPost.wait();
+
         if (progressReport)
-            os << "FindAllJob::track()  "
+            os  << "FindAllJob::track()  "
                 << "launched: " << _numLaunched << ", "
                 << "finished: " << _numFinished << ", "
                 << "success: "  << _numSuccess
                 << std::endl;
+
+        if (chunkLocksReport)
+            os  << "FindAllJob::track()  <LOCKED CHUNKS>  jobId: " << _id << "\n"
+                << _controller->serviceProvider().chunkLocker().locked (_id);
     }
     if (progressReport)
-        os << "FindAllJob::track()  "
+        os  << "FindAllJob::track()  "
             << "launched: " << _numLaunched << ", "
             << "finished: " << _numFinished << ", "
             << "success: "  << _numSuccess
             << std::endl;
 
+    if (chunkLocksReport)
+        os  << "FindAllJob::track()  <LOCKED CHUNKS>  jobId: " << _id << "\n"
+            << _controller->serviceProvider().chunkLocker().locked (_id);
+
     if (errorReport && _numLaunched - _numSuccess)
         replica_core::reportRequestState (_requests, os);
+
 }
 
 void
@@ -200,7 +211,7 @@ void
 FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
 
     LOGS(_log, LOG_LVL_DEBUG, context()
-         << "onRequestFinish  databaseFamily=" << request->database()
+         << "onRequestFinish  database=" << request->database()
          << " worker=" << request->worker());
 
     // Ignore the callback if the job was cancelled   

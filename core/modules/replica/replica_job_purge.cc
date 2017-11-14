@@ -89,11 +89,8 @@ bool test () {
         job->start();
         job->track (progressReport,
                     errorReport,
-                    std::cout);
-
-        if (chunkLocksReport)
-            std::cout << "CHUNK LOCKER REPORT:\n" << provider.chunkLocker().locked ();
-    
+                    chunkLocksReport,
+                    std::cout);    
 
         ///////////////////////////////////////////////////
         // Shutdown the controller and join with its thread

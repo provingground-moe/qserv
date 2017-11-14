@@ -88,10 +88,8 @@ bool test () {
         job->start();
         job->track (progressReport,
                     errorReport,
+                    chunkLocksReport,
                     std::cout);
-
-        if (chunkLocksReport)
-            std::cout << "CHUNK LOCKER REPORT:\n" << provider.chunkLocker().locked ();
 
         //////////////////////////////
         // Analyse and display results

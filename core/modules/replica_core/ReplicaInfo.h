@@ -29,6 +29,8 @@
 
 // System headers
 
+#include <ctime>
+#include <map>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -75,6 +77,9 @@ public:
         /// The current (or final) size of the file in bytes
         uint64_t size;
 
+        /// The (file content) modification timestamp in seconds (since the UNIX Epoch)
+        std::time_t mtime;
+
         /// The control/check sum of the file's content
         std::string cs;
 
@@ -82,7 +87,7 @@ public:
         uint64_t beginTransferTime;
 
         /// The time in milliseconds when the file creation finished or when
-        /// the last recording to th efile was made (where applies)
+        /// the last recording to the file was made (where applies)
         uint64_t endTransferTime;
 
         /// The size of the input file
@@ -103,27 +108,24 @@ public:
 
     /**
      * Construct with the default state NOT_FOUND
-     *
-     * @param status   - object status (see notes above)
-     * @param worker   - the name of the worker wre the replica is located
-     * @param database - the name of the database
-     * @param chunk    - the chunk number
      */
     ReplicaInfo ();
 
     /**
      * Construct with the specified state.
      *
-     * @param status   - object status (see notes above)
-     * @param worker   - the name of the worker wre the replica is located
-     * @param database - the name of the database
-     * @param chunk    - the chunk number
-     * @param fileInfo - a collection of info on each file of the chunk
+     * @param status     - object status (see notes above)
+     * @param worker     - the name of the worker wre the replica is located
+     * @param database   - the name of the database
+     * @param chunk      - the chunk number
+     * @param verifyTime - when the replica info was obtainer by a worker
+     * @param fileInfo   - a collection of info on each file of the chunk
      */
     ReplicaInfo (Status                    status,
                  std::string const&        worker,
                  std::string const&        database,
                  unsigned int              chunk,
+                 uint64_t                  verifyTime,
                  FileInfoCollection const& fileInfo);
 
     /// Construct from a protobuf object
@@ -147,7 +149,20 @@ public:
 
     unsigned int chunk () const { return _chunk; }
 
+    /**
+     * Return the last time when the replica status was checked
+     */
+    uint64_t verifyTime () const { return _verifyTime; }
+
+
+    /// Return a collection of files constituiting the replica
     FileInfoCollection const& fileInfo () const { return _fileInfo; }
+
+    /**
+     * Return a collection of files constituiting the replica as a map,
+     * in which the file name is the key.
+     */
+    std::map<std::string,FileInfo> fileInfoMap () const;
 
     /**
      * Return the minimum start time of the file migration operations of any
@@ -191,6 +206,8 @@ private:
 
     unsigned int _chunk;
     
+    uint64_t _verifyTime;
+
     FileInfoCollection _fileInfo;
 };
 

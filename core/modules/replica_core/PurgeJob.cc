@@ -125,6 +125,7 @@ PurgeJob::getReplicaData () const {
 void
 PurgeJob::track (bool          progressReport,
                  bool          errorReport,
+                 bool          chunkLocksReport,
                  std::ostream& os) const {
 
     if (_state == State::FINISHED) return;
@@ -132,6 +133,7 @@ PurgeJob::track (bool          progressReport,
     if (_findAllJob)
         _findAllJob->track (progressReport,
                             errorReport,
+                            chunkLocksReport,
                             os);
     
     BlockPost blockPost (1000, 2000);
@@ -139,18 +141,26 @@ PurgeJob::track (bool          progressReport,
     while (_numFinished < _numLaunched) {
         blockPost.wait();
         if (progressReport)
-            os << "PurgeJob::track()  "
+            os  << "PurgeJob::track()  "
                 << "launched: " << _numLaunched << ", "
                 << "finished: " << _numFinished << ", "
                 << "success: "  << _numSuccess
                 << std::endl;
+
+        if (chunkLocksReport)
+            os  << "PurgeJob::track()  <LOCKED CHUNKS>  jobId: " << _id << "\n"
+                << _controller->serviceProvider().chunkLocker().locked (_id);
     }
     if (progressReport)
-        os << "PurgeJob::track()  "
+        os  << "PurgeJob::track()  "
             << "launched: " << _numLaunched << ", "
             << "finished: " << _numFinished << ", "
             << "success: "  << _numSuccess
             << std::endl;
+
+    if (chunkLocksReport)
+        os  << "PurgeJob::track()  <LOCKED CHUNKS>  jobId: " << _id << "\n"
+            << _controller->serviceProvider().chunkLocker().locked (_id);
 
     if (errorReport && _numLaunched - _numSuccess)
         replica_core::reportRequestState (_requests, os);

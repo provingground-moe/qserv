@@ -35,7 +35,6 @@
 #include "proto/replication.pb.h"
 #include "replica/CmdParser.h"
 #include "replica_core/Controller.h"
-#include "replica_core/ReplicaInfo.h"
 #include "replica_core/ReplicateJob.h"
 #include "replica_core/ServiceProvider.h"
 
@@ -89,10 +88,8 @@ bool test () {
         job->start();
         job->track (progressReport,
                     errorReport,
+                    chunkLocksReport,
                     std::cout);
-
-        if (chunkLocksReport)
-            std::cout << "CHUNK LOCKER REPORT:\n" << provider.chunkLocker().locked ();
 
         ///////////////////////////////////////////////////
         // Shutdown the controller and join with its thread

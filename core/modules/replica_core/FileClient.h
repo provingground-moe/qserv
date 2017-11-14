@@ -31,6 +31,7 @@
 // System headers
 
 #include <boost/asio.hpp>
+#include <ctime>
 #include <memory>       // auto_ptr, shared_ptr, enable_shared_from_this
 #include <stdexcept>
 #include <string>
@@ -132,6 +133,9 @@ public:
     /// The size of a file (as reported by a server)
     size_t size () const { return _size; }
 
+    /// The last modification time (mtime) of the file
+    std::time_t mtime () const { return _mtime; }
+
     /**
      * Read (up to, but not exceeding) the specified number of bytes into a buffer.
      *
@@ -197,7 +201,10 @@ private:
 
     /// The size of the file in bytes (to be determined after contacting a server)
     size_t _size;
-    
+
+    /// The last modification time (mtime) of the file
+    std::time_t _mtime;
+
     /// The flag which wil be set after hitting the end of the input stream
     bool _eof;
 };
