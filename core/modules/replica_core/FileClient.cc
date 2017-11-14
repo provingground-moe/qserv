@@ -116,8 +116,9 @@ FileClient::FileClient (ServiceProvider   &serviceProvider,
         _io_service(),
         _socket(_io_service),
         
-        _size(0),
-        _eof (false) {
+        _size  (0),
+        _mtime (0),
+        _eof   (false) {
 }
 
 FileClient::~FileClient () { 
@@ -267,7 +268,8 @@ FileClient::openImpl () {
         _bufferPtr->parse(response, responseLengthBytes);
 
         if (response.available()) {
-            _size = response.size();
+            _size  = response.size();
+            _mtime = response.mtime();
             return true;
         }
 

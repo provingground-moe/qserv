@@ -159,6 +159,7 @@ public:
       */
     void track (bool          progressReport,
                 bool          errorReport,
+                bool          chunkLocksReport,
                 std::ostream& os) const override;
 
 protected:

@@ -30,6 +30,7 @@
 #include <boost/filesystem.hpp>
 #include <cerrno>
 #include <cstring>
+#include <ctime>
 #include <stdexcept>
 
 // Qserv headers
@@ -225,8 +226,9 @@ FileServerConnection::requestReceived (const boost::system::error_code &ec,
     
     // Find a file requested by a client
     
-    bool available = false; 
-    uint64_t size = 0;
+    bool        available = false; 
+    uint64_t    size      = 0;
+    std::time_t mtime     = 0;
     do {
         if (!_serviceProvider.config()->isKnownDatabase(request.database())) {
             LOGS(_log, LOG_LVL_ERROR, context << "requestReceived  unknown database: " << request.database());
@@ -251,6 +253,11 @@ FileServerConnection::requestReceived (const boost::system::error_code &ec,
             LOGS(_log, LOG_LVL_ERROR, context << "requestReceived  failed to get the file size of: " << file);
             break;
         }
+        mtime = fs::last_write_time(file, ec);
+        if (ec) {
+            LOGS(_log, LOG_LVL_ERROR, context << "requestReceived  failed to get file mtime of: " << file);
+            break;
+        }
 
         // If requested open the file and leave its descriptor open
 
@@ -271,6 +278,7 @@ FileServerConnection::requestReceived (const boost::system::error_code &ec,
     proto::ReplicationFileResponse response;
     response.set_available (available);
     response.set_size      (size);
+    response.set_mtime     (mtime);
 
     _bufferPtr->resize();
     _bufferPtr->serialize(response);

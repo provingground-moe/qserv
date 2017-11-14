@@ -33,10 +33,12 @@
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
 #include "replica_core/FindAllJob.h"
+#include "replica_core/FixUpJob.h"
 #include "replica_core/Performance.h"
 #include "replica_core/PurgeJob.h"
 #include "replica_core/ReplicateJob.h"
 #include "replica_core/ServiceProvider.h"
+#include "replica_core/VerifyJob.h"
 
 // This macro to appear witin each block which requires thread safety
 
@@ -247,6 +249,47 @@ JobController::findAll (std::string const&        databaseFamily,
     return job;
 }
 
+FixUpJob::pointer
+JobController::fixUp (std::string const&      databaseFamily,
+                      FixUpJob::callback_type onFinish,
+                      int                     priority,
+                      bool                    exclusive,
+                      bool                    preemptable) {
+
+    LOGS(_log, LOG_LVL_DEBUG, "JobController  fixUp");
+
+    LOCK_GUARD;
+
+    JobController::pointer self = shared_from_this();
+
+    FixUpJob::pointer job =
+        FixUpJob::create (databaseFamily,
+                          _controller,
+                          [self] (FixUpJob::pointer job) {
+                                self->onFinish (job);
+                          },
+                          priority,
+                          exclusive,
+                          preemptable);
+
+    // Register the job (along with its callback) by its unique
+    // identifier in the local registry. Once it's complete it'll
+    // be automatically removed from the Registry.
+
+    _registry[job->id()] =
+        std::make_shared<JobWrapperImpl<FixUpJob>> (job, onFinish);  
+
+    // Initiate the job
+    //
+    // FIXME: don't start the job right away. Put the request into the priority queue
+    // and call the scheduler's method to evaluate jobs in the queue to
+    // to see which should be started next (if any).
+
+    job->start ();
+
+    return job;
+}
+
 PurgeJob::pointer
 JobController::purge (std::string const&      databaseFamily,
                       unsigned int            numReplicas,
@@ -319,6 +362,47 @@ JobController::replicate (std::string const&          databaseFamily,
 
     _registry[job->id()] =
         std::make_shared<JobWrapperImpl<ReplicateJob>> (job, onFinish);  
+
+    // Initiate the job
+    //
+    // FIXME: don't start the job right away. Put the request into the priority queue
+    // and call the scheduler's method to evaluate jobs in the queue to
+    // to see which should be started next (if any).
+
+    job->start ();
+
+    return job;
+}
+
+VerifyJob::pointer
+JobController::verify (VerifyJob::callback_type         onFinish,
+                       VerifyJob::callback_type_on_diff onReplicaDifference,
+                       int                              priority,
+                       bool                             exclusive,
+                       bool                             preemptable) {
+
+    LOGS(_log, LOG_LVL_DEBUG, "JobController  verify");
+
+    LOCK_GUARD;
+
+    JobController::pointer self = shared_from_this();
+
+    VerifyJob::pointer job =
+        VerifyJob::create (_controller,
+                           [self] (VerifyJob::pointer job) {
+                                self->onFinish (job);
+                           },
+                           onReplicaDifference,
+                           priority,
+                           exclusive,
+                           preemptable);
+
+    // Register the job (along with its callback) by its unique
+    // identifier in the local registry. Once it's complete it'll
+    // be automatically removed from the Registry.
+
+    _registry[job->id()] =
+        std::make_shared<JobWrapperImpl<VerifyJob>> (job, onFinish);  
 
     // Initiate the job
     //

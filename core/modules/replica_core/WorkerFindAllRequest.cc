@@ -33,6 +33,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/FileUtils.h"
+#include "replica_core/Performance.h"
 #include "replica_core/ServiceProvider.h"
 
 // This macro to appear witin each block which requires thread safety
@@ -122,6 +123,7 @@ WorkerFindAllRequest::execute () {
                 _worker,
                 database(),
                 chunk,
+                PerformanceUtils::now(),
                 ReplicaInfo::FileInfoCollection());
     }
     return completed;
@@ -218,13 +220,21 @@ WorkerFindAllRequestPOSIX::execute () {
                                 ec,
                                 ExtendedCompletionStatus::EXT_STATUS_FILE_SIZE,
                                 "failed to read file size: " + entry.path().string());
-                        
+
+                    std::time_t const mtime = fs::last_write_time(entry.path(), ec);
+                    errorContext = errorContext
+                        || reportErrorIf (
+                                ec,
+                                ExtendedCompletionStatus::EXT_STATUS_FILE_MTIME,
+                                "failed to read file mtime: " + entry.path().string());
+
                     unsigned const chunk = std::get<1>(parsed);
 
                     chunk2fileInfoCollection[chunk].emplace_back (
                         ReplicaInfo::FileInfo ({
                             entry.path().filename().string(),
                             size,
+                            mtime,
                             "",     /* cs is never computed for this type of requests */
                             0,      /* beginTransferTime */
                             0,      /* endTransferTime */
@@ -260,6 +270,7 @@ WorkerFindAllRequestPOSIX::execute () {
                 worker(),
                 database(),
                 chunk,
+                PerformanceUtils::now(),
                 chunk2fileInfoCollection[chunk]);
     }
     setStatus(STATUS_SUCCEEDED);

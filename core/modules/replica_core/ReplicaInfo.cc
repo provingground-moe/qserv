@@ -53,14 +53,16 @@ void setInfoImpl ( lsst::qserv::replica_core::ReplicaInfo const& ri,
                         "unhandled status " + lsst::qserv::replica_core::ReplicaInfo::status2string(ri.status()) +
                         " in ReplicaInfo::setInfoImpl()");
     }
-    info->set_worker  (ri.worker  ());
-    info->set_database(ri.database());
-    info->set_chunk   (ri.chunk   ());
+    info->set_worker      (ri.worker    ());
+    info->set_database    (ri.database  ());
+    info->set_chunk       (ri.chunk     ());
+    info->set_verify_time (ri.verifyTime());
+
     for (auto const& fi: ri.fileInfo()) {
         lsst::qserv::proto::ReplicationFileInfo* fileInfo = info->add_file_info_many();
         fileInfo->set_name                (fi.name);
         fileInfo->set_size                (fi.size);
-        fileInfo->set_cs                  (fi.cs);
+        fileInfo->set_mtime               (fi.mtime);
         fileInfo->set_cs                  (fi.cs);
         fileInfo->set_begin_transfer_time (fi.beginTransferTime);
         fileInfo->set_end_transfer_time   (fi.endTransferTime);
@@ -77,41 +79,44 @@ namespace replica_core {
 std::string
 ReplicaInfo::status2string (Status status) {
     switch (status) {
-        case NOT_FOUND:                  return "NOT_FOUND";
-        case CORRUPT:                    return "CORRUPT";
-        case INCOMPLETE:                 return "INCOMPLETE";
-        case COMPLETE:                   return "COMPLETE";
+        case Status::NOT_FOUND:                  return "NOT_FOUND";
+        case Status::CORRUPT:                    return "CORRUPT";
+        case Status::INCOMPLETE:                 return "INCOMPLETE";
+        case Status::COMPLETE:                   return "COMPLETE";
     }
     throw std::logic_error("unhandled status " + std::to_string(status) +
                            " in ReplicaInfo::status2string()");
 }
 ReplicaInfo::ReplicaInfo ()
-    :   _status (NOT_FOUND),
-        _worker   (""),
-        _database (""),
-        _chunk    (0),
-        _fileInfo () {
+    :   _status     (Status::NOT_FOUND),
+        _worker     (""),
+        _database   (""),
+        _chunk      (0),
+        _verifyTime (0),
+        _fileInfo   () {
 }
 
 ReplicaInfo::ReplicaInfo (Status                                 status,
                           std::string const&                     worker,
                           std::string const&                     database,
                           unsigned int                           chunk,
+                          uint64_t                               verifyTime,
                           ReplicaInfo::FileInfoCollection const& fileInfo)
-    :   _status   (status),
-        _worker   (worker),
-        _database (database),
-        _chunk    (chunk),
-        _fileInfo (fileInfo) {
+    :   _status     (status),
+        _worker     (worker),
+        _database   (database),
+        _chunk      (chunk),
+        _verifyTime (verifyTime),
+        _fileInfo   (fileInfo) {
 }
 
 ReplicaInfo::ReplicaInfo (proto::ReplicationReplicaInfo const* info) {
 
     switch (info->status()) {
-        case proto::ReplicationReplicaInfo::NOT_FOUND:  this->_status = NOT_FOUND;  break;
-        case proto::ReplicationReplicaInfo::CORRUPT:    this->_status = CORRUPT;    break;
-        case proto::ReplicationReplicaInfo::INCOMPLETE: this->_status = INCOMPLETE; break;
-        case proto::ReplicationReplicaInfo::COMPLETE:   this->_status = COMPLETE;   break;
+        case proto::ReplicationReplicaInfo::NOT_FOUND:  this->_status = Status::NOT_FOUND;  break;
+        case proto::ReplicationReplicaInfo::CORRUPT:    this->_status = Status::CORRUPT;    break;
+        case proto::ReplicationReplicaInfo::INCOMPLETE: this->_status = Status::INCOMPLETE; break;
+        case proto::ReplicationReplicaInfo::COMPLETE:   this->_status = Status::COMPLETE;   break;
         default:
             throw std::logic_error (
                         "unhandled status " + proto::ReplicationReplicaInfo_ReplicaStatus_Name(info->status()) +
@@ -127,6 +132,7 @@ ReplicaInfo::ReplicaInfo (proto::ReplicationReplicaInfo const* info) {
             FileInfo ({
                 fileInfo.name(),
                 fileInfo.size(),
+                fileInfo.mtime(),
                 fileInfo.cs(),
                 fileInfo.begin_transfer_time(),
                 fileInfo.end_transfer_time(),
@@ -134,25 +140,28 @@ ReplicaInfo::ReplicaInfo (proto::ReplicationReplicaInfo const* info) {
             })
         );
     }
+    _verifyTime = info->verify_time();
 }
 
 ReplicaInfo::ReplicaInfo (ReplicaInfo const& ri) {
-    _status   = ri._status;
-    _worker   = ri._worker;
-    _database = ri._database;
-    _chunk    = ri._chunk;
-    _fileInfo = ri._fileInfo;
+    _status     = ri._status;
+    _worker     = ri._worker;
+    _database   = ri._database;
+    _chunk      = ri._chunk;
+    _verifyTime = ri._verifyTime;
+    _fileInfo   = ri._fileInfo;
 }
 
 
 ReplicaInfo&
 ReplicaInfo::operator= (ReplicaInfo const& ri) {
     if (this != &ri) {
-        _status   = ri._status;
-        _worker   = ri._worker;
-        _database = ri._database;
-        _chunk    = ri._chunk;
-        _fileInfo = ri._fileInfo;
+        _status     = ri._status;
+        _worker     = ri._worker;
+        _database   = ri._database;
+        _chunk      = ri._chunk;
+        _verifyTime = ri._verifyTime;
+        _fileInfo   = ri._fileInfo;
     }
     return *this;
 }
@@ -188,6 +197,15 @@ ReplicaInfo::setInfo (lsst::qserv::proto::ReplicationReplicaInfo* info) const {
     ::setInfoImpl(*this, info);
 }
 
+std::map<std::string,ReplicaInfo::FileInfo>
+ReplicaInfo::fileInfoMap () const {
+    std::map<std::string,ReplicaInfo::FileInfo> result;
+    for (auto const& f: _fileInfo)
+        result[f.name] = f;
+    return result;
+}
+
+    
 std::ostream&
 operator<< (std::ostream& os, ReplicaInfo::FileInfo const& fi) {
     static float const MB =  1024.0*1024.0;
@@ -197,10 +215,11 @@ operator<< (std::ostream& os, ReplicaInfo::FileInfo const& fi) {
     float const completedPercent = fi.inSize ? 100.0 * fi.size / fi.inSize : 0.0;
 
     os  << "FileInfo"
-        << " name: " << fi.name
-        << " size: " << fi.size
+        << " name: "   << fi.name
+        << " size: "   << fi.size
+        << " mtime: "  << fi.mtime
         << " inSize: " << fi.inSize
-        << " cs: "   << fi.cs
+        << " cs: "     << fi.cs
         << " beginTransferTime: " << fi.beginTransferTime
         << " endTransferTime: "   << fi.endTransferTime
         << " completed [%]: "     << completedPercent
@@ -212,10 +231,11 @@ operator<< (std::ostream& os, ReplicaInfo::FileInfo const& fi) {
 std::ostream&
 operator<< (std::ostream& os, ReplicaInfo const& ri) {
     os  << "ReplicaInfo"
-        << " status: " << ReplicaInfo::status2string(ri.status())
-        << " worker: "   << ri.worker()
-        << " database: " << ri.database()
-        << " chunk: "    << ri.chunk()
+        << " status: "     << ReplicaInfo::status2string(ri.status())
+        << " worker: "     << ri.worker()
+        << " database: "   << ri.database()
+        << " chunk: "      << ri.chunk()
+        << " verifyTime: " << ri.verifyTime()
         << " files: ";
     for (auto const& fi: ri.fileInfo())
         os << "\n   (" << fi << ")";

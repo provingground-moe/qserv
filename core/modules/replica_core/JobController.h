@@ -55,9 +55,12 @@ namespace replica_core {
 // Forward declarations
 
 class FindAllJob;
+class FixUpJob;
 class PurgeJob;
+class ReplicaDiff;
 class ReplicateJob;
 class ServiceProvider;
+class VerifyJob;
 
 /**
  * The base class for implementing requests registry as a polymorphic
@@ -99,10 +102,16 @@ public:
     typedef std::shared_ptr<FindAllJob>   FindAllJob_pointer;
     typedef std::shared_ptr<PurgeJob>     PurgeJob_pointer;
     typedef std::shared_ptr<ReplicateJob> ReplicateJob_pointer;
+    typedef std::shared_ptr<FixUpJob>     FixUpJob_pointer;
+    typedef std::shared_ptr<VerifyJob>    VerifyJob_pointer;
 
     typedef std::function<void(FindAllJob_pointer)>   FindAllJob_callback_type;
     typedef std::function<void(PurgeJob_pointer)>     PurgeJob_callback_type;
     typedef std::function<void(ReplicateJob_pointer)> ReplicateJob_callback_type;
+    typedef std::function<void(FixUpJob_pointer)>     FixUpJob_callback_type;
+    typedef std::function<void(VerifyJob_pointer)>    VerifyJob_callback_type;
+
+    typedef std::function<void(VerifyJob_pointer,ReplicaDiff const&)> VerifyJob_callback_type_on_diff;
 
     /// The priority queue for pointers to the new (unprocessed) jobs.
     /// Using inheritance to get access to the protected data members 'c'
@@ -218,6 +227,27 @@ public:
                                 bool                     preemptable = true);
 
     /**
+     * Submit a job for fixin up all non-colocateds replicas.
+     *
+     * @param databaseFamily - the name of a database family
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobController.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
+     */
+    FixUpJob_pointer fixUp (std::string const&     databaseFamily,
+                            FixUpJob_callback_type onFinish    = nullptr,
+                            int                    priority    = 2,
+                            bool                   exclusive   = true,
+                            bool                   preemptable = false);
+
+    /**
      * Submit a job for bringing the number of each chunk's replicas down
      * to a desired level.
      * 
@@ -269,6 +299,27 @@ public:
                                     bool                       exclusive   = true,
                                     bool                       preemptable = true);
 
+    /**
+     * Submit a job for verifying integrity of known replicas, updating their status
+     * accross all databases and workers.
+     *
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     @ @param onReplicaDifference - a callback function to be called when two replicas won't match
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobController.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
+     */
+    VerifyJob_pointer verify (VerifyJob_callback_type         onFinish            = nullptr,
+                              VerifyJob_callback_type_on_diff onReplicaDifference = nullptr,
+                              int                             priority            = -2,
+                              bool                            exclusive           = false,
+                              bool                            preemptable         = true);
 
     // TODO: add job inspection methods
 

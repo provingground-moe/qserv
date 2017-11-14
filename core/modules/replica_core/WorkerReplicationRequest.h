@@ -34,6 +34,7 @@
 
 #include <boost/filesystem.hpp>
 #include <cstdio>               // std::FILE, C-style file I/O
+#include <ctime>
 #include <map>
 #include <string>
 
@@ -324,6 +325,9 @@ private:
         /// is progressing)
         size_t outSizeBytes;
         
+        /// The last modification time of the file (seconds since UNISX Epoch)
+        std::time_t mtime;
+
         /// Control sum computed locally while copying the file
         uint64_t cs;
 

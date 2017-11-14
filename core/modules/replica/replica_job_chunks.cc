@@ -50,10 +50,11 @@ namespace {
 // Command line parameters
 
 std::string databaseFamily;
+std::string configUrl;
 bool        progressReport;
 bool        errorReport;
 bool        detailedReport;
-std::string configUrl;
+bool        chunkLocksReport = false;
 
 void dump (rc::FindAllJobResult const& replicaData) {
     std::cout << "*** DETAILED REPORTS ***\n";
@@ -108,6 +109,7 @@ bool test () {
         job->start();
         job->track (progressReport,
                     errorReport,
+                    chunkLocksReport,
                     std::cout);
 
         //////////////////////////////
@@ -229,18 +231,20 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database-family> [--progress-report] [--error-report] [--detailed-report]\n"
-            "                    [--config=<url>]\n"
+            "  <database-family> [--config=<url>]\n"
+            "                    [--progress-report]\n"
+            "                    [--error-report]\n"
+            "                    [--detailed-report]\n"
             "\n"
             "Parameters:\n"
             "  <database-family>  - the name of a database family to inspect\n"
             "\n"
             "Flags and options:\n"
+            "  --config           - a configuration URL (a configuration file or a set of the database\n"
+            "                       connection parameters [ DEFAULT: file:replication.cfg ]\n"
             "  --progress-report  - progress report when executing batches of requests\n"
             "  --error-report     - detailed report on failed requests\n"
-            "  --detailed-report  - detailed report on results\n"
-            "  --config           - a configuration URL (a configuration file or a set of the database\n"
-            "                       connection parameters [ DEFAULT: file:replication.cfg ]\n");
+            "  --detailed-report  - detailed report on results\n");
 
         ::databaseFamily = parser.parameter<std::string>(1);
         ::progressReport = parser.flag                  ("progress-report");
