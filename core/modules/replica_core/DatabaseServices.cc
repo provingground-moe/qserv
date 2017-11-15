@@ -33,6 +33,7 @@
 #include "replica_core/Controller.h"
 #include "replica_core/DatabaseServicesMySQL.h"
 #include "replica_core/Job.h"
+#include "replica_core/ReplicaInfo.h"
 
 
 namespace {
@@ -90,6 +91,24 @@ DatabaseServices::saveState (Job_pointer const& job) {
 void
 DatabaseServices::saveState (Request_pointer const& request) {
     LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::saveState[Request::" << request->type() << "]");
+}
+
+bool
+DatabaseServices::findOldestReplica (ReplicaInfo& replica) const {
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findOldestReplica");
+
+    return false;
+}
+ 
+bool
+DatabaseServices::findReplicas (std::vector<ReplicaInfo>& replicas,
+                                unsigned int              chunk,
+                                std::string const&        database) const {
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findReplicas "
+         << " chunk: "    << chunk
+         << " database: " << database);
+
+    return false;
 }
 
 }}} // namespace lsst::qserv::replica_core

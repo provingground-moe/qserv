@@ -32,6 +32,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 // Qserv headers
 
@@ -50,6 +51,7 @@ namespace replica_core {
 struct ControllerIdentity;
 
 class Job;
+class ReplicaInfo;
 class Request;
 
 /**
@@ -130,6 +132,37 @@ public:
      * @throw std::invalid_argument - if the actual request type won't match the expected one
      */
     virtual void saveState (Request_pointer const& request);
+
+    /**
+     * Locate a replica which has the has the oldest verification timestamp.
+     * Return 'true' and set the reference if the one is found.
+     *
+     * ATTENTION: no assumption on a new status of the replica object
+     * passed into the method should be made if the operation fails
+     * (returns 'false').
+     *
+     * @param replica - a reference to an object to be initialized
+     */
+    virtual bool findOldestReplica (ReplicaInfo& replica) const;
+    
+    /**
+     * Find all replicas for the specified chunk and the database.
+     *
+     * ATTENTION: no assumption on a new status of the replica collection
+     * passed into the method should be made if the operation fails
+     * (returns 'false').
+     *
+     * @param replicas - a collection of replicas (if any found)
+     * @param chunk    - the chunk number
+     * @param database - the name of a database
+     *
+     * @return 'true' in case of success (even if no replicas were found)
+     *
+     * @throw std::invalid_argument - if the database is unknown or empty
+     */
+    virtual bool findReplicas (std::vector<ReplicaInfo>& replicas,
+                               unsigned int              chunk,
+                               std::string const&        database) const;
 
 protected:
 
