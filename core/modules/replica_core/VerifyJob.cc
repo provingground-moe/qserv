@@ -378,10 +378,7 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
 
 bool
 VerifyJob::nextReplica () {
-
-    // TODO: pull next replica (if any) from the database
-
-    return false;
+    return _controller->serviceProvider().databaseServices()->findOldestReplica(_replica);
 }
 
 }}} // namespace lsst::qserv::replica_core

@@ -247,10 +247,10 @@ int main (int argc, const char* const argv[]) {
             "  --detailed-report  - detailed report on results\n");
 
         ::databaseFamily = parser.parameter<std::string>(1);
+        ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");
         ::progressReport = parser.flag                  ("progress-report");
         ::errorReport    = parser.flag                  ("error-report");
         ::detailedReport = parser.flag                  ("detailed-report");
-        ::configUrl      = parser.option   <std::string>("config", "file:replication.cfg");
 
     } catch (std::exception const& ex) {
         return 1;

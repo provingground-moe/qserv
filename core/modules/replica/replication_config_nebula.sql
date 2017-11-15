@@ -45,15 +45,15 @@ INSERT INTO `config` VALUES ('worker', 'data_dir',                   '/qserv/rep
 
 -- Preload parameters for runnig all services on the same host
 
-INSERT INTO `config_worker` VALUES ('worker-01', 1, 0, 'lsst-gapon-qserv-worker-1',  NULL, 'lsst-gapon-qserv-worker-1',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-02', 1, 0, 'lsst-gapon-qserv-worker-2',  NULL, 'lsst-gapon-qserv-worker-2',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-03', 1, 0, 'lsst-gapon-qserv-worker-3',  NULL, 'lsst-gapon-qserv-worker-3',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-04', 1, 0, 'lsst-gapon-qserv-worker-4',  NULL, 'lsst-gapon-qserv-worker-4',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-05', 1, 0, 'lsst-gapon-qserv-worker-5',  NULL, 'lsst-gapon-qserv-worker-5',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-06', 1, 0, 'lsst-gapon-qserv-worker-6',  NULL, 'lsst-gapon-qserv-worker-6',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-07', 1, 0, 'lsst-gapon-qserv-worker-7',  NULL, 'lsst-gapon-qserv-worker-7',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-08', 1, 0, 'lsst-gapon-qserv-worker-8',  NULL, 'lsst-gapon-qserv-worker-8',  NULL, NULL);
-INSERT INTO `config_worker` VALUES ('worker-09', 1, 0, 'lsst-gapon-qserv-worker-9',  NULL, 'lsst-gapon-qserv-worker-9',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-1',  1, 0, 'lsst-gapon-qserv-worker-1',  NULL, 'lsst-gapon-qserv-worker-1',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-2',  1, 0, 'lsst-gapon-qserv-worker-2',  NULL, 'lsst-gapon-qserv-worker-2',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-3',  1, 0, 'lsst-gapon-qserv-worker-3',  NULL, 'lsst-gapon-qserv-worker-3',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-4',  1, 0, 'lsst-gapon-qserv-worker-4',  NULL, 'lsst-gapon-qserv-worker-4',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-5',  1, 0, 'lsst-gapon-qserv-worker-5',  NULL, 'lsst-gapon-qserv-worker-5',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-6',  1, 0, 'lsst-gapon-qserv-worker-6',  NULL, 'lsst-gapon-qserv-worker-6',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-7',  1, 0, 'lsst-gapon-qserv-worker-7',  NULL, 'lsst-gapon-qserv-worker-7',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-8',  1, 0, 'lsst-gapon-qserv-worker-8',  NULL, 'lsst-gapon-qserv-worker-8',  NULL, NULL);
+INSERT INTO `config_worker` VALUES ('worker-9',  1, 0, 'lsst-gapon-qserv-worker-9',  NULL, 'lsst-gapon-qserv-worker-9',  NULL, NULL);
 INSERT INTO `config_worker` VALUES ('worker-10', 1, 0, 'lsst-gapon-qserv-worker-10', NULL, 'lsst-gapon-qserv-worker-10', NULL, NULL);
 
 -- This database lives witin its own family

@@ -29,6 +29,8 @@
 
 // System headers
 
+#include <vector>
+
 // Qserv headers
 
 #include "replica_core/DatabaseMySQL.h"
@@ -71,7 +73,7 @@ public:
     explicit DatabaseServicesMySQL (Configuration::pointer const& configuration);
 
     /// Destructor
-    virtual ~DatabaseServicesMySQL ();
+    ~DatabaseServicesMySQL () override;
 
     /**
      * Implement the corresponding method defined in the base class
@@ -93,7 +95,23 @@ public:
      *
      * @see DatabaseServices::saveState()
      */
-    virtual void saveState (Request_pointer const& request);
+    void saveState (Request_pointer const& request) override;
+
+    /**
+     * Implement the corresponding method defined in the base class
+     *
+     * @see DatabaseServices::findOldestReplica()
+     */
+    bool findOldestReplica (ReplicaInfo& replica) const override;
+    
+    /**
+     * Implement the corresponding method defined in the base class
+     *
+     * @see DatabaseServices::findReplicas()
+     */
+    bool findReplicas (std::vector<ReplicaInfo>& replicas,
+                       unsigned int              chunk,
+                       std::string const&        database) const override;
 
 private:
 
@@ -120,6 +138,17 @@ private:
      * @param infoCollection - a collection of replicas
      */
     void saveReplicaInfoCollection (ReplicaInfoCollection const& infoCollection);
+
+    /**
+     * Fetch replicas satisfying the specified query
+     *
+     * @param replicas - a collection of replicas to be returned
+     * @param query    - an SQL query against the corresponding table
+     *
+     * @return 'true' if the operation has succeeded (even if no replicas were found)
+     */
+    bool findReplicas (std::vector<ReplicaInfo>& replicas,
+                       std::string const&        query) const;
 
 protected:
 

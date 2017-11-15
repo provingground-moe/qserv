@@ -27,18 +27,21 @@
 // System headers
 
 #include <algorithm>
+#include <ctime>
 #include <stdexcept>
 #include <sstream>
 
 // Qserv headers
 
 #include "lsst/log/Log.h"
+#include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FixUpJob.h"
 #include "replica_core/PurgeJob.h"
+#include "replica_core/ReplicaInfo.h"
 #include "replica_core/ReplicateJob.h"
 #include "replica_core/ReplicationRequest.h"
 #include "replica_core/StatusRequest.h"
@@ -580,12 +583,10 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
             _conn->executeInsertQuery (
                 "replica",
                 "NULL",                         /* the auto-incremented PK */
-                info.worker   (),
-                info.database (),
-                info.chunk    (),
-                info.beginTransferTime (),
-                info.endTransferTime   (),
-                info.verifyTime        ());
+                info.worker     (),
+                info.database   (),
+                info.chunk      (),
+                info.verifyTime ());
 
             for (auto const& f: info.fileInfo()) {
                 _conn->executeInsertQuery (
@@ -632,20 +633,6 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
                 replicaId))
             throw std::logic_error (context + "NULL value is not allowed in this context");
 
-        uint64_t const beginTransferTime = info.beginTransferTime ();
-        if (beginTransferTime)
-            _conn->executeSimpleUpdateQuery (
-                "replica",
-                _conn->sqlEqual ("id",                replicaId),
-                std::make_pair  ("begin_create_time", beginTransferTime));
-
-        uint64_t const endTransferTime = info.endTransferTime ();
-        if (endTransferTime)
-            _conn->executeSimpleUpdateQuery (
-                "replica",
-                _conn->sqlEqual ("id",              replicaId),
-                std::make_pair  ("end_create_time", endTransferTime));
-
         uint64_t const verifyTime = info.verifyTime ();
         if (verifyTime)
             _conn->executeSimpleUpdateQuery (
@@ -684,5 +671,156 @@ DatabaseServicesMySQL::saveReplicaInfoCollection (ReplicaInfoCollection const& i
     for (auto const& info: infoCollection)
         saveReplicaInfo (info);
 }
+
+
+
+bool
+DatabaseServicesMySQL::findOldestReplica (ReplicaInfo& replica) const {
+
+    std::string const context = "DatabaseServicesMySQL::findOldestReplica  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context);
+
+    LOCK_GUARD;
+
+    std::vector<ReplicaInfo> replicas;
+    if (not findReplicas (
+                replicas,
+                "SELECT * FROM " + _conn->sqlId ("replica") +
+                " ORDER BY "     + _conn->sqlId ("verify_time") + " ASC LIMIT 1") or (replicas.size() != 1)) {
+
+        LOGS(_log, LOG_LVL_ERROR, context << "failed to find the oldest replica");
+        return false;
+    }
+    replica = replicas[0];
+    return true;
+}
+ 
+
+bool
+DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
+                                     unsigned int              chunk,
+                                     std::string const&        database) const {
+    std::string const context = 
+         "DatabaseServicesMySQL::findReplicas  chunk: " + std::to_string(chunk) +
+         "  database: " + database + "  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context);
+
+    LOCK_GUARD;
+
+    if (not _configuration->isKnownDatabase(database))
+        throw std::invalid_argument (context + "unknow database");
+
+    if (not findReplicas (
+                replicas,
+                "SELECT * FROM " + _conn->sqlId     ("replica") +
+                "  WHERE " +        _conn->sqlEqual ("chunk",    chunk) +
+                "    AND " +        _conn->sqlEqual ("database", database))) {
+
+        LOGS(_log, LOG_LVL_ERROR, context << "failed to find replicas");
+        return false;
+    }
+    return true;
+}
+
+bool
+DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
+                                     std::string const&        query) const {
+
+    std::string const context = "DatabaseServicesMySQL::findReplicas(replicas,query)  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context);
+
+    bool result = false;
+
+    try {
+        _conn->begin();
+        _conn->execute (query);
+
+        if (_conn->hasResult()) {
+
+            database::mysql::Row row;
+            while (_conn->next(row)) {
+
+                // Extract general attributes of the replica
+
+                uint64_t     id;
+                std::string  worker;
+                std::string  database;
+                unsigned int chunk;
+                uint64_t     verifyTime;
+
+                row.get ("id",          id);
+                row.get ("worker",      worker);
+                row.get ("database",    database);
+                row.get ("chunk",       chunk);
+                row.get ("verify_time", verifyTime);
+
+                // Pull a list of files associated with the replica
+
+                ReplicaInfo::FileInfoCollection files;
+
+                _conn->execute (
+                    "SELECT * FROM " + _conn->sqlId    ("replica_file") +
+                    "  WHERE "       + _conn->sqlEqual ("replica_id", id));
+                 
+                if (_conn->hasResult()) {
+            
+                    database::mysql::Row row;
+                    while (_conn->next(row)) {
+            
+                        // Extract attributes of the file
+            
+                        std::string name;
+                        uint64_t    size;
+                        std::time_t mtime;
+                        std::string cs;
+                        uint64_t    beginCreateTime;
+                        uint64_t    endCreateTime;
+            
+                        row.get ("name",              name);
+                        row.get ("size",              size);
+                        row.get ("mtime",             mtime);
+                        row.get ("cs",                cs);
+                        row.get ("begin_create_time", beginCreateTime);
+                        row.get ("end_create_time",   endCreateTime);
+            
+                        files.emplace_back (
+                            ReplicaInfo::FileInfo {
+                                name,
+                                size,
+                                mtime,
+                                cs,
+                                beginCreateTime,
+                                endCreateTime,
+                                size
+                            }
+                        );
+                    }
+                }
+                replicas.emplace_back (
+                    ReplicaInfo (
+                        ReplicaInfo::Status::COMPLETE,
+                        worker,
+                        database,
+                        chunk,
+                        verifyTime,
+                        files
+                    )
+                );
+            }
+        }
+        result = true;
+
+    } catch (database::mysql::Error const& ex) {
+        LOGS(_log, LOG_LVL_ERROR, context
+             << "database operation failed due to: " << ex.what());
+    }    
+    if (_conn->inTransaction()) _conn->rollback();
+
+    return result;
+}
+
 
 }}} // namespace lsst::qserv::replica_core
