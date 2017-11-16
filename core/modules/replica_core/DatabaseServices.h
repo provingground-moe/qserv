@@ -141,9 +141,12 @@ public:
      * passed into the method should be made if the operation fails
      * (returns 'false').
      *
-     * @param replica - a reference to an object to be initialized
+     * @param replica            - a reference to an object to be initialized
+     * @param enabledWorkersOnly - if set to 'true' then only consider known
+     *                             workers which are enabled in the Configuration
      */
-    virtual bool findOldestReplica (ReplicaInfo& replica) const;
+    virtual bool findOldestReplica (ReplicaInfo& replica,
+                                    bool         enabledWorkersOnly=true) const;
     
     /**
      * Find all replicas for the specified chunk and the database.
@@ -155,6 +158,8 @@ public:
      * @param replicas - a collection of replicas (if any found)
      * @param chunk    - the chunk number
      * @param database - the name of a database
+     * @param enabledWorkersOnly - if set to 'true' then only consider known
+     *                             workers which are enabled in the Configuration
      *
      * @return 'true' in case of success (even if no replicas were found)
      *
@@ -162,7 +167,8 @@ public:
      */
     virtual bool findReplicas (std::vector<ReplicaInfo>& replicas,
                                unsigned int              chunk,
-                               std::string const&        database) const;
+                               std::string const&        database,
+                               bool                      enabledWorkersOnly=true) const;
 
 protected:
 

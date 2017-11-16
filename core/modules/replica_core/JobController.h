@@ -111,7 +111,9 @@ public:
     typedef std::function<void(FixUpJob_pointer)>     FixUpJob_callback_type;
     typedef std::function<void(VerifyJob_pointer)>    VerifyJob_callback_type;
 
-    typedef std::function<void(VerifyJob_pointer,ReplicaDiff const&)> VerifyJob_callback_type_on_diff;
+    typedef std::function<void(VerifyJob_pointer,
+                               ReplicaDiff const&,
+                               std::vector<ReplicaDiff> const&)> VerifyJob_callback_type_on_diff;
 
     /// The priority queue for pointers to the new (unprocessed) jobs.
     /// Using inheritance to get access to the protected data members 'c'

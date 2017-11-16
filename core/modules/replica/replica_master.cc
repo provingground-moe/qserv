@@ -55,10 +55,11 @@ namespace {
 
 std::string  configUrl;
 unsigned int numReplicas;
-bool         bestEffort;
-bool         progressReport;
-bool         errorReport;
-bool         chunkLocksReport;
+bool computeCheckSum;
+bool bestEffort;
+bool progressReport;
+bool errorReport;
+bool chunkLocksReport;
 
 /**
  * Recursive function for continious submition of the replica verification
@@ -71,9 +72,31 @@ void submitVerifyJob (rc::JobController::pointer jobCtrl) {
             if (job->extendedState() != rc::Job::ExtendedState::CANCELLED)
                 submitVerifyJob (jobCtrl);
         },
-        [](rc::VerifyJob::pointer job, rc::ReplicaDiff const& replicaDiff) {
-            std::cout << replicaDiff << std::endl;
-        }
+        [] (rc::VerifyJob::pointer              job,
+            rc::ReplicaDiff const&              selfReplicaDiff,
+            std::vector<rc::ReplicaDiff> const& otherReplicaDiff) {
+
+            rc::ReplicaInfo const& r1 = selfReplicaDiff.replica1();
+            rc::ReplicaInfo const& r2 = selfReplicaDiff.replica2();
+            std::cout
+                << "Compared with OWN previous state  "
+                << " " << std::setw(20) << r1.database() << " " << std::setw(12) << r1.chunk()
+                << " " << std::setw(20) << r1.worker()   << " " << std::setw(20) << r2.worker() << " "
+                << " " << selfReplicaDiff.flags2string()
+                << std::endl;
+            
+            for (auto const& diff: otherReplicaDiff) {
+                rc::ReplicaInfo const& r1 = diff.replica1();
+                rc::ReplicaInfo const& r2 = diff.replica2();
+                std::cout
+                    << "Compared with OTHER replica state "
+                    << " " << std::setw(20) << r1.database() << " " << std::setw(12) << r1.chunk()
+                    << " " << std::setw(20) << r1.worker()   << " " << std::setw(20) << r2.worker() << " "
+                    << " " << diff.flags2string()
+                    << std::endl;
+            }
+        },
+        computeCheckSum
     );
 }
 
@@ -210,6 +233,7 @@ int main (int argc, const char* const argv[]) {
             "Usage:\n"
             "  [--config=<url>]\n"
             "  [--replicas=<number>]\n"
+            "  [--check-sum]\n"
             "  [--best-effort]\n"
             "  [--progress-report]\n"
             "  [--error-report]\n"
@@ -220,6 +244,7 @@ int main (int argc, const char* const argv[]) {
             "                         connection parameters [ DEFAULT: file:replication.cfg ]\n"
             "  --replicas           - the desired number of replicas [ DEFAULT: '0' to pull the number\n"
             "                         from the Configuration]\n"
+            "  --check-sum          - compute check/control sum of files\n"
             "  --best-effort        - allowing the operation even after not getting chunk disposition from\n"
             "                         all workers\n"
             "  --progress-report    - progress report when executing batches of requests\n"
@@ -228,6 +253,7 @@ int main (int argc, const char* const argv[]) {
 
         ::configUrl        = parser.option <std::string>("config", "file:replication.cfg");
         ::numReplicas      = parser.option<unsigned int>("replicas", 0);
+        ::computeCheckSum  = parser.flag                ("check-sum");
         ::bestEffort       = parser.flag                ("best-effort");
         ::progressReport   = parser.flag                ("progress-report");
         ::errorReport      = parser.flag                ("error-report");

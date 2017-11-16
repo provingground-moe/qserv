@@ -675,7 +675,8 @@ DatabaseServicesMySQL::saveReplicaInfoCollection (ReplicaInfoCollection const& i
 
 
 bool
-DatabaseServicesMySQL::findOldestReplica (ReplicaInfo& replica) const {
+DatabaseServicesMySQL::findOldestReplica (ReplicaInfo& replica,
+                                          bool         enabledWorkersOnly) const {
 
     std::string const context = "DatabaseServicesMySQL::findOldestReplica  ";
 
@@ -687,6 +688,8 @@ DatabaseServicesMySQL::findOldestReplica (ReplicaInfo& replica) const {
     if (not findReplicas (
                 replicas,
                 "SELECT * FROM " + _conn->sqlId ("replica") +
+                (enabledWorkersOnly ?
+                " WHERE " +        _conn->sqlIn ("worker", _configuration->workers(true)) : "") +
                 " ORDER BY "     + _conn->sqlId ("verify_time") + " ASC LIMIT 1") or (replicas.size() != 1)) {
 
         LOGS(_log, LOG_LVL_ERROR, context << "failed to find the oldest replica");
@@ -700,7 +703,8 @@ DatabaseServicesMySQL::findOldestReplica (ReplicaInfo& replica) const {
 bool
 DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
                                      unsigned int              chunk,
-                                     std::string const&        database) const {
+                                     std::string const&        database,
+                                     bool                      enabledWorkersOnly) const {
     std::string const context = 
          "DatabaseServicesMySQL::findReplicas  chunk: " + std::to_string(chunk) +
          "  database: " + database + "  ";
@@ -714,9 +718,11 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
 
     if (not findReplicas (
                 replicas,
-                "SELECT * FROM " + _conn->sqlId     ("replica") +
+                "SELECT * FROM " +  _conn->sqlId    ("replica") +
                 "  WHERE " +        _conn->sqlEqual ("chunk",    chunk) +
-                "    AND " +        _conn->sqlEqual ("database", database))) {
+                "    AND " +        _conn->sqlEqual ("database", database) +
+                (enabledWorkersOnly ?
+                 "   AND " +        _conn->sqlIn    ("worker",   _configuration->workers(true)) :""))) {
 
         LOGS(_log, LOG_LVL_ERROR, context << "failed to find replicas");
         return false;
