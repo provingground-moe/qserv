@@ -94,7 +94,8 @@ DatabaseServices::saveState (Request_pointer const& request) {
 }
 
 bool
-DatabaseServices::findOldestReplica (ReplicaInfo& replica) const {
+DatabaseServices::findOldestReplica (ReplicaInfo& replica,
+                                     bool         enabledWorkersOnly) const {
     LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findOldestReplica");
 
     return false;
@@ -103,7 +104,8 @@ DatabaseServices::findOldestReplica (ReplicaInfo& replica) const {
 bool
 DatabaseServices::findReplicas (std::vector<ReplicaInfo>& replicas,
                                 unsigned int              chunk,
-                                std::string const&        database) const {
+                                std::string const&        database,
+                                bool                      enabledWorkersOnly) const {
     LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findReplicas "
          << " chunk: "    << chunk
          << " database: " << database);

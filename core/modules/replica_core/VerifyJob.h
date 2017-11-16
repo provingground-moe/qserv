@@ -91,6 +91,12 @@ public:
     ReplicaInfo const& replica2 () const { return _replica2; }
 
     /**
+     * Return 'true' if the object encapculates two snapshots refferring
+     * to the same replica.
+     */
+    bool isSelf () const;
+
+    /**
      * The comporision operator returns 'true' in case if there are diffences
      * between replicas. Specific aspects of the difference can be explored
      * by comparing the replica objects.
@@ -106,6 +112,11 @@ public:
     bool fileCsMismatch    () const { return _fileCsMismatch; }
     bool fileMtimeMismatch () const { return _fileMtimeMismatch; }
 
+    /**
+     * Return a compact string representation of the failed tests
+     */
+    std::string const& flags2string () const;
+
 private:
 
     ReplicaInfo _replica1; // older replia
@@ -118,6 +129,8 @@ private:
     bool _fileSizeMismatch;
     bool _fileCsMismatch;
     bool _fileMtimeMismatch;
+    
+    mutable std::string _flags;     // computed firts time requested
 };
 
 /// Overloaded streaming operator for type ReplicaDiff
@@ -147,7 +160,9 @@ public:
     typedef std::function<void(pointer)> callback_type;
 
     /// The function type for notifications on the completon of the request
-    typedef std::function<void(pointer,ReplicaDiff const&)> callback_type_on_diff;
+    typedef std::function<void(pointer,
+                               ReplicaDiff const&,
+                               std::vector<ReplicaDiff> const&)> callback_type_on_diff;
 
     /**
      * Static factory method is needed to prevent issue with the lifespan
@@ -157,6 +172,7 @@ public:
      * @param controller  - for launching requests
      * @param onFinish    - a callback function to be called upon a completion of the job
      @ @param onReplicaDifference - a callback function to be called when two replicas won't match
+     * @param computeCheckSum     - tell a worker server to compute check/control sum on each file
      * @param priority    - set the desired job priority (larger values
      *                      mean higher priorities). A job with the highest
      *                      priority will be select from an input queue by
@@ -170,6 +186,7 @@ public:
     static pointer create (Controller::pointer const& controller,
                            callback_type              onFinish,
                            callback_type_on_diff      onReplicaDifference,
+                           bool                       computeCheckSum=false,
                            int                        priority    = 0,
                            bool                       exclusive   = false,
                            bool                       preemptable = true);
@@ -206,6 +223,7 @@ protected:
     VerifyJob (Controller::pointer const& controller,
                callback_type              onFinish,
                callback_type_on_diff      onReplicaDifference,
+               bool                       computeCheckSum,
                int                        priority,
                bool                       exclusive,
                bool                       preemptable);
@@ -253,6 +271,9 @@ protected:
 
     /// Client-defined function to be called when two replicas won't match
     callback_type_on_diff _onReplicaDifference;
+
+    /// This option will be passed on to the worker services
+    bool _computeCheckSum;
 
     // The current (last) replica which is inspected
     ReplicaInfo _replica;

@@ -25,6 +25,7 @@
 
 // System headers
 
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -46,10 +47,11 @@ namespace {
 // Command line parameters
 
 std::string configUrl;
-bool        progressReport;
-bool        errorReport;
-bool        detailedReport;
-bool        chunkLocksReport = false;
+bool computeCheckSum;
+bool progressReport;
+bool errorReport;
+bool detailedReport;
+bool chunkLocksReport = false;
 
 /// Run the test
 bool run () {
@@ -78,9 +80,31 @@ bool run () {
                     // the request will be caught by the tracker below
                     ;
                 },
-                [](rc::VerifyJob::pointer job, rc::ReplicaDiff const& replicaDiff) {
-                    std::cout << replicaDiff << std::endl;
-                }
+                [] (rc::VerifyJob::pointer              job,
+                    rc::ReplicaDiff const&              selfReplicaDiff,
+                    std::vector<rc::ReplicaDiff> const& otherReplicaDiff) {
+
+                    rc::ReplicaInfo const& r1 = selfReplicaDiff.replica1();
+                    rc::ReplicaInfo const& r2 = selfReplicaDiff.replica2();
+                    std::cout
+                        << "Compared with OWN previous state  "
+                        << " " << std::setw(20) << r1.database() << " " << std::setw(12) << r1.chunk()
+                        << " " << std::setw(20) << r1.worker()   << " " << std::setw(20) << r2.worker() << " "
+                        << " " << selfReplicaDiff.flags2string()
+                        << std::endl;
+
+                    for (auto const& diff: otherReplicaDiff) {
+                        rc::ReplicaInfo const& r1 = diff.replica1();
+                        rc::ReplicaInfo const& r2 = diff.replica2();
+                        std::cout
+                            << "Compared with OTHER replica state "
+                            << " " << std::setw(20) << r1.database() << " " << std::setw(12) << r1.chunk()
+                            << " " << std::setw(20) << r1.worker()   << " " << std::setw(20) << r2.worker() << " "
+                            << " " << diff.flags2string()
+                            << std::endl;
+                    }
+                },
+                computeCheckSum
             );
 
         job->start();
@@ -117,6 +141,7 @@ int main (int argc, const char* const argv[]) {
             "\n"
             "Usage:\n"
             "  [--config=<url>]\n"
+            "  [--check-sum]\n"
             "  [--progress-report]\n"
             "  [--error-report]\n"
             "  [--detailed-report]\n"
@@ -124,14 +149,16 @@ int main (int argc, const char* const argv[]) {
             "Flags and options:\n"
             "  --config           - a configuration URL (a configuration file or a set of the database\n"
             "                       connection parameters [ DEFAULT: file:replication.cfg ]\n"
+            "  --check-sum        - compute check/control sum of files\n"
             "  --progress-report  - progress report when executing batches of requests\n"
             "  --error-report     - detailed report on failed requests\n"
             "  --detailed-report  - detailed report on results\n");
 
-        ::configUrl      = parser.option<std::string>("config", "file:replication.cfg");
-        ::progressReport = parser.flag               ("progress-report");
-        ::errorReport    = parser.flag               ("error-report");
-        ::detailedReport = parser.flag               ("detailed-report");
+        ::configUrl       = parser.option<std::string>("config", "file:replication.cfg");
+        ::computeCheckSum = parser.flag               ("check-sum");
+        ::progressReport  = parser.flag               ("progress-report");
+        ::errorReport     = parser.flag               ("error-report");
+        ::detailedReport  = parser.flag               ("detailed-report");
 
     } catch (std::exception const& ex) {
         return 1;

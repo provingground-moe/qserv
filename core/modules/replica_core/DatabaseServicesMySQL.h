@@ -102,7 +102,8 @@ public:
      *
      * @see DatabaseServices::findOldestReplica()
      */
-    bool findOldestReplica (ReplicaInfo& replica) const override;
+    bool findOldestReplica (ReplicaInfo& replica,
+                            bool         enabledWorkersOnly) const override;
     
     /**
      * Implement the corresponding method defined in the base class
@@ -111,7 +112,8 @@ public:
      */
     bool findReplicas (std::vector<ReplicaInfo>& replicas,
                        unsigned int              chunk,
-                       std::string const&        database) const override;
+                       std::string const&        database,
+                       bool                      enabledWorkersOnly) const override;
 
 private:
 

@@ -120,7 +120,11 @@ FindRequestC::responseData () const {
 void
 FindRequestC::beginProtocol () {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "beginProtocol "
+         << " worker: "          << worker()
+         << " database: "        << database()
+         << " chunk: "           << chunk()
+         << " computeCheckSum: " << (computeCheckSum() ? "true" : "false"));
 
     // Serialize the Request message header and the request itself into
     // the network buffer.
@@ -163,9 +167,9 @@ void
 FindRequestC::requestSent (boost::system::error_code const& ec,
                            size_t                           bytes_transferred) {
 
-    LOCK_GUARD;
-
     LOGS(_log, LOG_LVL_DEBUG, context() << "requestSent");
+
+    LOCK_GUARD;
 
     if (isAborted(ec)) return;
 
@@ -210,9 +214,9 @@ void
 FindRequestC::responseReceived (boost::system::error_code const& ec,
                                 size_t                           bytes_transferred) {
 
-    LOCK_GUARD;
-
     LOGS(_log, LOG_LVL_DEBUG, context() << "responseReceived");
+
+    LOCK_GUARD;
 
     if (isAborted(ec)) return;
 
@@ -255,9 +259,9 @@ FindRequestC::wait () {
 void
 FindRequestC::awaken (boost::system::error_code const& ec) {
 
-    LOCK_GUARD;
-
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
+
+    LOCK_GUARD;
 
     if (isAborted(ec)) return;
 
@@ -311,9 +315,9 @@ void
 FindRequestC::statusSent (boost::system::error_code const& ec,
                           size_t                           bytes_transferred) {
 
-    LOCK_GUARD;
-
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusSent");
+
+    LOCK_GUARD;
 
     if (isAborted(ec)) return;
 
@@ -358,9 +362,9 @@ void
 FindRequestC::statusReceived (boost::system::error_code const& ec,
                               size_t                           bytes_transferred) {
 
-    LOCK_GUARD;
-
     LOGS(_log, LOG_LVL_DEBUG, context() << "statusReceived");
+
+    LOCK_GUARD;
 
     if (isAborted(ec)) return;
 
@@ -529,7 +533,11 @@ FindRequestM::responseData () const {
 void
 FindRequestM::startImpl () {
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "startImpl");
+    LOGS(_log, LOG_LVL_DEBUG, context() << "startImpl "
+         << " worker: "          << worker()
+         << " database: "        << database()
+         << " chunk: "           << chunk()
+         << " computeCheckSum: " << (computeCheckSum() ? "true" : "false"));
 
     // Serialize the Request message header and the request itself into
     // the network buffer.
@@ -574,9 +582,9 @@ FindRequestM::wait () {
 void
 FindRequestM::awaken (boost::system::error_code const& ec) {
 
-    LOCK_GUARD;
-
     LOGS(_log, LOG_LVL_DEBUG, context() << "awaken");
+
+    LOCK_GUARD;
 
     if (isAborted(ec)) return;
 
@@ -625,12 +633,13 @@ void
 FindRequestM::analyze (bool                                  success,
                        proto::ReplicationResponseFind const& message) {
 
+    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
+
     // This guard is made on behalf of an asynchronious callback fired
     // upon a completion of the request within method send() - the only
     // client of analyze() 
-    LOCK_GUARD;
 
-    LOGS(_log, LOG_LVL_DEBUG, context() << "analyze");
+    LOCK_GUARD;
 
     if (success) {
 

@@ -563,7 +563,31 @@ public:
         sqlPackPair (sql, Fargs...);
         return sql;
     }
-    
+
+    /**
+     * Return:
+     *
+     *   `col` IN (<val1>,<val2>,<val3>,,,)
+     *
+     * NOTES:
+     * - the column name will be surrounded by back ticks
+     * - values of string types will be escaped and surrounded by single quotes
+     *
+     * @param col    - the name of a column
+     * @param values - an iterable collection of values
+     */
+    template <typename T>
+    std::string sqlIn (std::string const& col,
+                       T const&           values) const {
+        std::ostringstream ss;
+        ss << sqlId (col) << " IN (";
+        int num=0;
+        for (auto const& val: values)
+            ss << (num++ ? "," : "") << sqlValue (val);
+        ss << ")";
+        return ss.str();
+    }
+
     /**
      * Generate an SQL statement for updating select values of table rows
      * where the optional condition is met. Fields to be updated and their new
