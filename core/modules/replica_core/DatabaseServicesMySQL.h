@@ -115,6 +115,14 @@ public:
                        std::string const&        database,
                        bool                      enabledWorkersOnly) const override;
 
+    /**
+     * Implement the corresponding method defined in the base class
+     *
+     * @see DatabaseServices::findWorkerReplicas()
+     */
+    bool findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
+                             std::string const&        worker) const override;
+
 private:
 
     /**

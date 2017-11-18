@@ -119,7 +119,9 @@ public:
      *   mysql:database=<name>[,host=<name>][,port=<number>][,user=<username>][,password=<***>]
      *
      * @param configUrl - the configuration source
-     * @throw std::invalid_argument - if the URL has unsupported prefix or it couldn't be parsed
+     *
+     * @throw std::invalid_argument - if the URL has unsupported prefix or it
+     *                                couldn't be parsed
      */
     static pointer load (std::string const& configUrl);
 
@@ -232,7 +234,8 @@ public:
      *
      * @param family - the optional name of a database family
      *
-     * @throw std::invalid_argument - if the family is not known
+     * @throw std::invalid_argument - if the specified family was not found in
+     *                                the configuration.
      */
     size_t replicationLevel (std::string const& family) const;
 
@@ -242,12 +245,13 @@ public:
      *
      * @param family - the optional name of a database family
      *
-     * @throw std::invalid_argument - if the family is not known
+     * @throw std::invalid_argument - if the specified family was not found in
+     *                                the configuration.
      */
     std::vector<std::string> databases (std::string const& family=std::string()) const;
 
     /**
-     * Return 'true' if the specified database is known to the configuraion
+     * Return 'true' if the specified database is known in the configuraion
      *
      * @param name - the name of a database
      */
@@ -256,10 +260,10 @@ public:
     /**
      * Return parameters of the specified database
      *
-     * The method will throw std::out_of_range if the specified database was not
-     * found in the configuration.
-     *
      * @param name - the name of a database
+     *
+     * @throw std::invalid_argument - if the specified database was not found in
+     *                                the configuration
      */
     DatabaseInfo const& databaseInfo (std::string const& name) const;
 
@@ -278,12 +282,39 @@ public:
     /**
      * Return parameters of the specified worker
      *
-     * The method will throw std::out_of_range if the specified worker was not
-     * found in the configuration.
-     *
      * @param name - the name of a worker
+     *
+     * @throw std::invalid_argument - if the specified worker was not found in
+     *                                the configuration.
      */
     WorkerInfo const& workerInfo (std::string const& name) const;
+
+    /**
+     * Change the status of the worker node to 'disabled' thus disallowing
+     * its use for any replication activities. Return the updated descriptor
+     * of the worker service. Note that if the operation fails to update
+     * the configuration then it won't throw any exceptions. In that case it will
+     * just a post a complain into the corresponding log stream. It's up
+     * to caller of this method to check the new status of the worker in
+     * the returned descriptor.:
+     * @code
+     *   try {
+     *       if (config.disableWorker("worker-name").is_enabled) {
+     *           std::cerr << "failed to disablethe worker" << std::endl;
+     *       }
+     *   } catch (std::invalid_argument const& ex) {
+     *       std::cerr << "the work is not known" << std::endl;
+     *   }
+     * @code
+     *
+     * @param name - the name of a worker
+     *
+     * @return the updated status of the worker
+     * 
+     * @throw std::invalid_argument - if the specified worker was not found in
+     *                                the configuration.
+     */
+    virtual WorkerInfo const& disableWorker (std::string const& name)=0;
 
     /// Return the name of the default technology for implementing requests
     std::string const& workerTechnology () const { return _workerTechnology; }

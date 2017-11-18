@@ -32,9 +32,12 @@
 
 // Qserv headers
 
+#include "lsst/log/Log.h"
 #include "util/ConfigStore.h"
 
 namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ConfigurationFile");
 
 /**
  * Fetch and parse a value of the specified key into. Return the specified
@@ -84,6 +87,22 @@ ConfigurationFile::ConfigurationFile (std::string const& configFile)
 ConfigurationFile::~ConfigurationFile () {
 }
 
+WorkerInfo const&
+ConfigurationFile::disableWorker (std::string const& name) {
+
+    std::string const context = "ConfigurationFile::disableWorker  ";
+
+    LOGS(_log, LOG_LVL_ERROR, context << name);
+
+    WorkerInfo const& info = workerInfo(name);
+    if (info.isEnabled) {
+    
+        // Then update the transient state (note this change will be also be)
+        // seen via the above obtainer reference to the worker description.
+        _workerInfo[name].isEnabled = false;
+    }
+    return info;
+}
 void
 ConfigurationFile::loadConfiguration () {
 

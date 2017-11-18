@@ -247,7 +247,7 @@ Configuration::isKnownWorker (std::string const& name) const {
 WorkerInfo const&
 Configuration::workerInfo (std::string const& name) const {
     if (!isKnownWorker(name)) 
-        throw std::out_of_range (
+        throw std::invalid_argument (
                 "Configuration::workerInfo() uknown worker name '" + name + "'");
     return _workerInfo.at(name);
 }
@@ -260,7 +260,7 @@ Configuration::isKnownDatabase (std::string const& name) const {
 DatabaseInfo const&
 Configuration::databaseInfo (std::string const& name) const {
     if (!isKnownDatabase(name)) 
-        throw std::out_of_range (
+        throw std::invalid_argument (
                 "Configuration::databaseInfo() uknown database name '" + name + "'");
     return _databaseInfo.at(name);
 }

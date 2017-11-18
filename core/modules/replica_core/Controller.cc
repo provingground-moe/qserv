@@ -145,11 +145,11 @@ public:
             std::string const&                   workerName,
             std::string const&                   targetRequestId,
             typename REQUEST_TYPE::callback_type onFinish,
-            bool                                 keepTracking
+            bool                                 keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-            ,typename Messenger::pointer const&  messenger
+            typename Messenger::pointer const&   messenger,
 #endif
-            ) {
+            unsigned int                         requestExpirationIvalSec) {
 
         controller->assertIsRunning();
 
@@ -177,7 +177,7 @@ public:
     
         // Initiate the request
 
-        request->start (controller, jobId);
+        request->start (controller, jobId, requestExpirationIvalSec);
 
         return request;
     }
@@ -196,11 +196,11 @@ public:
             Controller::pointer const&           controller,
             std::string const&                   jobId,
             std::string const&                   workerName,
-            typename REQUEST_TYPE::callback_type onFinish
+            typename REQUEST_TYPE::callback_type onFinish,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-            ,typename Messenger::pointer const&  messenger
+            typename Messenger::pointer const&   messenger,
 #endif
-            ) {
+            unsigned int                         requestExpirationIvalSec) {
 
         controller->assertIsRunning();
 
@@ -226,7 +226,7 @@ public:
 
         // Initiate the request
 
-        request->start (controller, jobId);
+        request->start (controller, jobId, requestExpirationIvalSec);
 
         return request;
     }
@@ -367,7 +367,8 @@ Controller::replicate (std::string const&                workerName,
                        int                               priority,
                        bool                              keepTracking,
                        bool                              allowDuplicate,
-                       std::string const&                jobId) {
+                       std::string const&                jobId,
+                       unsigned int                      requestExpirationIvalSec) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -402,7 +403,7 @@ Controller::replicate (std::string const&                workerName,
 
     // Initiate the request
 
-    request->start (controller, jobId);
+    request->start (controller, jobId, requestExpirationIvalSec);
 
     return request;
 }
@@ -415,7 +416,8 @@ Controller::deleteReplica (std::string const&           workerName,
                            int                          priority,
                            bool                         keepTracking,
                            bool                         allowDuplicate,
-                           std::string const&           jobId) {
+                           std::string const&           jobId,
+                           unsigned int                 requestExpirationIvalSec) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -449,7 +451,7 @@ Controller::deleteReplica (std::string const&           workerName,
 
     // Initiate the request
 
-    request->start (controller, jobId);
+    request->start (controller, jobId, requestExpirationIvalSec);
 
     return request;
 }
@@ -462,7 +464,8 @@ Controller::findReplica (std::string const&         workerName,
                          int                        priority,
                          bool                       computeCheckSum,
                          bool                       keepTracking,
-                         std::string const&         jobId) {
+                         std::string const&         jobId,
+                         unsigned int               requestExpirationIvalSec) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -496,7 +499,7 @@ Controller::findReplica (std::string const&         workerName,
 
     // Initiate the request
 
-    request->start (controller, jobId);
+    request->start (controller, jobId, requestExpirationIvalSec);
 
     return request;
 }
@@ -507,7 +510,8 @@ Controller::findAllReplicas (std::string const&            workerName,
                              FindAllRequest::callback_type onFinish,
                              int                           priority,
                              bool                          keepTracking,
-                             std::string const&            jobId) {
+                             std::string const&            jobId,
+                             unsigned int                  requestExpirationIvalSec) {
     LOCK_GUARD;
 
     assertIsRunning();
@@ -539,7 +543,7 @@ Controller::findAllReplicas (std::string const&            workerName,
 
     // Initiate the request
 
-    request->start (controller, jobId);
+    request->start (controller, jobId, requestExpirationIvalSec);
 
     return request;
 }
@@ -549,7 +553,8 @@ Controller::stopReplication (std::string const&                    workerName,
                              std::string const&                    targetRequestId,
                              StopReplicationRequest::callback_type onFinish,
                              bool                                  keepTracking,
-                             std::string const&                    jobId) {
+                             std::string const&                    jobId,
+                             unsigned int                          requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplication  targetRequestId = " << targetRequestId);
@@ -560,11 +565,11 @@ Controller::stopReplication (std::string const&                    workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 StopDeleteRequest::pointer
@@ -572,7 +577,8 @@ Controller::stopReplicaDelete (std::string const&               workerName,
                                std::string const&               targetRequestId,
                                StopDeleteRequest::callback_type onFinish,
                                bool                             keepTracking,
-                               std::string const&               jobId) {
+                               std::string const&               jobId,
+                               unsigned int                     requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaDelete  targetRequestId = " << targetRequestId);
@@ -583,11 +589,11 @@ Controller::stopReplicaDelete (std::string const&               workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 StopFindRequest::pointer
@@ -595,7 +601,8 @@ Controller::stopReplicaFind (std::string const&             workerName,
                              std::string const&             targetRequestId,
                              StopFindRequest::callback_type onFinish,
                              bool                           keepTracking,
-                             std::string const&             jobId) {
+                             std::string const&             jobId,
+                             unsigned int                   requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaFind  targetRequestId = " << targetRequestId);
@@ -606,11 +613,11 @@ Controller::stopReplicaFind (std::string const&             workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 StopFindAllRequest::pointer
@@ -618,7 +625,8 @@ Controller::stopReplicaFindAll (std::string const&                workerName,
                                 std::string const&                targetRequestId,
                                 StopFindAllRequest::callback_type onFinish,
                                 bool                              keepTracking,
-                                std::string const&                jobId) {
+                                std::string const&                jobId,
+                                unsigned int                      requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "stopReplicaFindAll  targetRequestId = " << targetRequestId);
@@ -629,11 +637,11 @@ Controller::stopReplicaFindAll (std::string const&                workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 StatusReplicationRequest::pointer
@@ -641,7 +649,8 @@ Controller::statusOfReplication (std::string const&                      workerN
                                  std::string const&                      targetRequestId,
                                  StatusReplicationRequest::callback_type onFinish,
                                  bool                                    keepTracking,
-                                 std::string const&                      jobId) {
+                                 std::string const&                      jobId,
+                                 unsigned int                            requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfReplication  targetRequestId = " << targetRequestId);
@@ -652,11 +661,11 @@ Controller::statusOfReplication (std::string const&                      workerN
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 StatusDeleteRequest::pointer
@@ -664,7 +673,8 @@ Controller::statusOfDelete (std::string const&                 workerName,
                             std::string const&                 targetRequestId,
                             StatusDeleteRequest::callback_type onFinish,
                             bool                               keepTracking,
-                            std::string const&                 jobId) {
+                            std::string const&                 jobId,
+                            unsigned int                       requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfDelete  targetRequestId = " << targetRequestId);
@@ -675,11 +685,11 @@ Controller::statusOfDelete (std::string const&                 workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 StatusFindRequest::pointer
@@ -687,7 +697,8 @@ Controller::statusOfFind (std::string const&               workerName,
                           std::string const&               targetRequestId,
                           StatusFindRequest::callback_type onFinish,
                           bool                             keepTracking,
-                          std::string const&               jobId) {
+                          std::string const&               jobId,
+                          unsigned int                     requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfFind  targetRequestId = " << targetRequestId);
@@ -698,11 +709,11 @@ Controller::statusOfFind (std::string const&               workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 StatusFindAllRequest::pointer
@@ -710,7 +721,8 @@ Controller::statusOfFindAll (std::string const&                  workerName,
                              std::string const&                  targetRequestId,
                              StatusFindAllRequest::callback_type onFinish,
                              bool                                keepTracking,
-                             std::string const&                  jobId) {
+                             std::string const&                  jobId,
+                             unsigned int                        requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfFindAll  targetRequestId = " << targetRequestId);
@@ -721,17 +733,18 @@ Controller::statusOfFindAll (std::string const&                  workerName,
         workerName,
         targetRequestId,
         onFinish,
-        keepTracking
+        keepTracking,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 ServiceSuspendRequest::pointer
 Controller::suspendWorkerService (std::string const&                   workerName,
                                   ServiceSuspendRequest::callback_type onFinish,
-                                  std::string const&                   jobId) {
+                                  std::string const&                   jobId,
+                                  unsigned int                         requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "suspendWorkerService  workerName: " << workerName);
@@ -740,17 +753,18 @@ Controller::suspendWorkerService (std::string const&                   workerNam
         shared_from_this(),
         jobId,
         workerName,
-        onFinish
+        onFinish,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 ServiceResumeRequest::pointer
 Controller::resumeWorkerService (std::string const&                  workerName,
                                  ServiceResumeRequest::callback_type onFinish,
-                                 std::string const&                  jobId) {
+                                 std::string const&                  jobId,
+                                 unsigned int                        requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "resumeWorkerService  workerName: " << workerName);
@@ -759,17 +773,18 @@ Controller::resumeWorkerService (std::string const&                  workerName,
         shared_from_this(),
         jobId,
         workerName,
-        onFinish
+        onFinish,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 ServiceStatusRequest::pointer
 Controller::statusOfWorkerService (std::string const&                  workerName,
                                    ServiceStatusRequest::callback_type onFinish,
-                                   std::string const&                  jobId) {
+                                   std::string const&                  jobId,
+                                   unsigned int                        requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "statusOfWorkerService  workerName: " << workerName);
@@ -778,17 +793,18 @@ Controller::statusOfWorkerService (std::string const&                  workerNam
         shared_from_this(),
         jobId,
         workerName,
-        onFinish
+        onFinish,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 ServiceRequestsRequest::pointer
 Controller::requestsOfWorkerService (std::string const&                    workerName,
                                      ServiceRequestsRequest::callback_type onFinish,
-                                     std::string const&                    jobId) {
+                                     std::string const&                    jobId,
+                                     unsigned int                          requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "requestsOfWorkerService  workerName: " << workerName);
@@ -797,17 +813,18 @@ Controller::requestsOfWorkerService (std::string const&                    worke
         shared_from_this(),
         jobId,
         workerName,
-        onFinish
+        onFinish,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 ServiceDrainRequest::pointer
 Controller::drainWorkerService (std::string const&                 workerName,
                                 ServiceDrainRequest::callback_type onFinish,
-                                std::string const&                 jobId) {
+                                std::string const&                 jobId,
+                                unsigned int                       requestExpirationIvalSec) {
     LOCK_GUARD;
 
     LOGS(_log, LOG_LVL_DEBUG, "drainWorkerService  workerName: " << workerName);
@@ -816,11 +833,11 @@ Controller::drainWorkerService (std::string const&                 workerName,
         shared_from_this(),
         jobId,
         workerName,
-        onFinish
+        onFinish,
 #ifndef LSST_QSERV_REPLICA_CORE_REQUEST_BASE_C
-        ,_messenger
+        _messenger,
 #endif
-        );
+        requestExpirationIvalSec);
 }
 
 size_t

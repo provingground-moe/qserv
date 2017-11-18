@@ -127,11 +127,15 @@ Request::remoteId () const {
 
 void
 Request::start (std::shared_ptr<Controller> const& controller,
-                std::string const&                 jobId) {
+                std::string const&                 jobId,
+                unsigned int                       requestExpirationIvalSec) {
 
     LOCK_GUARD;
 
     assertState(CREATED);
+
+    // Change the expiration ival if requested
+    if (requestExpirationIvalSec) _requestExpirationIvalSec = requestExpirationIvalSec;
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "start  _requestExpirationIvalSec: " << _requestExpirationIvalSec);
 
