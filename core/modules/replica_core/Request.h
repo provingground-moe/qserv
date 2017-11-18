@@ -194,9 +194,14 @@ public:
      * @param controller - an optional pointer to an instance of the Controller
      * @param jobId      - an optional identifier of a job specifying a context
      *                     in which a request will be executed.
+     * @param requestExpirationIvalSec
+     *                   - an optional parameter (if differs from 0)
+     *                     allowing to override the default value of the corresponding
+     *                     parameter from the Configuration.
      */
     void start (std::shared_ptr<Controller> const& controller=nullptr,
-                std::string const&                 jobId="");
+                std::string const&                 jobId="",
+                unsigned int                       requestExpirationIvalSec=0);
 
     /**
      * Return an identifier if the owning job (if the request has started)

@@ -86,6 +86,13 @@ public:
         return "file:" + _configFile;
     }
 
+    /**
+     * Implements the method defined in the base class
+     *
+     * @see Configuration::disableWorker ()
+     */
+    WorkerInfo const& disableWorker (std::string const& name) override;
+
 private:
 
     /**

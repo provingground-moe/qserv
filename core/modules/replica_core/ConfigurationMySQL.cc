@@ -21,6 +21,7 @@
  */
 
 // Class header
+#include "lsst/log/Log.h"
 #include "replica_core/ConfigurationMySQL.h"
 
 // System headers
@@ -30,6 +31,8 @@
 // Qserv headers
 
 namespace {
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.replica_core.ConfigurationMySQL");
 
 using namespace lsst::qserv::replica_core;
 
@@ -87,6 +90,40 @@ ConfigurationMySQL::~ConfigurationMySQL () {
 std::string
 ConfigurationMySQL::configUrl () const {
     return  _databaseTechnology + ":" + _connectionParams.toString();
+}
+
+WorkerInfo const&
+ConfigurationMySQL::disableWorker (std::string const& name) {
+
+    std::string const context = "ConfigurationMySQL::disableWorker  ";
+
+    LOGS(_log, LOG_LVL_ERROR, context << name);
+
+    WorkerInfo const& info = workerInfo(name);
+    if (info.isEnabled) {
+
+        database::mysql::Connection::pointer conn;
+        try {
+    
+            // First update the database
+            conn = database::mysql::Connection::open (_connectionParams);
+            conn->begin();
+            conn->executeSimpleUpdateQuery (
+                "config_worker",
+                conn->sqlEqual("name", name),
+                std::make_pair ("is_enabled",  0));
+            conn->commit();
+    
+            // Then update the transient state (note this change will be also be)
+            // seen via the above obtainer reference to the worker description.
+            _workerInfo[name].isEnabled = false;
+    
+        } catch (database::mysql::Error const& ex) {
+            LOGS(_log, LOG_LVL_ERROR, context << ex.what());
+            if (conn and conn->inTransaction()) conn->commit();
+        }
+    }
+    return info;
 }
 
 void

@@ -113,4 +113,12 @@ DatabaseServices::findReplicas (std::vector<ReplicaInfo>& replicas,
     return false;
 }
 
+bool
+DatabaseServices::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
+                                      std::string const&        worker) const {
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findWorkerReplicas "
+         << " worker: " << worker);
+
+    return false;
+}
 }}} // namespace lsst::qserv::replica_core

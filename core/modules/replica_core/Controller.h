@@ -211,6 +211,10 @@ public:
      * @param keepTracking     - keep tracking the request before it finishes or fails
      * @param allowDuplicate   - follow a previously made request if the current one duplicates it
      * @param jobId            - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                         - an optional parameter (if differs from 0)
+     *                           allowing to override the default value of the corresponding
+     *                           parameter from the Configuration.
      *
      * @return a pointer to the replication request
      */
@@ -222,7 +226,8 @@ public:
                                           int                              priority=0,
                                           bool                             keepTracking=true,
                                           bool                             allowDuplicate=true,
-                                          std::string const&               jobId="");
+                                          std::string const&               jobId="",
+                                          unsigned int                     requestExpirationIvalSec=0);
 
     /**
      * Initiate a new replica deletion request.
@@ -234,7 +239,11 @@ public:
      * @param priority       - a priority level of the request
      * @param keepTracking   - keep tracking the request before it finishes or fails
      * @param allowDuplicate - follow a previously made request if the current one duplicates it
-     * @param jobId            - an optional identifier of a job issed the request
+     * @param jobId          - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                       - an optional parameter (if differs from 0)
+     *                         allowing to override the default value of the corresponding
+     *                         parameter from the Configuration.
      *
      * @return a pointer to the replication request
      */
@@ -245,7 +254,8 @@ public:
                                          int                         priority=0,
                                          bool                        keepTracking=true,
                                          bool                        allowDuplicate=true,
-                                         std::string const&          jobId="");
+                                         std::string const&          jobId="",
+                                         unsigned int                requestExpirationIvalSec=0);
 
     /**
      * Initiate a new replica lookup request.
@@ -263,6 +273,10 @@ public:
      * @param computeCheckSum - tell a worker server to compute check/control sum on each file
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                         - an optional parameter (if differs from 0)
+     *                           allowing to override the default value of the corresponding
+     *                           parameter from the Configuration.
      *
      * @return a pointer to the replication request
      */
@@ -273,7 +287,8 @@ public:
                                      int                       priority=0,
                                      bool                      computeCheckSum=false,
                                      bool                      keepTracking=true,
-                                     std::string const&        jobId="");
+                                     std::string const&        jobId="",
+                                     unsigned int              requestExpirationIvalSec=0);
 
     /**
      * Initiate a new replicas lookup request.
@@ -284,6 +299,10 @@ public:
      * @param priority        - a priority level of the request
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the replication request
      */
@@ -293,7 +312,8 @@ public:
                                         FindAllRequest_callback_type onFinish=nullptr,
                                         int                          priority=0,
                                         bool                         keepTracking=true,
-                                        std::string const&           jobId="");
+                                        std::string const&           jobId="",
+                                        unsigned int                 requestExpirationIvalSec=0);
 
     /**
      * Stop an outstanding replication request.
@@ -303,6 +323,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the stop request
      */
@@ -311,7 +335,8 @@ public:
                                         std::string const&                   targetRequestId,
                                         StopReplicationRequest_callback_type onFinish=nullptr,
                                         bool                                 keepTracking=true,
-                                        std::string const&                   jobId="");
+                                        std::string const&                   jobId="",
+                                        unsigned int                         requestExpirationIvalSec=0);
 
     /**
      * Stop an outstanding replica deletion request.
@@ -321,6 +346,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the stop request
      */
@@ -329,7 +358,8 @@ public:
                                         std::string const&              targetRequestId,
                                         StopDeleteRequest_callback_type onFinish=nullptr,
                                         bool                            keepTracking=true,
-                                        std::string const&              jobId="");
+                                        std::string const&              jobId="",
+                                        unsigned int                    requestExpirationIvalSec=0);
 
     /**
      * Stop an outstanding replica lookup request.
@@ -339,6 +369,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the stop request
      */
@@ -347,7 +381,8 @@ public:
                                         std::string const&            targetRequestId,
                                         StopFindRequest_callback_type onFinish=nullptr,
                                         bool                          keepTracking=true,
-                                        std::string const&            jobId="");
+                                        std::string const&            jobId="",
+                                        unsigned int                  requestExpirationIvalSec=0);
 
     /**
      * Stop an outstanding replicas lookup request.
@@ -357,6 +392,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the stop request
      */
@@ -365,7 +404,8 @@ public:
                                         std::string const&               targetRequestId,
                                         StopFindAllRequest_callback_type onFinish=nullptr,
                                         bool                             keepTracking=true,
-                                        std::string const&               jobId="");
+                                        std::string const&               jobId="",
+                                        unsigned int                     requestExpirationIvalSec=0);
 
     /**
      * Check the on-going status of an outstanding replication request.
@@ -375,6 +415,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the status inquery request
      */
@@ -383,7 +427,8 @@ public:
                                         std::string const&                     targetRequestId,
                                         StatusReplicationRequest_callback_type onFinish=nullptr,
                                         bool                                   keepTracking=false,
-                                        std::string const&                     jobId="");
+                                        std::string const&                     jobId="",
+                                        unsigned int                           requestExpirationIvalSec=0);
  
     /**
      * Check the on-going status of an outstanding replica deletion request.
@@ -393,6 +438,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the status inquery request
      */
@@ -401,7 +450,8 @@ public:
                                         std::string const&                targetRequestId,
                                         StatusDeleteRequest_callback_type onFinish=nullptr,
                                         bool                              keepTracking=false,
-                                        std::string const&                jobId="");
+                                        std::string const&                jobId="",
+                                        unsigned int                      requestExpirationIvalSec=0);
 
     /**
      * Check the on-going status of an outstanding replica lookup request.
@@ -411,6 +461,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the status inquery request
      */
@@ -419,7 +473,8 @@ public:
                                         std::string const&              targetRequestId,
                                         StatusFindRequest_callback_type onFinish=nullptr,
                                         bool                            keepTracking=false,
-                                        std::string const&              jobId="");
+                                        std::string const&              jobId="",
+                                        unsigned int                    requestExpirationIvalSec=0);
 
     /**
      * Check the on-going status of an outstanding (multiple) replicas lookup request.
@@ -429,6 +484,10 @@ public:
      * @param onFinish        - a callback function to be called upon completion of the operation
      * @param keepTracking    - keep tracking the request before it finishes or fails
      * @param jobId           - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                        - an optional parameter (if differs from 0)
+     *                          allowing to override the default value of the corresponding
+     *                          parameter from the Configuration.
      *
      * @return a pointer to the status inquery request
      */
@@ -437,21 +496,27 @@ public:
                                         std::string const&                 targetRequestId,
                                         StatusFindAllRequest_callback_type onFinish=nullptr,
                                         bool                               keepTracking=false,
-                                        std::string const&                 jobId="");
+                                        std::string const&                 jobId="",
+                                        unsigned int                       requestExpirationIvalSec=0);
 
     /**
      * Tell the worker-side service to temporarily suspend processing requests
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
-     * @param jobId           - an optional identifier of a job issed the request
+     * @param jobId      - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                   - an optional parameter (if differs from 0)
+     *                     allowing to override the default value of the corresponding
+     *                     parameter from the Configuration.
      *
      * @return a pointer to the request
      */
     ServiceSuspendRequest_pointer suspendWorkerService (
                                         std::string const&                  workerName,
                                         ServiceSuspendRequest_callback_type onFinish=nullptr,
-                                        std::string const&                  jobId="");
+                                        std::string const&                  jobId="",
+                                        unsigned int                        requestExpirationIvalSec=0);
 
     /**
      * Tell the worker-side service to resume processing requests
@@ -459,26 +524,36 @@ public:
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
      * @param jobId      - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                   - an optional parameter (if differs from 0)
+     *                     allowing to override the default value of the corresponding
+     *                     parameter from the Configuration.
      *
      * @return a pointer to the request
      */
     ServiceResumeRequest_pointer resumeWorkerService (
                                         std::string const&                 workerName,
                                         ServiceResumeRequest_callback_type onFinish=nullptr,
-                                        std::string const&                 jobId="");
+                                        std::string const&                 jobId="",
+                                        unsigned int                       requestExpirationIvalSec=0);
     /**
      * Request the current status of the worker-side service
      *
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
      * @param jobId      - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                   - an optional parameter (if differs from 0)
+     *                     allowing to override the default value of the corresponding
+     *                     parameter from the Configuration.
      *
      * @return a pointer to the request
      */
     ServiceStatusRequest_pointer statusOfWorkerService (
                                         std::string const&                 workerName,
                                         ServiceStatusRequest_callback_type onFinish=nullptr,
-                                        std::string const&                 jobId="");
+                                        std::string const&                 jobId="",
+                                        unsigned int                       requestExpirationIvalSec=0);
                                                          
     /**
      * Request detailed info on which replication-related requests are known
@@ -487,13 +562,18 @@ public:
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
      * @param jobId      - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                   - an optional parameter (if differs from 0)
+     *                     allowing to override the default value of the corresponding
+     *                     parameter from the Configuration.
      *
      * @return a pointer to the request
      */
     ServiceRequestsRequest_pointer requestsOfWorkerService (
                                         std::string const&                   workerName,
                                         ServiceRequestsRequest_callback_type onFinish=nullptr,
-                                        std::string const&                   jobId="");
+                                        std::string const&                   jobId="",
+                                        unsigned int                         requestExpirationIvalSec=0);
 
     /**
      * Cancel all queue or being processed replica-related requsts known
@@ -502,13 +582,18 @@ public:
      * @param workerName - the name of a worker node where the service runs
      * @param onFinish   - a callback function to be called upon completion of the operation
      * @param jobId      - an optional identifier of a job issed the request
+     * @param requestExpirationIvalSec
+     *                   - an optional parameter (if differs from 0)
+     *                     allowing to override the default value of the corresponding
+     *                     parameter from the Configuration.
      *
      * @return a pointer to the request
      */
     ServiceDrainRequest_pointer drainWorkerService (
                                         std::string const&                workerName,
                                         ServiceDrainRequest_callback_type onFinish=nullptr,
-                                        std::string const&                jobId="");
+                                        std::string const&                jobId="",
+                                        unsigned int                      requestExpirationIvalSec=0);
                                                          
     /**
      * Return requests of a specific type

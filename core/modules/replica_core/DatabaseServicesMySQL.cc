@@ -731,6 +731,30 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
 }
 
 bool
+DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
+                                           std::string const&        worker) const {
+    std::string const context = 
+         "DatabaseServicesMySQL::findWorkerReplicas  worker: " + worker + "  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context);
+
+    LOCK_GUARD;
+
+    if (not _configuration->isKnownWorker(worker))
+        throw std::invalid_argument (context + "unknow worker");
+
+    if (not findReplicas (
+                replicas,
+                "SELECT * FROM " + _conn->sqlId    ("replica") +
+                "  WHERE " +       _conn->sqlEqual ("worker", worker))) {
+
+        LOGS(_log, LOG_LVL_ERROR, context << "failed to find replicas");
+        return false;
+    }
+    return true;
+}
+
+bool
 DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
                                      std::string const&        query) const {
 
