@@ -316,6 +316,17 @@ public:
      */
     virtual WorkerInfo const& disableWorker (std::string const& name)=0;
 
+    
+    /**
+     * Completelly remove the specified worker from the Configuration.
+     * 
+     * @param name - the name of a worker
+     *
+     * @throw std::invalid_argument - if the specified worker was not found in
+     *                                the configuration.
+     */
+    virtual void deleteWorker (std::string const& name)=0;
+
     /// Return the name of the default technology for implementing requests
     std::string const& workerTechnology () const { return _workerTechnology; }
 

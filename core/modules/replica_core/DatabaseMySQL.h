@@ -722,7 +722,7 @@ public:
      *
      * ATTENTION: the method will *NOT* start a transaction, neither it will
      * commit the one in the end. Transaction management is a responsibility
-     * of a caller of teh method.
+     * of a caller of the method.
      *
      * @see Connection::sqlSimpleUpdateQuery()
      *

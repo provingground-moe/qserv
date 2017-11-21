@@ -90,6 +90,13 @@ public:
      */
     WorkerInfo const& disableWorker (std::string const& name) override;
 
+    /**
+     * Implements the method defined in the base class
+     *
+     * @see Configuration::deleteWorker ()
+     */
+    void deleteWorker (std::string const& name) override;
+
 private:
 
     /**

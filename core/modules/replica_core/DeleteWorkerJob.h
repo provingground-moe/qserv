@@ -119,23 +119,26 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param worker      - the name of a worker to be deleted
-     * @param controller  - for launching requests
-     * @param onFinish    - a callback function to be called upon a completion of the job
-     * @param bestEffort  - the flag (if set) allowing to proceed with the replication effort
-     *                      when some workers fail to report their cunk disposition.
-     *                      ATTENTION: do *NOT* use this in production!
-     * @param priority    - set the desired job priority (larger values
-     *                      mean higher priorities). A job with the highest
-     *                      priority will be select from an input queue by
-     *                      the JobScheduler.
-     * @param exclusive   - set to 'true' to indicate that the job can't be
-     *                      running simultaneously alongside other jobs.
-     * @param preemptable - set to 'true' to indicate that this job can be
-     *                      interrupted to give a way to some other job of
-     *                      high importancy.
+     * @param worker          - the name of a worker to be deleted
+     * @param permanentDelete - if set to 'true' the worker record will be completelly wiped out
+     *                          from the configuration
+     * @param controller      - for launching requests
+     * @param onFinish        - a callback function to be called upon a completion of the job
+     * @param bestEffort      - the flag (if set) allowing to proceed with the replication effort
+     *                          when some workers fail to report their cunk disposition.
+     *                          ATTENTION: do *NOT* use this in production!
+     * @param priority        - set the desired job priority (larger values
+     *                          mean higher priorities). A job with the highest
+     *                          priority will be select from an input queue by
+     *                          the JobScheduler.
+     * @param exclusive       - set to 'true' to indicate that the job can't be
+     *                          running simultaneously alongside other jobs.
+     * @param preemptable     - set to 'true' to indicate that this job can be
+     *                          interrupted to give a way to some other job of
+     *                          high importancy.
      */
     static pointer create (std::string const&         worker,
+                           bool                       permanentDelete,
                            Controller::pointer const& controller,
                            callback_type              onFinish,
                            bool                       bestEffort  = false,
@@ -154,6 +157,9 @@ public:
 
     /// Return the name of a worker to be deleted
     std::string const& worker () const { return _worker; }
+
+    /// Return 'true' i fthis is teh permanent delete
+    bool permanentDelete () const { return _permanentDelete; }
 
     /**
      * Return the result of the operation.
@@ -192,6 +198,7 @@ protected:
      * @see DeleteWorkerJob::create()
      */
     DeleteWorkerJob (std::string const&         worker,
+                     bool                       permanentDelete,
                      Controller::pointer const& controller,
                      callback_type              onFinish,
                      bool                       bestEffort,
@@ -252,6 +259,9 @@ protected:
 
     /// The name of a worker to be disabled
     std::string _worker;
+
+    /// Permamently remove from the configuration if set
+    bool _permanentDelete;
 
     /// Client-defined function to be called upon the completion of the job
     callback_type _onFinish;

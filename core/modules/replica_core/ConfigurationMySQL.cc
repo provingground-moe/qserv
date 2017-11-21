@@ -99,6 +99,7 @@ ConfigurationMySQL::disableWorker (std::string const& name) {
 
     LOGS(_log, LOG_LVL_DEBUG, context << name);
 
+    // This will also throw an exception if the worker is unknown
     WorkerInfo const& info = workerInfo(name);
     if (info.isEnabled) {
 
@@ -124,6 +125,34 @@ ConfigurationMySQL::disableWorker (std::string const& name) {
         }
     }
     return info;
+}
+
+void
+ConfigurationMySQL::deleteWorker (std::string const& name) {
+
+    std::string const context = "ConfigurationMySQL::deleteWorker  ";
+
+    LOGS(_log, LOG_LVL_DEBUG, context << name);
+
+    // This will also throw an exception if the worker is unknown
+    WorkerInfo const& info = workerInfo(name);
+
+    database::mysql::Connection::pointer conn;
+    try {
+
+        // First update the database
+        conn = database::mysql::Connection::open (_connectionParams);
+        conn->begin();
+        conn->execute ("DELETE FROM config_worker WHERE " + conn->sqlEqual("name", name));
+        conn->commit();
+
+        // Then update the transient state 
+        _workerInfo.erase(name);
+
+    } catch (database::mysql::Error const& ex) {
+        LOGS(_log, LOG_LVL_ERROR, context << ex.what());
+        if (conn and conn->inTransaction()) conn->commit();
+    }
 }
 
 void

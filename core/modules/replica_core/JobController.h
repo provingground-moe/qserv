@@ -54,6 +54,7 @@ namespace replica_core {
 
 // Forward declarations
 
+class DeleteWorkerJob;
 class FindAllJob;
 class FixUpJob;
 class PurgeJob;
@@ -99,17 +100,19 @@ public:
 
     // Forward declarations for class-specific pointers
 
-    typedef std::shared_ptr<FindAllJob>   FindAllJob_pointer;
-    typedef std::shared_ptr<PurgeJob>     PurgeJob_pointer;
-    typedef std::shared_ptr<ReplicateJob> ReplicateJob_pointer;
-    typedef std::shared_ptr<FixUpJob>     FixUpJob_pointer;
-    typedef std::shared_ptr<VerifyJob>    VerifyJob_pointer;
+    typedef std::shared_ptr<FindAllJob>      FindAllJob_pointer;
+    typedef std::shared_ptr<PurgeJob>        PurgeJob_pointer;
+    typedef std::shared_ptr<ReplicateJob>    ReplicateJob_pointer;
+    typedef std::shared_ptr<FixUpJob>        FixUpJob_pointer;
+    typedef std::shared_ptr<VerifyJob>       VerifyJob_pointer;
+    typedef std::shared_ptr<DeleteWorkerJob> DeleteWorkerJob_pointer;
 
-    typedef std::function<void(FindAllJob_pointer)>   FindAllJob_callback_type;
-    typedef std::function<void(PurgeJob_pointer)>     PurgeJob_callback_type;
-    typedef std::function<void(ReplicateJob_pointer)> ReplicateJob_callback_type;
-    typedef std::function<void(FixUpJob_pointer)>     FixUpJob_callback_type;
-    typedef std::function<void(VerifyJob_pointer)>    VerifyJob_callback_type;
+    typedef std::function<void(FindAllJob_pointer)>      FindAllJob_callback_type;
+    typedef std::function<void(PurgeJob_pointer)>        PurgeJob_callback_type;
+    typedef std::function<void(ReplicateJob_pointer)>    ReplicateJob_callback_type;
+    typedef std::function<void(FixUpJob_pointer)>        FixUpJob_callback_type;
+    typedef std::function<void(VerifyJob_pointer)>       VerifyJob_callback_type;
+    typedef std::function<void(DeleteWorkerJob_pointer)> DeleteWorkerJob_callback_type;
 
     typedef std::function<void(VerifyJob_pointer,
                                ReplicaDiff const&,
@@ -322,6 +325,31 @@ public:
                               int                             priority            = -2,
                               bool                            exclusive           = false,
                               bool                            preemptable         = true);
+
+    /**
+     * Submit a job for disabling or permanently deleting (depends on the corresponding
+     * option) a worker from teh replication setup.
+     * 
+     * @param worker         - the name of a worker
+     * @param permanentDelete - if set to 'true' the worker record will be completelly wiped out
+     *                          from the configuration
+     * @param onFinish       - a callback function to be called upon a completion of the job
+     * @param priority       - set the desired job priority (larger values
+     *                         mean higher priorities). A job with the highest
+     *                         priority will be select from an input queue by
+     *                         the JobController.
+     * @param exclusive      - set to 'true' to indicate that the job can't be
+     *                         running simultaneously alongside other jobs.
+     * @param preemptable    - set to 'true' to indicate that this job can be
+     *                         interrupted to give a way to some other job of
+     *                         high importancy.
+     */
+    DeleteWorkerJob_pointer deleteWorker (std::string const&            worker,
+                                          bool                          permanentDelete,
+                                          DeleteWorkerJob_callback_type onFinish    = nullptr,
+                                          int                           priority    = 2,
+                                          bool                          exclusive   = true,
+                                          bool                          preemptable = false);
 
     // TODO: add job inspection methods
 
