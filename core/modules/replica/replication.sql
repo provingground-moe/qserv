@@ -161,8 +161,7 @@ CREATE TABLE IF NOT EXISTS `job_delete_worker` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
-  `worker`        VARCHAR(255) NOT NULL ,
-  `num_replicas`  INT          NOT NULL ,
+  `worker`  VARCHAR(255) NOT NULL ,
 
   CONSTRAINT `job_delete_worker_fk_1`
     FOREIGN KEY (`job_id` )

@@ -61,18 +61,18 @@ namespace replica_core {
 struct DeleteWorkerJobResult {
 
     /// New replicas created upon the successfull completion
-    /// of the corresponidng requests. Results groupped by:
-    /// chunk number, database, worker
-    std::map<unsigned int,                  // chunk
-             std::map<std::string,          // database
-                      std::map<std::string, // worker
-                               ReplicaInfo>>> chunks;
+    /// of the corresponidng requests
+    std::map<std::string,               // database family
+        std::map<unsigned int,          // chunk
+            std::map<std::string,       // database
+                std::map<std::string,   // worker
+                    ReplicaInfo>>>> chunks;
 
     /// Replicas which only existed on the deleted worker node and which
-    /// couldn't be redistributed. Results groupped by: chunk number, database
-    std::map<unsigned int,                  // chunk
-             std::map<std::string,          // database
-                      ReplicaInfo>> orphanChunks;
+    /// couldn't be redistributed
+    std::map<unsigned int,              // chunk
+        std::map<std::string,           // database
+            ReplicaInfo>> orphanChunks;
 };
 
 /**

@@ -37,6 +37,7 @@
 #include "replica_core/Configuration.h"
 #include "replica_core/Controller.h"
 #include "replica_core/DeleteRequest.h"
+#include "replica_core/DeleteWorkerJob.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FixUpJob.h"
@@ -342,7 +343,11 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
             throw std::invalid_argument (context + "not implemented for job type name:" + job->type());
 
         } else if ("DELETE_WORKER" == job->type()) {
-            throw std::invalid_argument (context + "not implemented for job type name:" + job->type());
+            auto ptr = safeAssign<DeleteWorkerJob>(job);
+            _conn->executeInsertQuery (
+                "job_delete_worker",
+                ptr->id(),
+                ptr->worker());
 
         } else if ("ADD_WORKER" == job->type()) {
             throw std::invalid_argument (context + "not implemented for job type name:" + job->type());
