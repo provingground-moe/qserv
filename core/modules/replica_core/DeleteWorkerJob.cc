@@ -62,9 +62,9 @@ using namespace lsst::qserv::replica_core;
  */
 template <class T>
 std::tuple<size_t,size_t,size_t> counters (std::list<typename T::pointer> const& collection) {
-    size_t total;
-    size_t finished;
-    size_t success;
+    size_t total    = 0;
+    size_t finished = 0;
+    size_t success  = 0;
     for (auto const& ptr: collection) {
         total++;
         if (ptr->state() == T::State::FINISHED) {
@@ -102,7 +102,7 @@ track (std::list<typename T::pointer> const& collection,
         size_t const success  = std::get<1>(t);
             
         if (progressReport)
-            os  << "DeleteWorkerJob::track()  " << scope
+            os  << "DeleteWorkerJob::track()  " << scope << "  "
                 << "launched: " << launched << ", "
                 << "finished: " << finished << ", "
                 << "success: "  << success
@@ -146,7 +146,7 @@ DeleteWorkerJob::DeleteWorkerJob (std::string const&         worker,
                                   bool                       preemptable)
 
     :   Job (controller,
-             "PURGE",
+             "DELETE_WORKER",
              priority,
              exclusive,
              preemptable),
@@ -195,6 +195,14 @@ DeleteWorkerJob::track (bool          progressReport,
     }
     ::track<FindAllJob>   (_findAllJobs,   "_findAllJobs",   progressReport, os);
     ::track<ReplicateJob> (_replicateJobs, "_replicateJobs", progressReport, os);
+
+    // The last step is needed to le the job to finalize its state after
+    // finishing all activities.
+    BlockPost blockPost (1000, 2000);
+    while (state() != State::FINISHED) {
+        LOGS(_log, LOG_LVL_DEBUG, context() << "track");
+        blockPost.wait();
+    }
 }
 
 void
@@ -323,15 +331,16 @@ DeleteWorkerJob::onRequestFinish (FindAllRequest::pointer request) {
         // to allow client notifications (see the end of the method)
         LOCK_GUARD;
 
+        _numFinished++;
+
         // Ignore the callback if the job was cancelled   
         if (_state == State::FINISHED) {
             return;
-        }
-    
-        _numFinished++;
+        }    
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             _numSuccess++;
         }
+
     } while (false);
 
     // Evaluate the status of on-going operations to see if the job
@@ -388,6 +397,8 @@ DeleteWorkerJob::onJobFinish (FindAllJob::pointer job) {
         // to allow client notifications (see the end of the method)
         LOCK_GUARD;
 
+        _numFinished++;
+
         // Ignore the callback if the job was cancelled (or otherwise failed)
         if (_state == State::FINISHED) return;
     
@@ -398,12 +409,9 @@ DeleteWorkerJob::onJobFinish (FindAllJob::pointer job) {
             setState(State::FINISHED, ExtendedState::FAILED);
             break;
         }
-    
-        _numFinished++;
         if (job->extendedState() == ExtendedState::SUCCESS) {
             _numSuccess++;
-        }
-        
+        }        
         if (_numFinished == _numLaunched) {
     
             // Launch chained jobs to ensure the minimal replication level
@@ -445,45 +453,35 @@ DeleteWorkerJob::onJobFinish (ReplicateJob::pointer job) {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "onJobFinish(ReplicateJob) "
          << " databaseFamily: " << job->databaseFamily()
-         << " numReplicas: " << job->numReplicas());
+         << " numReplicas: " << job->numReplicas()
+         << " state: " << Job::state2string(job->state(), job->extendedState()));
 
     do {
         // This lock will be automatically release beyond this scope
         // to allow client notifications (see the end of the method)
         LOCK_GUARD;
 
+        _numFinished++;
+
         // Ignore the callback if the job was cancelled (or otherwise failed)
         if (_state == State::FINISHED) return;
-    
+
         // Do not proceed with the rest unless running the jobs
         // under relaxed condition.
     
-        if (!_bestEffort && (job->extendedState() != Job::ExtendedState::SUCCESS)) {
+        if (!_bestEffort && (job->extendedState() != ExtendedState::SUCCESS)) {
             setState(State::FINISHED, ExtendedState::FAILED);
             break;
         }
     
-        _numFinished++;
-
         if (job->extendedState() == ExtendedState::SUCCESS) {
             _numSuccess++;
-            
+
+            LOGS(_log, LOG_LVL_DEBUG, context() << "onJobFinish(ReplicateJob)  "
+                 << "job->getReplicaData().chunks.size(): " << job->getReplicaData().chunks.size());
+
             // Merge results into the current job's result object
-
-            for (auto const& chunkEntry: getReplicaData().chunks) {
-                unsigned int chunk = chunkEntry.first;
-
-                for (auto const& databaseEntry: chunkEntry.second) {
-                    std::string const& database = databaseEntry.first;
-
-                    for (auto const& workerEntry: databaseEntry.second) {
-                        std::string const& worker = workerEntry.first;
-                        ReplicaInfo const& info   = workerEntry.second;
-
-                        _replicaData.chunks[chunk][database][worker] = info;
-                    }
-                }
-            }
+            _replicaData.chunks[job->databaseFamily()] = job->getReplicaData().chunks;
         }    
         if (_numFinished == _numLaunched) {
 
@@ -495,10 +493,14 @@ DeleteWorkerJob::onJobFinish (ReplicateJob::pointer job) {
                     unsigned int const chunk    = replica.chunk();
                     std::string const& database = replica.database();
 
-                    if (not _replicaData.chunks.count(chunk) or
-                        not _replicaData.chunks[chunk].count(database)) {
-                        _replicaData.orphanChunks[chunk][database] = replica;
+                    bool replicated = false;
+                    for (auto const& databaseFamilyEntry: _replicaData.chunks) {
+                        auto const& chunks = databaseFamilyEntry.second;
+                        replicated = replicated or
+                            (chunks.count(chunk) and chunks.at(chunk).count(database));
                     }
+                    if (not replicated)
+                        _replicaData.orphanChunks[chunk][database] = replica;
                 }
             }
             
@@ -510,9 +512,9 @@ DeleteWorkerJob::onJobFinish (ReplicateJob::pointer job) {
             // through.
             ;
 
+            setState(State::FINISHED, ExtendedState::SUCCESS);
+            break;
         }
-        setState(State::FINISHED, ExtendedState::SUCCESS);
-        break;
 
     } while (false);
     

@@ -97,7 +97,7 @@ ConfigurationMySQL::disableWorker (std::string const& name) {
 
     std::string const context = "ConfigurationMySQL::disableWorker  ";
 
-    LOGS(_log, LOG_LVL_ERROR, context << name);
+    LOGS(_log, LOG_LVL_DEBUG, context << name);
 
     WorkerInfo const& info = workerInfo(name);
     if (info.isEnabled) {
