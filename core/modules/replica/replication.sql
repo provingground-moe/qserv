@@ -2,6 +2,160 @@ SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 ;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 ;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL' ;
 
+-- --------------------------------------------------------------
+-- Table `config`
+-- --------------------------------------------------------------
+--
+-- The common parameters and defaults shared by all components
+-- of the replication system. It also provides default values
+-- for some critical parameters of the worker-side services.
+
+DROP TABLE IF EXISTS `config` ;
+
+CREATE TABLE IF NOT EXISTS `config` (
+
+  `category` VARCHAR(255) NOT NULL ,
+  `param`    VARCHAR(255) NOT NULL ,
+  `value`    VARCHAR(255) NOT NULL ,
+
+  UNIQUE  KEY (`category`,`param`)
+)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `config_worker`
+-- -----------------------------------------------------
+--
+-- Worker-specific configuration parameters and overrides
+-- of the corresponidng default values if needed
+
+DROP TABLE IF EXISTS `config_worker` ;
+
+CREATE TABLE IF NOT EXISTS `config_worker` (
+
+  `name`         VARCHAR(255)       NOT NULL ,      -- the name of the worker
+
+  `is_enabled`   BOOLEAN            NOT NULL ,      -- is enabled for replication
+  `is_read_only` BOOLEAN            NOT NULL ,      -- a subclass of 'is_enabled' which restricts use of
+                                                    -- the worker for reading replicas. No new replicas can't be
+                                                    -- placed onto this class of workers.
+
+  `svc_host`     VARCHAR(255)       NOT NULL ,      -- the host name on which the worker server runs
+  `svc_port`     SMALLINT UNSIGNED  DEFAULT NULL ,  -- override for the global default
+
+  `fs_host`      VARCHAR(255)       NOT NULL ,      -- the host name on which the built-in FileServer runs
+  `fs_port`      SMALLINT UNSIGNED  DEFAULT NULL ,  -- override for the global default
+
+  `data_dir`     VARCHAR(255)       DEFAULT NULL ,  -- a file system path to the databases
+
+  PRIMARY KEY (`name`) ,
+
+  UNIQUE  KEY (`svc_host`, `svc_port`) ,
+  UNIQUE  KEY (`fs_host`,  `fs_port`)
+)
+ENGINE = InnoDB;
+
+
+-- --------------------------------------------------------------
+-- Table `config_worker_ext`
+-- --------------------------------------------------------------
+--
+-- The additional parameters overriding the defaults for individual
+-- worker services.
+
+DROP TABLE IF EXISTS `config_worker_ext` ;
+
+CREATE TABLE IF NOT EXISTS `config_worker_ext` (
+
+  `worker_name`  VARCHAR(255) NOT NULL ,
+  `param`        VARCHAR(255) NOT NULL ,
+  `value`        VARCHAR(255) NOT NULL ,
+
+  UNIQUE  KEY (`worker_name`, `param`, `value`) ,
+
+  CONSTRAINT `config_worker_ext_fk_1`
+    FOREIGN KEY (`worker_name` )
+    REFERENCES `config_worker` (`name` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `config_database_family`
+-- -----------------------------------------------------
+--
+-- Groups of databases which require coordinated replication
+-- efforts (the number of replicas, chunk collocation)
+--
+-- NOTE: chunk collocation is implicitly determined
+--       by database membership within a family
+
+DROP TABLE IF EXISTS `config_database_family` ;
+
+CREATE TABLE IF NOT EXISTS `config_database_family` (
+
+  `name`                   VARCHAR(255)  NOT NULL ,
+  `min_replication_level`  INT UNSIGNED  NOT NULL ,    -- minimum number of replicas per chunk
+
+  UNIQUE  KEY (`name`)
+)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `config_database`
+-- -----------------------------------------------------
+--
+-- Databases which are managd by the replication system
+--
+-- NOTE: Each database belongs to exctly one family, even
+--       if that family has the only members (that database).
+
+DROP TABLE IF EXISTS `config_database` ;
+
+CREATE TABLE IF NOT EXISTS `config_database` (
+
+  `database`     VARCHAR(255)  NOT NULL ,
+  `family_name`  VARCHAR(255)  NOT NULL ,
+
+  -- Each database is allowed to belong to one family only
+  --
+  UNIQUE  KEY (`database`) ,
+
+  CONSTRAINT `config_database_fk_1`
+    FOREIGN KEY (`family_name` )
+    REFERENCES `config_database_family` (`name` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+)
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `config_database_table`
+-- -----------------------------------------------------
+--
+-- Database tables
+
+DROP TABLE IF EXISTS `config_database_table` ;
+
+CREATE TABLE IF NOT EXISTS `config_database_table` (
+
+  `database`  VARCHAR(255)  NOT NULL ,
+  `table`     VARCHAR(255)  NOT NULL ,
+
+  `is_partitioned` BOOLEAN NOT NULL ,
+
+  UNIQUE  KEY (`database`, `table`) ,
+
+  CONSTRAINT `config_database_table_fk_1`
+    FOREIGN KEY (`database` )
+    REFERENCES `config_database` (`database` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+)
+ENGINE = InnoDB;
+
 
 -- -----------------------------------------------------
 -- Table `controller`
@@ -161,7 +315,8 @@ CREATE TABLE IF NOT EXISTS `job_delete_worker` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
-  `worker`  VARCHAR(255) NOT NULL ,
+  `worker`    VARCHAR(255) NOT NULL ,
+  `permanent` BOOLEAN      NOT NULL , 
 
   CONSTRAINT `job_delete_worker_fk_1`
     FOREIGN KEY (`job_id` )
@@ -184,8 +339,7 @@ CREATE TABLE IF NOT EXISTS `job_add_worker` (
 
   `job_id`  VARCHAR(255) NOT NULL ,
 
-  `worker`        VARCHAR(255) NOT NULL ,
-  `num_replicas`  INT NOT NULL ,
+  `worker` VARCHAR(255) NOT NULL ,
 
   CONSTRAINT `job_add_worker_fk_1`
     FOREIGN KEY (`job_id` )
@@ -287,6 +441,12 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `replica`
 -- -----------------------------------------------------
+--
+-- ATTENTION: replicas have dependencies onto worker and database
+--            entries of the Configuration. Removing workers or
+--            databases from the correspondig configuration tables
+--            will also eliminate replicas.
+--
 DROP TABLE IF EXISTS `replica` ;
 
 CREATE TABLE IF NOT EXISTS `replica` (
@@ -300,7 +460,20 @@ CREATE TABLE IF NOT EXISTS `replica` (
   `verify_time` BIGINT UNSIGNED NOT NULL ,
 
   PRIMARY KEY           (`id`) ,
-  UNIQUE  KEY `replica` (`worker`,`database`,`chunk`)
+  UNIQUE  KEY `replica` (`worker`,`database`,`chunk`) ,
+
+
+  CONSTRAINT `replica_fk_1`
+    FOREIGN KEY (`worker` )
+    REFERENCES `config_worker` (`name` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE ,
+
+  CONSTRAINT `replica_fk_2`
+    FOREIGN KEY (`database` )
+    REFERENCES `config_database` (`database` )
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
 )
 ENGINE = InnoDB;
 
@@ -327,160 +500,6 @@ CREATE TABLE IF NOT EXISTS `replica_file` (
   CONSTRAINT `replica_file_fk_1`
     FOREIGN KEY (`replica_id` )
     REFERENCES `replica` (`id` )
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-)
-ENGINE = InnoDB;
-
--- --------------------------------------------------------------
--- Table `config`
--- --------------------------------------------------------------
---
--- The common parameters and defaults shared by all components
--- of the replication system. It also provides default values
--- for some critical parameters of the worker-side services.
-
-DROP TABLE IF EXISTS `config` ;
-
-CREATE TABLE IF NOT EXISTS `config` (
-
-  `category` VARCHAR(255) NOT NULL ,
-  `param`    VARCHAR(255) NOT NULL ,
-  `value`    VARCHAR(255) NOT NULL ,
-
-  UNIQUE  KEY (`category`,`param`)
-)
-ENGINE = InnoDB;
-
--- -----------------------------------------------------
--- Table `config_worker`
--- -----------------------------------------------------
---
--- Worker-specific configuration parameters and overrides
--- of the corresponidng default values if needed
-
-DROP TABLE IF EXISTS `config_worker` ;
-
-CREATE TABLE IF NOT EXISTS `config_worker` (
-
-  `name`         VARCHAR(255)       NOT NULL ,      -- the name of the worker
-
-  `is_enabled`   BOOLEAN            NOT NULL ,      -- is enabled for replication
-  `is_read_only` BOOLEAN            NOT NULL ,      -- a subclass of 'is_enabled' which restricts use of
-                                                    -- the worker for reading replicas. No new replicas can't be
-                                                    -- placed onto this class of workers.
-
-  `svc_host`     VARCHAR(255)       NOT NULL ,      -- the host name on which the worker server runs
-  `svc_port`     SMALLINT UNSIGNED  DEFAULT NULL ,  -- override for the global default
-
-  `fs_host`      VARCHAR(255)       NOT NULL ,      -- the host name on which the built-in FileServer runs
-  `fs_port`      SMALLINT UNSIGNED  DEFAULT NULL ,  -- override for the global default
-
-  `data_dir`     VARCHAR(255)       DEFAULT NULL ,  -- a file system path to the databases
-
-  PRIMARY KEY (`name`) ,
-
-  UNIQUE  KEY (`svc_host`, `svc_port`) ,
-  UNIQUE  KEY (`fs_host`,  `fs_port`)
-)
-ENGINE = InnoDB;
-
-
--- --------------------------------------------------------------
--- Table `config_worker_ext`
--- --------------------------------------------------------------
---
--- The additional parameters overriding the defaults for individual
--- worker services.
-
-DROP TABLE IF EXISTS `config_worker_ext` ;
-
-CREATE TABLE IF NOT EXISTS `config_worker_ext` (
-
-  `worker_name`  VARCHAR(255) NOT NULL ,
-  `param`        VARCHAR(255) NOT NULL ,
-  `value`        VARCHAR(255) NOT NULL ,
-
-  UNIQUE  KEY (`worker_name`, `param`, `value`) ,
-
-  CONSTRAINT `config_worker_ext_fk_1`
-    FOREIGN KEY (`worker_name` )
-    REFERENCES `config_worker` (`name` )
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-)
-ENGINE = InnoDB;
-
-
--- -----------------------------------------------------
--- Table `config_database_family`
--- -----------------------------------------------------
---
--- Groups of databases which require coordinated replication
--- efforts (the number of replicas, chunk collocation)
---
--- NOTE: chunk collocation is implicitly determined
---       by database membership within a family
-
-DROP TABLE IF EXISTS `config_database_family` ;
-
-CREATE TABLE IF NOT EXISTS `config_database_family` (
-
-  `name`                   VARCHAR(255)  NOT NULL ,
-  `min_replication_level`  INT UNSIGNED  NOT NULL ,    -- minimum number of replicas per chunk
-
-  UNIQUE  KEY (`name`)
-)
-ENGINE = InnoDB;
-
--- -----------------------------------------------------
--- Table `config_database`
--- -----------------------------------------------------
---
--- Databases which are managd by the replication system
---
--- NOTE: Each database belongs to exctly one family, even
---       if that family has the only members (that database).
-
-DROP TABLE IF EXISTS `config_database` ;
-
-CREATE TABLE IF NOT EXISTS `config_database` (
-
-  `database`     VARCHAR(255)  NOT NULL ,
-  `family_name`  VARCHAR(255)  NOT NULL ,
-
-  -- Each database is allowed to belong to one family only
-  --
-  UNIQUE  KEY (`database`) ,
-
-  CONSTRAINT `config_database_fk_1`
-    FOREIGN KEY (`family_name` )
-    REFERENCES `config_database_family` (`name` )
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-)
-ENGINE = InnoDB;
-
--- -----------------------------------------------------
--- Table `config_database_table`
--- -----------------------------------------------------
---
--- Database tables
-
-DROP TABLE IF EXISTS `config_database_table` ;
-
-CREATE TABLE IF NOT EXISTS `config_database_table` (
-
-  `database`  VARCHAR(255)  NOT NULL ,
-  `table`     VARCHAR(255)  NOT NULL ,
-
-  `is_partitioned` BOOLEAN NOT NULL ,
-
-  UNIQUE  KEY (`database`, `table`) ,
-
-  CONSTRAINT `config_database_table_fk_1`
-    FOREIGN KEY (`database` )
-    REFERENCES `config_database` (`database` )
     ON DELETE CASCADE
     ON UPDATE CASCADE
 )

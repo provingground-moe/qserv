@@ -48,6 +48,7 @@ namespace {
 
 std::string  worker;
 std::string  configUrl;
+bool permanentDelete;
 bool bestEffort;
 bool progressReport;
 bool errorReport;
@@ -75,6 +76,7 @@ bool test () {
         auto job =
             rc::DeleteWorkerJob::create (
                 worker,
+                permanentDelete,
                 controller,
                 [](rc::DeleteWorkerJob::pointer job) {
                     // Not using the callback because the completion of the request
@@ -172,6 +174,7 @@ int main (int argc, const char* const argv[]) {
             "\n"
             "Usage:\n"
             "  <worker> [--config=<url>]\n"
+            "           [--permanent-delete]\n"
             "           [--best-effort]\n"
             "           [--progress-report]\n"
             "           [--error-report]\n"
@@ -183,6 +186,7 @@ int main (int argc, const char* const argv[]) {
             "Flags and options:\n"
             "  --config             - a configuration URL (a configuration file or a set of the database\n"
             "                         connection parameters [ DEFAULT: file:replication.cfg ]\n"
+            "  --permanent-delete   - permanently delete a worker from the Configuration\n"
             "  --best-effort        - allowing the operation even after not getting chunk disposition from\n"
             "                         all workers\n"
             "  --progress-report    - progress report when executing batches of requests\n"
@@ -191,6 +195,7 @@ int main (int argc, const char* const argv[]) {
 
         ::worker           = parser.parameter<std::string>(1);
         ::configUrl        = parser.option   <std::string>("config", "file:replication.cfg");
+        ::permanentDelete  = parser.flag                  ("permanent-delete");
         ::bestEffort       = parser.flag                  ("best-effort");
         ::progressReport   = parser.flag                  ("progress-report");
         ::errorReport      = parser.flag                  ("error-report");

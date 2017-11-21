@@ -94,6 +94,7 @@ ConfigurationFile::disableWorker (std::string const& name) {
 
     LOGS(_log, LOG_LVL_ERROR, context << name);
 
+    // This will also throw an exception if the worker is unknown
     WorkerInfo const& info = workerInfo(name);
     if (info.isEnabled) {
     
@@ -103,6 +104,20 @@ ConfigurationFile::disableWorker (std::string const& name) {
     }
     return info;
 }
+
+void
+ConfigurationFile::deleteWorker (std::string const& name) {
+
+    std::string const context = "ConfigurationFile::deleteWorker  ";
+
+    LOGS(_log, LOG_LVL_ERROR, context << name);
+
+    // This will also throw an exception if the worker is unknown
+    WorkerInfo const& info = workerInfo(name);
+    
+    _workerInfo.erase(name);
+}
+
 void
 ConfigurationFile::loadConfiguration () {
 

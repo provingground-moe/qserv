@@ -121,6 +121,7 @@ namespace replica_core {
 
 DeleteWorkerJob::pointer
 DeleteWorkerJob::create (std::string const&         worker,
+                         bool                       permanentDelete,
                          Controller::pointer const& controller,
                          callback_type              onFinish,
                          bool                       bestEffort,
@@ -129,6 +130,7 @@ DeleteWorkerJob::create (std::string const&         worker,
                          bool                       preemptable) {
     return DeleteWorkerJob::pointer (
         new DeleteWorkerJob (worker,
+                             permanentDelete,
                              controller,
                              onFinish,
                              bestEffort,
@@ -138,6 +140,7 @@ DeleteWorkerJob::create (std::string const&         worker,
 }
 
 DeleteWorkerJob::DeleteWorkerJob (std::string const&         worker,
+                                  bool                       permanentDelete,
                                   Controller::pointer const& controller,
                                   callback_type              onFinish,
                                   bool                       bestEffort,
@@ -151,7 +154,8 @@ DeleteWorkerJob::DeleteWorkerJob (std::string const&         worker,
              exclusive,
              preemptable),
 
-        _worker (worker),
+        _worker          (worker),
+        _permanentDelete (permanentDelete),
 
         _onFinish   (onFinish),
         _bestEffort (bestEffort),
@@ -360,7 +364,9 @@ DeleteWorkerJob::disableWorker () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "disableWorker");
 
-    // Disable worker in the configuration
+    // Temporary disable this worker from the configuration. If it's requsted
+    // to be permanently deleted this will be done only after all other relevamnt
+    // operations of this job will be done.
     _controller->serviceProvider().config()->disableWorker(_worker);
 
     // Launch the chained jobs to get chunk disposition within the rest
@@ -511,6 +517,11 @@ DeleteWorkerJob::onJobFinish (ReplicateJob::pointer job) {
             // NOTE: this could be a complicated procedure which needs to be thought
             // through.
             ;
+
+            // Do this only if requested, and only in case of the successful
+            // completion of the job
+            if (_permanentDelete)
+                _controller->serviceProvider().config()->deleteWorker (_worker);
 
             setState(State::FINISHED, ExtendedState::SUCCESS);
             break;

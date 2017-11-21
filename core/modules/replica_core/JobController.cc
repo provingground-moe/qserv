@@ -32,6 +32,7 @@
 
 #include "lsst/log/Log.h"
 #include "replica_core/BlockPost.h"
+#include "replica_core/DeleteWorkerJob.h"
 #include "replica_core/FindAllJob.h"
 #include "replica_core/FixUpJob.h"
 #include "replica_core/Performance.h"
@@ -222,14 +223,14 @@ JobController::findAll (std::string const&        databaseFamily,
     JobController::pointer self = shared_from_this();
 
     FindAllJob::pointer job =
-        FindAllJob::create (databaseFamily,
-                            _controller,
-                            [self] (FindAllJob::pointer job) {
-                                self->onFinish (job);
-                            },
-                            priority,
-                            exclusive,
-                            preemptable);
+        FindAllJob::create (
+            databaseFamily,
+            _controller,
+            [self] (FindAllJob::pointer job) { self->onFinish (job); },
+            priority,
+            exclusive,
+            preemptable
+        );
 
     // Register the job (along with its callback) by its unique
     // identifier in the local registry. Once it's complete it'll
@@ -263,14 +264,14 @@ JobController::fixUp (std::string const&      databaseFamily,
     JobController::pointer self = shared_from_this();
 
     FixUpJob::pointer job =
-        FixUpJob::create (databaseFamily,
-                          _controller,
-                          [self] (FixUpJob::pointer job) {
-                                self->onFinish (job);
-                          },
-                          priority,
-                          exclusive,
-                          preemptable);
+        FixUpJob::create (
+            databaseFamily,
+            _controller,
+            [self] (FixUpJob::pointer job) { self->onFinish (job); },
+            priority,
+            exclusive,
+            preemptable
+        );
 
     // Register the job (along with its callback) by its unique
     // identifier in the local registry. Once it's complete it'll
@@ -303,15 +304,15 @@ JobController::purge (std::string const&      databaseFamily,
     JobController::pointer self = shared_from_this();
 
     PurgeJob::pointer job =
-        PurgeJob::create (databaseFamily,
-                          numReplicas,
-                          _controller,
-                          [self] (PurgeJob::pointer job) {
-                              self->onFinish (job);
-                          },
-                          priority,
-                          exclusive,
-                          preemptable);
+        PurgeJob::create (
+            databaseFamily,
+            numReplicas,
+            _controller,
+            [self] (PurgeJob::pointer job) { self->onFinish (job); },
+            priority,
+            exclusive,
+            preemptable
+        );
 
     // Register the job (along with its callback) by its unique
     // identifier in the local registry. Once it's complete it'll
@@ -346,15 +347,15 @@ JobController::replicate (std::string const&          databaseFamily,
     JobController::pointer self = shared_from_this();
 
     ReplicateJob::pointer job =
-        ReplicateJob::create (databaseFamily,
-                              numReplicas,
-                              _controller,
-                              [self] (ReplicateJob::pointer job) {
-                                   self->onFinish (job);
-                              },
-                              priority,
-                              exclusive,
-                              preemptable);
+        ReplicateJob::create (
+            databaseFamily,
+            numReplicas,
+            _controller,
+            [self] (ReplicateJob::pointer job) { self->onFinish (job); },
+            priority,
+            exclusive,
+            preemptable
+        );
 
     // Register the job (along with its callback) by its unique
     // identifier in the local registry. Once it's complete it'll
@@ -388,14 +389,14 @@ JobController::verify (VerifyJob::callback_type         onFinish,
     JobController::pointer self = shared_from_this();
 
     VerifyJob::pointer job =
-        VerifyJob::create (_controller,
-                           [self] (VerifyJob::pointer job) {
-                                self->onFinish (job);
-                           },
-                           onReplicaDifference,
-                           priority,
-                           exclusive,
-                           preemptable);
+        VerifyJob::create (
+            _controller,
+            [self] (VerifyJob::pointer job) { self->onFinish (job); },
+            onReplicaDifference,
+            priority,
+            exclusive,
+            preemptable
+        );
 
     // Register the job (along with its callback) by its unique
     // identifier in the local registry. Once it's complete it'll
@@ -403,6 +404,48 @@ JobController::verify (VerifyJob::callback_type         onFinish,
 
     _registry[job->id()] =
         std::make_shared<JobWrapperImpl<VerifyJob>> (job, onFinish);  
+
+    // Initiate the job
+    //
+    // FIXME: don't start the job right away. Put the request into the priority queue
+    // and call the scheduler's method to evaluate jobs in the queue to
+    // to see which should be started next (if any).
+
+    job->start ();
+
+    return job;
+}
+
+DeleteWorkerJob::pointer
+JobController::deleteWorker (std::string const&             worker,
+                             bool                           permanentDelete,
+                             DeleteWorkerJob::callback_type onFinish,
+                             int                            priority,
+                             bool                           exclusive,
+                             bool                           preemptable) {
+    LOGS(_log, LOG_LVL_DEBUG, "JobController  deleteWorker");
+
+    LOCK_GUARD;
+
+    JobController::pointer self = shared_from_this();
+
+    DeleteWorkerJob::pointer job =
+        DeleteWorkerJob::create (
+            worker,
+            permanentDelete,
+            _controller,
+            [self] (DeleteWorkerJob::pointer job) { self->onFinish (job); },
+            priority,
+            exclusive,
+            preemptable
+        );
+
+    // Register the job (along with its callback) by its unique
+    // identifier in the local registry. Once it's complete it'll
+    // be automatically removed from the Registry.
+
+    _registry[job->id()] =
+        std::make_shared<JobWrapperImpl<DeleteWorkerJob>> (job, onFinish);  
 
     // Initiate the job
     //

@@ -347,7 +347,8 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
             _conn->executeInsertQuery (
                 "job_delete_worker",
                 ptr->id(),
-                ptr->worker());
+                ptr->worker(),
+                ptr->permanentDelete() ? 1 : 0);
 
         } else if ("ADD_WORKER" == job->type()) {
             throw std::invalid_argument (context + "not implemented for job type name:" + job->type());
