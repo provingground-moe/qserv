@@ -187,6 +187,7 @@ CREATE TABLE IF NOT EXISTS `job` (
   `controller_id`  VARCHAR(255) NOT NULL ,
 
   `type` ENUM ('FIXUP',
+               'FIND_ALL',
                'REPLICATE',
                'PURGE',
                'REBALANCE',
@@ -230,6 +231,29 @@ CREATE TABLE IF NOT EXISTS `job_fixup` (
     ON UPDATE CASCADE
 )
 ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `job_find_all`
+-- -----------------------------------------------------
+--
+-- Extended parameters of the 'FIND_ALL' jobs
+--
+DROP TABLE IF EXISTS `job_find_all` ;
+
+CREATE TABLE IF NOT EXISTS `job_find_all` (
+
+  `job_id`  VARCHAR(255) NOT NULL ,
+
+  `database_family`  VARCHAR(255) NOT NULL ,
+
+  CONSTRAINT `job_find_all_fk_1`
+    FOREIGN KEY (`job_id`)
+    REFERENCES `job` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+)
+ENGINE = InnoDB;
+
 
 -- -----------------------------------------------------
 -- Table `job_replicate`

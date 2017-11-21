@@ -38,6 +38,7 @@
 #include "replica_core/Controller.h"
 #include "replica_core/DeleteRequest.h"
 #include "replica_core/DeleteWorkerJob.h"
+#include "replica_core/FindAllJob.h"
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FixUpJob.h"
@@ -294,6 +295,7 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
     LOCK_GUARD;
 
     if (!::found_in (job->type(), {"FIXUP",
+                                   "FIND_ALL",
                                    "REPLICATE",
                                    "PURGE",
                                    "REBALANCE",
@@ -320,6 +322,13 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
             auto ptr = safeAssign<FixUpJob>(job);
             _conn->executeInsertQuery (
                 "job_fixup",
+                ptr->id(),
+                ptr->databaseFamily());
+
+        } else if ("FIND_ALL" == job->type()) {
+            auto ptr = safeAssign<FindAllJob>(job);
+            _conn->executeInsertQuery (
+                "job_find_all",
                 ptr->id(),
                 ptr->databaseFamily());
 
