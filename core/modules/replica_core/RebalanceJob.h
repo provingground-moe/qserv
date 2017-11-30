@@ -65,7 +65,7 @@ struct RebalanceJobResult {
     /// New replica creation results groupped by: chunk number, database, worker
     std::map<unsigned int,                  // chunk
              std::map<std::string,          // database
-                      std::map<std::string, // worker
+                      std::map<std::string, // destination worker
                                ReplicaInfo>>> createdChunks;
 
     /// Results reported by workers upon the successfull completion
@@ -75,7 +75,7 @@ struct RebalanceJobResult {
     /// Replica deletion results groupped by: chunk number, database, worker
     std::map<unsigned int,                  // chunk
              std::map<std::string,          // database
-                      std::map<std::string, // worker
+                      std::map<std::string, // source worker
                                ReplicaInfo>>> deletedChunks;
 
     /// Per-worker flags indicating if the corresponidng replica retreival
@@ -93,7 +93,7 @@ struct RebalanceJobResult {
   * - key metrics for the algorithm are:
   *     + a database family to be rebalanced
   *     + total number of replicas within a database family
-  *     + the total number and names  of workers which are available (up and running)
+  *     + the total number and names of workers which are available (up and running)
   *     + the average number of replicas per worker node
   *
   * - rebalance each database family independently of each other because
@@ -127,9 +127,9 @@ struct RebalanceJobResult {
   *   may switch to pulling this informtion from a database. That would work better
   *   at a presence of other activities keeping the database content updated.
   *
-  * - at a each iteration a limited number (from the Configuration?) of replicas
-  *   will be processed. Then chunk disposition will be recomputed to adjust for
-  *   other parallel activities (replication, purge, etc.).
+  * - [TO BE CONFIRMED] at a each iteration a limited number (from the Configuration?)
+  *   of replicas will be processed. Then chunk disposition will be recomputed to adjust
+  *   for other parallel activities (replication, purge, etc.).
   */
 class RebalanceJob
     :   public Job  {
@@ -281,13 +281,6 @@ protected:
      */
     void restart ();
 
-    /**
-     * Unconditionally release the specified chunk
-     *
-     * @param chunk - the chunk number
-     */
-    void release (unsigned int chunk);
-
 protected:
 
     /// The name of the database
@@ -320,7 +313,14 @@ protected:
     size_t _numFailedLocks;
 
     /// A collection of requests implementing the operation
-    std::vector<MoveReplicaJob::pointer> _jobs;
+    std::vector<MoveReplicaJob::pointer> _moveReplicaJobs;
+
+    /// The cache of locked chunks. It's meant to be used for keeping track
+    /// of all jobs associated with each locked chunks. Chuns will get unlocked
+    /// when all relevant jobs will get finished.
+    std::map<unsigned int,          // chunk
+             std::map<std::string,  // sourceWorker
+                      MoveReplicaJob::pointer>> _chunk2jobs;
 
     /// The result of the operation (gets updated as requests are finishing)
     RebalanceJobResult _replicaData;

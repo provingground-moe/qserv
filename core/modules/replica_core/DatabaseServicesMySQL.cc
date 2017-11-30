@@ -44,6 +44,7 @@
 #include "replica_core/FixUpJob.h"
 #include "replica_core/MoveReplicaJob.h"
 #include "replica_core/PurgeJob.h"
+#include "replica_core/RebalanceJob.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/ReplicateJob.h"
 #include "replica_core/ReplicationRequest.h"
@@ -351,7 +352,13 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
                 ptr->numReplicas());
 
         } else if ("REBALANCE" == job->type()) {
-            throw std::invalid_argument (context + "not implemented for job type name:" + job->type());
+            auto ptr = safeAssign<RebalanceJob>(job);
+            _conn->executeInsertQuery (
+                "job_rebalance",
+                ptr->id(),
+                ptr->databaseFamily(),
+                ptr->startPercent(),
+                ptr->stopPercent());
 
         } else if ("DELETE_WORKER" == job->type()) {
             auto ptr = safeAssign<DeleteWorkerJob>(job);
