@@ -376,10 +376,12 @@ PurgeJob::onPrecursorJobFinish () {
                         targetWorker = worker;
                     }
                 }
-                if (targetWorker.empty() or not maxNumChunks)
-                    throw std::logic_error (
-                            "PurgeJob::onPrecursorJobFinish  failed to find a target worker for chunk: " +
-                            std::to_string(chunk));
+                if (targetWorker.empty() or not maxNumChunks) {
+                    LOGS(_log, LOG_LVL_ERROR, context() << "onPrecursorJobFinish  "
+                         << "failed to find a target worker for chunk: " << chunk);
+                    setState (State::FINISHED, ExtendedState::FAILED);
+                    break;
+                }
     
                 // Remove the selct worker from the list, so that the next iteration (if the one
                 // will happen) will be not considering this worker fro deletion.
@@ -416,8 +418,9 @@ PurgeJob::onPrecursorJobFinish () {
                     worker2occupancy[targetWorker]--;
                 }
             }
-            
+            if (_state == State::FINISHED) break;
         }
+        if (_state == State::FINISHED) break;
 
         // Finish right away if no problematic chunks found
         if (not _requests.size()) {
@@ -435,12 +438,10 @@ PurgeJob::onPrecursorJobFinish () {
 
     } while (false);
     
-    // Note that access to the job's public API should not be locked while
-    // notifying a caller (if the callback function was povided) in order to avoid
-    // the circular deadlocks.
-
+    // Client notification should be made from the lock-free zone
+    // to avoid possible deadlocks
     if (_state == State::FINISHED)
-        notify ();
+        notify();
 }
 
 void
@@ -510,12 +511,11 @@ PurgeJob::onRequestFinish (DeleteRequest::pointer request) {
                 break;
             }
         }
+
     } while (false);
 
-    // Note that access to the job's public API shoul not be locked while
-    // notifying a caller (if the callback function was povided) in order to avoid
-    // the circular deadlocks.
-
+    // Client notification should be made from the lock-free zone
+    // to avoid possible deadlocks
     if (_state == State::FINISHED)
         notify ();
 }

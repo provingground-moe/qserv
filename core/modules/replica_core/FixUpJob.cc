@@ -254,106 +254,118 @@ FixUpJob::onPrecursorJobFinish () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "onPrecursorJobFinish");
 
-    // Ignore the callback if the job was cancelled   
-    if (_state == State::FINISHED) return;
+    do {
+        LOCK_GUARD;
 
-    LOCK_GUARD;
-
-    ////////////////////////////////////////////////////////////////////
-    // Do not proceed with the replication effort unless running the job
-    // under relaxed condition.
-
-    if (!_bestEffort && (_findAllJob->extendedState() != ExtendedState::SUCCESS)) {
-        setState(State::FINISHED, ExtendedState::FAILED);
-        return;
-    }
-
-    /////////////////////////////////////////////////////////////////
-    // Analyse results and prepare a replication plan to fix chunk
-    // co-location for under-represented chunks
-
-    FindAllJobResult const& replicaData = _findAllJob->getReplicaData ();
-
-    auto self = shared_from_base<FixUpJob>();
-
-    for (auto const& chunk2workers: replicaData.isColocated) {
-        unsigned int chunk = chunk2workers.first;
-
-        for (auto const& worker2colocated: chunk2workers.second) {
-            std::string const& destinationWorker = worker2colocated.first;
-            bool        const  isColocated       = worker2colocated.second;
-
-            if (isColocated) continue;
-
-            // Chunk locking is mandatory. If it's not possible to do this now then
-            // the job will need to make another attempt later.
+        // Ignore the callback if the job was cancelled   
+        if (_state == State::FINISHED) return;
+        
+        ////////////////////////////////////////////////////////////////////
+        // Do not proceed with the replication effort unless running the job
+        // under relaxed condition.
     
-            if (not _controller->serviceProvider().chunkLocker().lock({_databaseFamily, chunk}, _id)) {
-                ++_numFailedLocks;
-                continue;
-            }
-
-            // Iterate over all participating databases, find the ones which aren't
-            // represented on the worker, find a suitable source worker which has
-            // a complete chunk for the database and which (the worker) is not the same
-            // as the current one and submite the replication request.
-
-            for (auto const& database: replicaData.databases.at(chunk)) {
-                if (not replicaData.chunks.at(chunk).at(database).count(destinationWorker)) {
- 
-                    // Finding a source worker first
-                    std::string sourceWorker;
-                    for (auto const& worker: replicaData.complete.at(chunk).at(database)) {
-                        if (worker != destinationWorker) {
-                            sourceWorker = worker;
+        if (!_bestEffort && (_findAllJob->extendedState() != ExtendedState::SUCCESS)) {
+            setState(State::FINISHED, ExtendedState::FAILED);
+            break;
+        }
+    
+        /////////////////////////////////////////////////////////////////
+        // Analyse results and prepare a replication plan to fix chunk
+        // co-location for under-represented chunks
+    
+        FindAllJobResult const& replicaData = _findAllJob->getReplicaData ();
+    
+        auto self = shared_from_base<FixUpJob>();
+    
+        for (auto const& chunk2workers: replicaData.isColocated) {
+            unsigned int chunk = chunk2workers.first;
+    
+            for (auto const& worker2colocated: chunk2workers.second) {
+                std::string const& destinationWorker = worker2colocated.first;
+                bool        const  isColocated       = worker2colocated.second;
+    
+                if (isColocated) continue;
+    
+                // Chunk locking is mandatory. If it's not possible to do this now then
+                // the job will need to make another attempt later.
+        
+                if (not _controller->serviceProvider().chunkLocker().lock({_databaseFamily, chunk}, _id)) {
+                    ++_numFailedLocks;
+                    continue;
+                }
+    
+                // Iterate over all participating databases, find the ones which aren't
+                // represented on the worker, find a suitable source worker which has
+                // a complete chunk for the database and which (the worker) is not the same
+                // as the current one and submite the replication request.
+    
+                for (auto const& database: replicaData.databases.at(chunk)) {
+                    if (not replicaData.chunks.at(chunk).at(database).count(destinationWorker)) {
+     
+                        // Finding a source worker first
+                        std::string sourceWorker;
+                        for (auto const& worker: replicaData.complete.at(chunk).at(database)) {
+                            if (worker != destinationWorker) {
+                                sourceWorker = worker;
+                                break;
+                            }
+                        }
+                        if (sourceWorker.empty()) {
+                            LOGS(_log, LOG_LVL_ERROR, context()
+                                 << "onPrecursorJobFinish  failed to find a source worker for chunk: "
+                                 << chunk << " and database: " << database);
+                            release(chunk);
+                            setState (State::FINISHED, ExtendedState::FAILED);
                             break;
                         }
+    
+                        // Finally, launch the replication request and register it for further
+                        // tracking (or cancellation, should the one be requested)
+            
+                        ReplicationRequest::pointer ptr =
+                            _controller->replicate (
+                                destinationWorker,
+                                sourceWorker,
+                                database,
+                                chunk,
+                                [self] (ReplicationRequest::pointer ptr) {
+                                    self->onRequestFinish(ptr);
+                                },
+                                0,      /* priority */
+                                true,   /* keepTracking */
+                                true,   /* allowDuplicate */
+                                _id     /* jobId */
+                            );
+            
+                        _chunk2requests[chunk][destinationWorker][database] = ptr;
+                        _requests.push_back (ptr);
+                        _numLaunched++;
                     }
-                    if (sourceWorker.empty()) {
-                        LOGS(_log, LOG_LVL_ERROR, context()
-                             << "onPrecursorJobFinish  failed to find a source worker for chunk: "
-                             << chunk << " and database: " << database);
-                        release(chunk);
-                        setState (State::FINISHED, ExtendedState::FAILED);
-                    }
-
-                    // Finally, launch the replication request and register it for further
-                    // tracking (or cancellation, should the one be requested)
-        
-                    ReplicationRequest::pointer ptr =
-                        _controller->replicate (
-                            destinationWorker,
-                            sourceWorker,
-                            database,
-                            chunk,
-                            [self] (ReplicationRequest::pointer ptr) {
-                                self->onRequestFinish(ptr);
-                            },
-                            0,      /* priority */
-                            true,   /* keepTracking */
-                            true,   /* allowDuplicate */
-                            _id     /* jobId */
-                        );
-        
-                    _chunk2requests[chunk][destinationWorker][database] = ptr;
-                    _requests.push_back (ptr);
-                    _numLaunched++;
                 }
+                if (_state == State::FINISHED) break;
+            }
+            if (_state == State::FINISHED) break;
+        }
+        if (_state == State::FINISHED) break;
+
+        // Finish right away if no problematic chunks found
+        if (not _requests.size()) {
+            if (not _numFailedLocks) {
+                setState (State::FINISHED, ExtendedState::SUCCESS);
+            } else {
+                // Some of the chuks were locked and yet, no sigle request was
+                // lunched. Hence we should start another iteration by requesting
+                // the fresh state of the chunks within the family.
+                restart ();
             }
         }
-    }
 
-    // Finish right away if no problematic chunks found
-    if (not _requests.size()) {
-        if (not _numFailedLocks) {
-            setState (State::FINISHED, ExtendedState::SUCCESS);
-        } else {
-            // Some of the chuks were locked and yet, no sigle request was
-            // lunched. Hence we should start another iteration by requesting
-            // the fresh state of the chunks within the family.
-            restart ();
-        }
-    }
+    } while (false);
+
+    // Client notification should be made from the lock-free zone
+    // to avoid possible deadlocks
+    if (_state == State::FINISHED)
+        notify();
 }
 
 void
@@ -369,16 +381,16 @@ FixUpJob::onRequestFinish (ReplicationRequest::pointer request) {
          << "  worker="   << worker
          << "  chunk="    << chunk);
 
-    // Ignore the callback if the job was cancelled   
-    if (_state == State::FINISHED) {
-        release (chunk);
-        return;
-    }
-
-    // Update counters and object state if needed.
-    {
+    do {
         LOCK_GUARD;
 
+        // Ignore the callback if the job was cancelled   
+        if (_state == State::FINISHED) {
+            release (chunk);
+            return;
+        }
+
+        // Update counters and object state if needed.
         _numFinished++;
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             _numSuccess++;
@@ -410,21 +422,23 @@ FixUpJob::onRequestFinish (ReplicationRequest::pointer request) {
                     // Make another iteration (and another one, etc. as many as needed)
                     // before it succeeds or fails.
                     restart ();
+                    return;
                 } else {
                     setState (State::FINISHED, ExtendedState::SUCCESS);
+                    break;
                 }
             } else {
                 setState (State::FINISHED, ExtendedState::FAILED);
+                break;
             }
         }
-    }
 
-    // Note that access to the job's public API should not be locked while
-    // notifying a caller (if the callback function was povided) in order to avoid
-    // the circular deadlocks.
+    } while (false);
 
+    // Client notification should be made from the lock-free zone
+    // to avoid possible deadlocks
     if (_state == State::FINISHED)
-        notify ();
+        notify();
 }
 
 void
