@@ -165,7 +165,11 @@ FindAllJob::startImpl () {
             _numLaunched++;
         }
     }
-    setState(State::IN_PROGRESS);
+
+    // In case if no workers or database are present in the Configuration
+    // at this time.
+    if (not _numLaunched) setState(State::FINISHED);
+    else                  setState(State::IN_PROGRESS);
 }
 
 void
@@ -214,14 +218,14 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
          << "onRequestFinish  database=" << request->database()
          << " worker=" << request->worker());
 
-    // Ignore the callback if the job was cancelled   
-    if (_state == State::FINISHED) return;
 
-    // Update counters and object state if needed.
-
-    {
+    do {
         LOCK_GUARD;
 
+        // Ignore the callback if the job was cancelled   
+        if (_state == State::FINISHED) return;
+
+        // Update counters and object state if needed.
         _numFinished++;
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             _numSuccess++;
@@ -234,12 +238,12 @@ FindAllJob::onRequestFinish (FindAllRequest::pointer request) {
         } else {
             _replicaData.workers[request->worker()] = false;
         }
-        if (_numFinished == _numLaunched) {
-            setState (
-                State::FINISHED,
-                _numSuccess == _numLaunched ? ExtendedState::SUCCESS : ExtendedState::FAILED);
-        }
-    }
+        if (_numFinished == _numLaunched)
+            setState (State::FINISHED,
+                      _numSuccess == _numLaunched ? ExtendedState::SUCCESS :
+                                                    ExtendedState::FAILED);
+
+    } while (false);
     
     // Note that access to the job's public API shoul not be locked while
     // notifying a caller (if the callback function was povided) in order to avoid

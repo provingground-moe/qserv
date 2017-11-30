@@ -42,6 +42,7 @@
 #include "replica_core/FindAllRequest.h"
 #include "replica_core/FindRequest.h"
 #include "replica_core/FixUpJob.h"
+#include "replica_core/MoveReplicaJob.h"
 #include "replica_core/PurgeJob.h"
 #include "replica_core/ReplicaInfo.h"
 #include "replica_core/ReplicateJob.h"
@@ -300,7 +301,8 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
                                    "PURGE",
                                    "REBALANCE",
                                    "DELETE_WORKER",
-                                   "ADD_WORKER"})) return;
+                                   "ADD_WORKER",
+                                   "MOVE_REPLICA"})) return;
 
     // The algorithm will first try the INSERT query. If a row with the same
     // primary key (Job id) already exists in the table then the UPDATE
@@ -361,6 +363,17 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
 
         } else if ("ADD_WORKER" == job->type()) {
             throw std::invalid_argument (context + "not implemented for job type name:" + job->type());
+
+        } else if ("MOVE_REPLICA" == job->type()) {
+            auto ptr = safeAssign<MoveReplicaJob>(job);
+            _conn->executeInsertQuery (
+                "job_move_replica",
+                ptr->id(),
+                ptr->databaseFamily(),
+                ptr->chunk(),
+                ptr->sourceWorker(),
+                ptr->destinationWorker(),
+                ptr->purge() ? 1 : 0);
         }
         _conn->commit ();
 
@@ -769,6 +782,32 @@ DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
     return true;
 }
 
+bool
+DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
+                                           unsigned int              chunk,
+                                           std::string const&        worker) const {
+    std::string const context = 
+         "DatabaseServicesMySQL::findWorkerReplicas  worker: " + worker + " " +
+         std::string("chunk: " + std::to_string(chunk) + "  ");
+
+    LOGS(_log, LOG_LVL_DEBUG, context);
+
+    LOCK_GUARD;
+
+    if (not _configuration->isKnownWorker(worker))
+        throw std::invalid_argument (context + "unknow worker");
+
+    if (not findReplicas (
+                replicas,
+                "SELECT * FROM " + _conn->sqlId    ("replica") +
+                "  WHERE " +       _conn->sqlEqual ("worker", worker) +
+                "  AND "   +       _conn->sqlEqual ("chunk",  chunk))) {
+
+        LOGS(_log, LOG_LVL_ERROR, context << "failed to find replicas");
+        return false;
+    }
+    return true;
+}
 bool
 DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
                                      std::string const&        query) const {

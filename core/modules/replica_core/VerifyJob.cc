@@ -328,18 +328,19 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
          << " worker=" << request->worker()
          << " chunk="  << request->chunk());
 
-    // Ignore the callback if the job was cancelled   
-    if (_state == State::FINISHED) return;
-
-    auto self = shared_from_base<VerifyJob>();
-
     // The default version of the object won't have any difference
     // reported
     ReplicaDiff              selfReplicaDiff;   // against the previous state of the current replica
     std::vector<ReplicaDiff> otherReplicaDiff;  // against other known replicas
-    {
+
+    auto self = shared_from_base<VerifyJob>();
+
+    do {
         LOCK_GUARD;
 
+        // Ignore the callback if the job was cancelled   
+        if (_state == State::FINISHED) return;
+    
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             
             // TODO:
@@ -385,7 +386,7 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
             
         } else {
 
-            // Report the error and proceed to the next request?
+            // Report the error and keep going
             LOGS(_log, LOG_LVL_ERROR, context() << "failed request " << request->context()
                  << " worker: "   << request->worker()
                  << " database: " << request->database()
@@ -412,8 +413,10 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
             // from the system or there was a problem to access the database.
 
             setState (State::FINISHED);
+            break;
         }
-    }
+    
+    } while (false);
 
     // NOTE: The callbacks are called w/o keeping a lock on the object API
     // to prevent potential deadlocks.
@@ -421,7 +424,8 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
     if (_onReplicaDifference)
         _onReplicaDifference (self, selfReplicaDiff, otherReplicaDiff);
     
-    if (_state == State::FINISHED) notify ();
+    if (_state == State::FINISHED)
+        notify ();
 }
 
 bool

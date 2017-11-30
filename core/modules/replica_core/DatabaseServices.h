@@ -187,6 +187,25 @@ public:
     virtual bool findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
                                      std::string const&        worker) const;
 
+    /**
+     * Find all replicas for the specified chubk on a worker.
+     *
+     * ATTENTION: no assumption on a new status of the replica collection
+     * passed into the method should be made if the operation fails
+     * (returns 'false').
+     *
+     * @param replicas - a collection of replicas (if any found)
+     * @param chunk    - the chunk number
+     * @param worker   - the name of a worker
+     *
+     * @return 'true' in case of success (even if no replicas were found)
+     *
+     * @throw std::invalid_argument - if the worker is unknown or its name is empty
+     */
+    virtual bool findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
+                                     unsigned int              chunk,
+                                     std::string const&        worker) const;
+
 protected:
 
     /// Return shared pointer of the desired subclass (no dynamic type checking)

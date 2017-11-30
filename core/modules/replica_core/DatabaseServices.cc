@@ -116,7 +116,17 @@ DatabaseServices::findReplicas (std::vector<ReplicaInfo>& replicas,
 bool
 DatabaseServices::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
                                       std::string const&        worker) const {
-    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findWorkerReplicas "
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findWorkerReplicas(worker) "
+         << " worker: " << worker);
+
+    return false;
+}
+
+bool
+DatabaseServices::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
+                                      unsigned int              chunk,
+                                      std::string const&        worker) const {
+    LOGS(_log, LOG_LVL_DEBUG, "DatabaseServices::findWorkerReplicas(chunk,worker) "
          << " worker: " << worker);
 
     return false;

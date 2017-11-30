@@ -489,20 +489,20 @@ ReplicateJob::onPrecursorJobFinish () {
         if (not _requests.size()) {
             if (not _numFailedLocks) {
                 setState (State::FINISHED, ExtendedState::SUCCESS);
+                break;
             } else {
                 // Some of the chuks were locked and yet, no sigle request was
                 // lunched. Hence we should start another iteration by requesting
                 // the fresh state of the chunks within the family.
                 restart ();
+                return;
             }
         }
 
     } while (false);
 
-    // Note that access to the job's public API shoul not be locked while
-    // notifying a caller (if the callback function was povided) in order to avoid
-    // the circular deadlocks.
-
+    // Client notification should be made from the lock-free zone
+    // to avoid possible deadlocks
     if (_state == State::FINISHED)
         notify ();
 }
@@ -520,16 +520,17 @@ ReplicateJob::onRequestFinish (ReplicationRequest::pointer request) {
          << "  worker="   << worker
          << "  chunk="    << chunk);
 
-    // Ignore the callback if the job was cancelled   
-    if (_state == State::FINISHED) {
-        release (chunk);
-        return;
-    }
 
-    // Update counters and object state if needed.
-    {
+    do {
         LOCK_GUARD;
 
+        // Ignore the callback if the job was cancelled   
+        if (_state == State::FINISHED) {
+            release (chunk);
+            return;
+        }
+
+        // Update counters and object state if needed.
         _numFinished++;
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             _numSuccess++;
@@ -561,19 +562,21 @@ ReplicateJob::onRequestFinish (ReplicationRequest::pointer request) {
                     // Make another iteration (and another one, etc. as many as needed)
                     // before it succeeds or fails.
                     restart ();
+                    return;
                 } else {
                     setState (State::FINISHED, ExtendedState::SUCCESS);
+                    break;
                 }
             } else {
                 setState (State::FINISHED, ExtendedState::FAILED);
+                break;
             }
         }
-    }
 
-    // Note that access to the job's public API shoul not be locked while
-    // notifying a caller (if the callback function was povided) in order to avoid
-    // the circular deadlocks.
+    } while (false);
 
+    // Client notification should be made from the lock-free zone
+    // to avoid possible deadlocks
     if (_state == State::FINISHED)
         notify ();
 }

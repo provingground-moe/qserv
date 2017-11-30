@@ -106,15 +106,27 @@ void
 Job::start () {
 
     LOGS(_log, LOG_LVL_DEBUG, context() << "start");
-    LOCK_GUARD;
 
-    assertState(State::CREATED);
-    startImpl();
-    assertState(State::IN_PROGRESS);
+    do {
+        LOCK_GUARD;
 
-    _beginTime = PerformanceUtils::now();
+        assertState(State::CREATED);
+        startImpl();
 
-    _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
+        _beginTime = PerformanceUtils::now();
+        _controller->serviceProvider().databaseServices()->saveState (shared_from_this());
+
+        // Allow the job to be fully accomplished right away
+        if (_state == State::FINISHED) break;
+
+        assertState(State::IN_PROGRESS);
+
+    } while (false);
+
+    // Client notification should be made from the lock-free zone
+    // to avoid possible deadlocks
+    if (_state == State::FINISHED)
+        notify();
 }
 
 void
