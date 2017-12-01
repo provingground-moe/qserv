@@ -65,7 +65,7 @@ struct MoveReplicaJobResult {
     /// New replica creation results groupped by: chunk number, database, worker
     std::map<unsigned int,                  // chunk
              std::map<std::string,          // database
-                      std::map<std::string, // worker
+                      std::map<std::string, // destination worker
                                ReplicaInfo>>> createdChunks;
 
     /// Results reported by workers upon the successfull completion
@@ -75,7 +75,7 @@ struct MoveReplicaJobResult {
     /// Replica deletion results groupped by: chunk number, database, worker
     std::map<unsigned int,                  // chunk
              std::map<std::string,          // database
-                      std::map<std::string, // worker
+                      std::map<std::string, // source worker
                                ReplicaInfo>>> deletedChunks;
 };
 

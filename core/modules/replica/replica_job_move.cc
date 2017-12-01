@@ -149,7 +149,7 @@ bool test () {
         rc::MoveReplicaJobResult const& replicaData = job->getReplicaData();
 
         printReplicaInfo ("CREATED REPLICAS", replicaData.createdChunks);
-        printReplicaInfo ("DELETED REPLICAS", replicaData.createdChunks);
+        printReplicaInfo ("DELETED REPLICAS", replicaData.deletedChunks);
 
         ///////////////////////////////////////////////////
         // Shutdown the controller and join with its thread
