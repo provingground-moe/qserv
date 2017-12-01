@@ -122,10 +122,9 @@ RebalanceJob::RebalanceJob (std::string const&         databaseFamily,
     // Neither limit should be outside a range of [10,50], and the difference shouldn't
     // be less than 5%.
 
-    if ((_startPercent < 10 or _startPercent >= 50) or
-        (_stopPercent  < 10 or _stopPercent  >= 50) or
-        (_stopPercent  < _startPercent) or
-        (_stopPercent  - _startPercent < 5))
+    if ((_startPercent < 10 or _startPercent > 50) or
+        (_stopPercent  <  5 or _stopPercent  > 45) or
+        (_stopPercent  > _startPercent) or (_stopPercent  - _startPercent < 5))
         throw std::invalid_argument (
                 "RebalanceJob::RebalanceJob ()  invalid values of parameters 'startPercent' or 'stopPercent'");
 }
