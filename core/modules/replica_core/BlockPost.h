@@ -47,6 +47,8 @@ namespace replica_core {
  * by a built-in generator producing a series of uniformally
  * distributed numbers of mislliseconds within a range specified upon
  * an object construction.
+ *
+ * THREAD SAFETY NOTE: this class implementation is thread-safe.
  */
 class BlockPost {
 
