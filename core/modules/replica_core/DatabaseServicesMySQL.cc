@@ -244,7 +244,7 @@ DatabaseServicesMySQL::DatabaseServicesMySQL (Configuration::pointer const& conf
     :   DatabaseServices (configuration) {
 
     // Pull database info from the configuration and prepare
-    // the connection object.
+    // the connection objects.
 
     database::mysql::ConnectionParams params;
 
@@ -254,7 +254,8 @@ DatabaseServicesMySQL::DatabaseServicesMySQL (Configuration::pointer const& conf
     params.password = configuration->databasePassword ();
     params.database = configuration->databaseName     ();
 
-    _conn = database::mysql::Connection::open (params);
+    _conn  = database::mysql::Connection::open (params);
+    _conn2 = database::mysql::Connection::open (params);
 }
 
 DatabaseServicesMySQL::~DatabaseServicesMySQL () {
@@ -813,6 +814,7 @@ DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
         LOGS(_log, LOG_LVL_ERROR, context << "failed to find replicas");
         return false;
     }
+    LOGS(_log, LOG_LVL_DEBUG, context << "num replicas found: " << replicas.size());
     return true;
 }
 bool
@@ -828,6 +830,8 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
     try {
         _conn->begin();
         _conn->execute (query);
+
+        _conn2->begin();
 
         if (_conn->hasResult()) {
 
@@ -849,17 +853,20 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
                 row.get ("verify_time", verifyTime);
 
                 // Pull a list of files associated with the replica
+                //
+                // ATTENTION: using a separate connector to avoid any interference
+                //            with a context of the upper loop iterator.
 
                 ReplicaInfo::FileInfoCollection files;
 
-                _conn->execute (
+                _conn2->execute (
                     "SELECT * FROM " + _conn->sqlId    ("replica_file") +
                     "  WHERE "       + _conn->sqlEqual ("replica_id", id));
                  
-                if (_conn->hasResult()) {
+                if (_conn2->hasResult()) {
             
-                    database::mysql::Row row;
-                    while (_conn->next(row)) {
+                    database::mysql::Row row2;
+                    while (_conn2->next(row2)) {
             
                         // Extract attributes of the file
             
@@ -870,12 +877,12 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
                         uint64_t    beginCreateTime;
                         uint64_t    endCreateTime;
             
-                        row.get ("name",              name);
-                        row.get ("size",              size);
-                        row.get ("mtime",             mtime);
-                        row.get ("cs",                cs);
-                        row.get ("begin_create_time", beginCreateTime);
-                        row.get ("end_create_time",   endCreateTime);
+                        row2.get ("name",              name);
+                        row2.get ("size",              size);
+                        row2.get ("mtime",             mtime);
+                        row2.get ("cs",                cs);
+                        row2.get ("begin_create_time", beginCreateTime);
+                        row2.get ("end_create_time",   endCreateTime);
             
                         files.emplace_back (
                             ReplicaInfo::FileInfo {
@@ -908,7 +915,8 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
         LOGS(_log, LOG_LVL_ERROR, context
              << "database operation failed due to: " << ex.what());
     }    
-    if (_conn->inTransaction()) _conn->rollback();
+    if (_conn ->inTransaction()) _conn ->rollback();
+    if (_conn2->inTransaction()) _conn2->rollback();
 
     return result;
 }

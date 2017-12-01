@@ -173,6 +173,9 @@ protected:
 
     /// Databse connection
     database::mysql::Connection::pointer _conn;
+
+    /// Databse connection (second instance for nested queries)
+    database::mysql::Connection::pointer _conn2;
 };
 
 }}} // namespace lsst::qserv::replica_core

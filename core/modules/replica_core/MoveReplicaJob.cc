@@ -339,17 +339,17 @@ MoveReplicaJob::notify () {
 void
 MoveReplicaJob::onRequestFinish (ReplicationRequest::pointer request) {
 
-    std::string  const database     = request->database(); 
-    std::string  const worker       = request->worker();
-    std::string  const sourceWorker = request->sourceWorker();
-    unsigned int const chunk        = request->chunk();
+    std::string  const database          = request->database(); 
+    std::string  const destinationWorker = request->worker();
+    std::string  const sourceWorker      = request->sourceWorker();
+    unsigned int const chunk             = request->chunk();
 
     LOGS(_log, LOG_LVL_DEBUG, context()
          << "onRequestFinish(ReplicationeRequest)"
-         << "  database="     << database
-         << "  worker="       << worker
-         << "  sourceWorker=" << sourceWorker
-         << "  chunk="        << chunk);
+         << "  database="          << database
+         << "  destinationWorker=" << destinationWorker
+         << "  sourceWorker="      << sourceWorker
+         << "  chunk="             << chunk);
 
     do {
         // This lock will be automatically release beyon this scope
@@ -362,7 +362,7 @@ MoveReplicaJob::onRequestFinish (ReplicationRequest::pointer request) {
         // Update stats
         if (request->extendedState() == Request::ExtendedState::SUCCESS) {
             _replicaData.createdReplicas.emplace_back(request->responseData());
-            _replicaData.createdChunks[chunk][database][worker] = request->responseData();
+            _replicaData.createdChunks[chunk][database][destinationWorker] = request->responseData();
         }
         
         // Evaluate the status of on-going operations to see if the replica creation
