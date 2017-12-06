@@ -81,6 +81,28 @@ struct RebalanceJobResult {
     /// Per-worker flags indicating if the corresponidng replica retreival
     /// request succeeded.
     std::map<std::string, bool> workers;
+
+    /// Replication plan
+    ///
+    /// ATTENTION: if the job is run in the 'estimateOnly' mode the plan and
+    /// relevant variables defined after the plan are captured at the first (and only)
+    /// iteration of the job. For the real rebalance regime these contain parameters
+    /// of the last planning only.
+    std::map<unsigned int,                  // chunk
+             std::map<std::string,          // source worker
+                      std::string>> plan;   // destination worker
+
+    // Parameters of the planner
+
+    size_t totalWorkers    {0};     // not counting workers which failed to report chunks
+    size_t totalGoodChunks {0};     // good chunks reported by the precursor job
+
+    size_t avgChunksPerWorker   {0};
+    size_t startChunksPerWorker {0};
+    size_t stopChunksPerWorker  {0};
+
+    /// The total number of iterations the job has gone so far
+    size_t numIterations {0};
 };
 
 /**
@@ -150,6 +172,7 @@ public:
      * @param databaseFamily - the name of a database family
      * @param startPercent   - the upper shreshold (a deviation in % of the average) when the algorithm starts
      * @param stopPercent    - the lower threshold (a deviation in % of the average) when the algorithm finishes
+     * @param estimateOnly   - do not perform any changes to chunk disposition. Just produce an estimate report.
      * @param controller     - for launching requests
      * @param onFinish       - a callback function to be called upon a completion of the job
      * @param bestEffort     - the flag (if set) allowing to proceed with the replication effort
@@ -168,6 +191,7 @@ public:
     static pointer create (std::string const&         databaseFamily,
                            unsigned int               startPercent,
                            unsigned int               stopPercent,
+                           bool                       estimateOnly,
                            Controller::pointer const& controller,
                            callback_type              onFinish,
                            bool                       bestEffort  = true,
@@ -232,6 +256,7 @@ protected:
     RebalanceJob (std::string const&         databaseFamily,
                   unsigned int               startPercent,
                   unsigned int               stopPercent,
+                  bool                       estimateOnly,
                   Controller::pointer const& controller,
                   callback_type              onFinish,
                   bool                       bestEffort,
@@ -289,8 +314,11 @@ protected:
     /// The upper threshold triggering the operation
     unsigned int _startPercent;
 
-    /// Te lower threshold when the operation finishes
+    /// The lower threshold when the operation finishes
     unsigned int _stopPercent;
+
+    /// Estimate mode option
+    bool _estimateOnly;
 
     /// Client-defined function to be called upon the completion of the job
     callback_type _onFinish;
@@ -302,9 +330,6 @@ protected:
     /// The chained job to be completed first in order to figure out
     /// replica disposition.
     FindAllJob::pointer _findAllJob;
-
-    /// The total number of iterations the job has gone so far
-    size_t _numIterations;
 
     /// The number of chunks which required to be moved but couldn't be locked
     /// in the exclusive mode. The counter will be analyzed upon a completion

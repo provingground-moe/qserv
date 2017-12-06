@@ -197,14 +197,17 @@ public:
      * @param replicas - a collection of replicas (if any found)
      * @param chunk    - the chunk number
      * @param worker   - the name of a worker
+     * @param databaseFamily - the optional database family
      *
      * @return 'true' in case of success (even if no replicas were found)
      *
-     * @throw std::invalid_argument - if the worker is unknown or its name is empty
+     * @throw std::invalid_argument - if the worker is unknown or its name is empty,
+     *                                or if the database family is unknown (if provided)
      */
     virtual bool findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
                                      unsigned int              chunk,
-                                     std::string const&        worker) const;
+                                     std::string const&        worker,
+                                     std::string const&        databaseFamily=std::string()) const;
 
 protected:
 

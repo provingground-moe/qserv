@@ -51,9 +51,41 @@ std::string  databaseFamily;
 unsigned int startPercent;
 unsigned int stopPercent;
 std::string  configUrl;
+bool         estimateOnly;
 bool         progressReport;
 bool         errorReport;
 bool         chunkLocksReport;
+
+
+void
+printPlan (rc::RebalanceJobResult const& r) {
+    std::cout
+        << "THE REBALANCE PLAN:\n"
+        << "  totalWorkers:         " << r.totalWorkers         << "  (not counting workers which failed to report chunks)\n"
+        << "  totalGoodChunks:      " << r.totalGoodChunks      << "  (good chunks reported by the precursor job)\n"
+        << "  avgChunksPerWorker:   " << r.avgChunksPerWorker   << "\n"
+        << "  startChunksPerWorker: " << r.startChunksPerWorker << "\n"
+        << "  stopChunksPerWorker:  " << r.stopChunksPerWorker  << "\n"
+        << "\n"
+        << "--------+--------------------------+--------------------------\n"
+        << "  chunk |            source worker |       destination worker \n"
+        << "--------+--------------------------+--------------------------\n";
+
+    for (auto const& chunkEntry: r.plan) {
+        unsigned int const chunk = chunkEntry.first;
+        for (auto const& sourceWorkerEntry: chunkEntry.second) {
+            std::string const& sourceWorker      = sourceWorkerEntry.first;
+            std::string const& destinationWorker = sourceWorkerEntry.second;
+            std::cout
+                << " " << std::setw(6)  << chunk             << " |"
+                << " " << std::setw(24) << sourceWorker      << " |"
+                << " " << std::setw(24) << destinationWorker << "\n";
+        }
+    }
+    std::cout
+        << "--------+--------------------------+--------------------------\n"
+        << std::endl;
+}
 
 template <class COLLECTION>
 void printReplicaInfo (std::string const& collectionName,
@@ -124,6 +156,7 @@ bool test () {
                 databaseFamily,
                 startPercent,
                 stopPercent,
+                estimateOnly,
                 controller,
                 [](rc::RebalanceJob::pointer job) {
                     // Not using the callback because the completion of the request
@@ -143,6 +176,7 @@ bool test () {
     
         rc::RebalanceJobResult const& replicaData = job->getReplicaData();
 
+        printPlan (replicaData);
         printReplicaInfo ("CREATED REPLICAS", replicaData.createdChunks);
         printReplicaInfo ("DELETED REPLICAS", replicaData.deletedChunks);
 
@@ -175,6 +209,7 @@ int main (int argc, const char* const argv[]) {
             "Usage:\n"
             "  <database-family> <start-percent> <stop-percent>\n"
             "    [--config=<url>]\n"
+            "    [--estimate-only]\n"
             "    [--progress-report]\n"
             "    [--error-report]\n"
             "    [--chunk-locks-report]\n"
@@ -191,6 +226,8 @@ int main (int argc, const char* const argv[]) {
             "Flags and options:\n"
             "  --config             - a configuration URL (a configuration file or a set of the database\n"
             "                         connection parameters [ DEFAULT: file:replication.cfg ]\n"
+            "  --estimate-only      - do not make any changes to chunk disposition. Just produce\n"
+            "                         and print an estimate for the rebalance plan.\n"
             "  --progress-report    - progress report when executing batches of requests\n"
             "  --error-report       - the flag triggering detailed report on failed requests\n"
             "  --chunk-locks-report - report chunks which are locked\n");
@@ -199,6 +236,7 @@ int main (int argc, const char* const argv[]) {
         ::startPercent      = parser.parameter<unsigned int>(2);
         ::stopPercent       = parser.parameter<unsigned int>(3);
         ::configUrl         = parser.option   <std::string> ("config", "file:replication.cfg");
+        ::estimateOnly      = parser.flag                   ("estimate-only");
         ::progressReport    = parser.flag                   ("progress-report");
         ::errorReport       = parser.flag                   ("error-report");
         ::chunkLocksReport  = parser.flag                   ("chunk-locks-report");

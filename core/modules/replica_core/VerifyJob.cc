@@ -273,10 +273,8 @@ VerifyJob::startImpl () {
         _replica.worker   (),
         _replica.database (),
         _replica.chunk    (),
-        [self] (FindRequest::pointer request) {
-            self->onRequestFinish (request);
-        },
-        0,                  /* priority */
+        [self] (FindRequest::pointer request) { self->onRequestFinish (request); },
+        _priority,          /* inherited from the one of the current job */
         _computeCheckSum,
         true,               /* keepTracking*/
         _id                 /* jobId */
@@ -353,14 +351,10 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
             
             // Compare new state of the replica against its older one which was
             // known to the database before this request was launched. Notify
-            // a subscriber of any changes (after releasing LOCK_GUARD). Changes
-            // which should be tracked include:
-            // - the status of the replica (unless it's NOT_FOUND as discussed above)
-            // - the number of files
-            // - the names of files
-            // - file sizes
-            // - mtime of files
-            // - constrol/check sums of files (if they were known before)
+            // a subscriber of any changes (after releasing LOCK_GUARD).
+            //
+            // @see class ReplicaDiff for further specific details on replica
+            // differece analysis.
             //
             // ATTENTIONS: Replica differeces are reported into the log stream only
             //             when no interest to be notified in the differences
@@ -398,10 +392,8 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
                 _replica.worker   (),
                 _replica.database (),
                 _replica.chunk    (),
-                [self] (FindRequest::pointer request) {
-                    self->onRequestFinish (request);
-                },
-                0,                  /* priority */
+                [self] (FindRequest::pointer request) { self->onRequestFinish (request); },
+                _priority,          /* inherited from the one of the current job */
                 _computeCheckSum,
                 true,               /* keepTracking*/
                 _id                 /* jobId */
