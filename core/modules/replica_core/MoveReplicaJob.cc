@@ -209,7 +209,8 @@ MoveReplicaJob::startImpl () {
     if (not _controller->serviceProvider().databaseServices()->findWorkerReplicas (
                 destinationReplicas,
                 _chunk,
-                _destinationWorker)) {
+                _destinationWorker,
+                _databaseFamily)) {
 
         LOGS(_log, LOG_LVL_ERROR, context() << "startImpl  "
              << "** failed to find replicas ** "
@@ -243,7 +244,8 @@ MoveReplicaJob::startImpl () {
     if (not _controller->serviceProvider().databaseServices()->findWorkerReplicas (
                 sourceReplicas,
                 _chunk,
-                _sourceWorker)) {
+                _sourceWorker,
+                _databaseFamily)) {
 
         LOGS(_log, LOG_LVL_ERROR, context() << "startImpl  ** failed to find replicas ** "
              << " chunk: "  << _chunk

@@ -130,7 +130,8 @@ public:
      */
     bool findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
                              unsigned int              chunk,
-                             std::string const&        worker) const override;
+                             std::string const&        worker,
+                             std::string const&        databaseFamily) const override;
 
 private:
 

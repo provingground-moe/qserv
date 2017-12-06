@@ -793,10 +793,11 @@ DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
 bool
 DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
                                            unsigned int              chunk,
-                                           std::string const&        worker) const {
+                                           std::string const&        worker,
+                                           std::string const&        databaseFamily) const {
     std::string const context = 
          "DatabaseServicesMySQL::findWorkerReplicas  worker: " + worker + " " +
-         std::string("chunk: " + std::to_string(chunk) + "  ");
+         std::string("chunk: " + std::to_string(chunk) + "  database family: " + databaseFamily);
 
     LOGS(_log, LOG_LVL_DEBUG, context);
 
@@ -805,11 +806,16 @@ DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
     if (not _configuration->isKnownWorker(worker))
         throw std::invalid_argument (context + "unknow worker");
 
+    if (not databaseFamily.empty() and not _configuration->isKnownDatabaseFamily(databaseFamily))
+        throw std::invalid_argument (context + "unknow databaseFamily");
+
     if (not findReplicas (
                 replicas,
                 "SELECT * FROM " + _conn->sqlId    ("replica") +
                 "  WHERE " +       _conn->sqlEqual ("worker", worker) +
-                "  AND "   +       _conn->sqlEqual ("chunk",  chunk))) {
+                "  AND "   +       _conn->sqlEqual ("chunk",  chunk) +
+                (databaseFamily.empty() ? "" :
+                "  AND " + _conn->sqlIn("database", _configuration->databases(databaseFamily))))) {
 
         LOGS(_log, LOG_LVL_ERROR, context << "failed to find replicas");
         return false;

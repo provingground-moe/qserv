@@ -134,11 +134,14 @@ bool test () {
         for (auto const& entry: replicaData.workers)
             if (!entry.second) failedWorkers.insert(entry.first);
 
-        std::map<std::string, std::vector<unsigned int>> worker2chunks;     // Chunks hosted by a worker
+        std::map<std::string, std::map<unsigned int, std::map<std::string,bool>>> worker2chunks2databases;
 
         for (rc::ReplicaInfoCollection const& replicaCollection: replicaData.replicas)
             for (rc::ReplicaInfo const& replica: replicaCollection) {
-                worker2chunks[replica.worker()].push_back(replica.chunk());
+                worker2chunks2databases[replica.worker()][replica.chunk()][replica.database()] = true;
+                if (replica.worker() == "worker-1") {
+                    std::cout << replica.worker() << ": " << replica.chunk() << " " << replica.database() << std::endl;
+                }
             }
 
         std::cout
@@ -151,7 +154,7 @@ bool test () {
         for (auto const& worker: provider.config()->workers())
             std::cout
                 << " " << std::setw(8) << worker << " | " << std::setw(10)
-                << (failedWorkers.count(worker) ? "*" : std::to_string(worker2chunks[worker].size())) << "\n";
+                << (failedWorkers.count(worker) ? "*" : std::to_string(worker2chunks2databases[worker].size())) << "\n";
 
         std::cout
             << "----------+------------\n"
