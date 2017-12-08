@@ -154,5 +154,53 @@ Generators::uniqueId () {
     return boost::uuids::to_string(id);
 }
 
+////////////////////////////////////////////
+//        Parameters of requests          //
+////////////////////////////////////////////
+
+ReplicationRequestParams::ReplicationRequestParams ()
+    :   priority     (0),
+        database     (""),
+        chunk        (0),
+        sourceWorker ("") {
+}
+ReplicationRequestParams::ReplicationRequestParams (lsst::qserv::proto::ReplicationRequestReplicate const& message)
+    :   priority     (message.priority ()),
+        database     (message.database ()),
+        chunk        (message.chunk    ()),
+        sourceWorker (message.worker   ()) {
+}
+
+DeleteRequestParams::DeleteRequestParams ()
+    :   priority     (0),
+        database     (""),
+        chunk        (0) {
+}
+DeleteRequestParams::DeleteRequestParams (lsst::qserv::proto::ReplicationRequestDelete const& message)
+    :   priority     (message.priority ()),
+        database     (message.database ()),
+        chunk        (message.chunk    ()) {
+}
+
+
+FindRequestParams::FindRequestParams ()
+    :   priority     (0),
+        database     (""),
+        chunk        (0) {
+}
+FindRequestParams::FindRequestParams (lsst::qserv::proto::ReplicationRequestFind const& message)
+    :   priority     (message.priority ()),
+        database     (message.database ()),
+        chunk        (message.chunk    ()) {
+}
+
+FindAllRequestParams::FindAllRequestParams ()
+    :   priority     (0),
+        database     ("") {
+}
+FindAllRequestParams::FindAllRequestParams (lsst::qserv::proto::ReplicationRequestFindAll const& message)
+    :   priority     (message.priority ()),
+        database     (message.database ()) {
+}
 
 }}} // namespace lsst::qserv::replica_core

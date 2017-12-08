@@ -99,6 +99,9 @@ public:
     unsigned int       chunk        () const { return _chunk; }
     std::string const& sourceWorker () const { return _sourceWorker; }
 
+    /// Return target request specific parameters
+    ReplicationRequestParams const& targetRequestParams () const { return _targetRequestParams; }
+
     /// Return the status of the replica
     ReplicaInfo const& responseData () const { return _replicaInfo; }
 
@@ -209,9 +212,11 @@ private:
     unsigned int _chunk;
     std::string  _sourceWorker;
     
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+
+    /// Request-specific parameters of the target request
+    ReplicationRequestParams _targetRequestParams;
 
     /// Detailed info on the replica status
     ReplicaInfo _replicaInfo;
@@ -251,6 +256,9 @@ public:
     std::string const& database     () const { return _database; }
     unsigned int       chunk        () const { return _chunk; }
     std::string const& sourceWorker () const { return _sourceWorker; }
+
+    /// Return target request specific parameters
+    ReplicationRequestParams const& targetRequestParams () const { return _targetRequestParams; }
 
     /// Return request-specific extended data reported upon a successfull completion
     /// of the request
@@ -343,9 +351,11 @@ private:
     unsigned int _chunk;
     std::string  _sourceWorker;
     
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+
+    /// Request-specific parameters of the target request
+    ReplicationRequestParams _targetRequestParams;
 
     /// Detailed info on the replica status
     ReplicaInfo _replicaInfo;

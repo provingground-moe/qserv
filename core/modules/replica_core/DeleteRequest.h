@@ -98,6 +98,9 @@ public:
     std::string const& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
 
+    /// Return target request specific parameters
+    DeleteRequestParams const& targetRequestParams () const { return _targetRequestParams; }
+
     /// Return request-specific extended data reported upon a successfull
     /// completion of the request
     ReplicaInfo const& responseData () const { return _responseData; }
@@ -204,9 +207,11 @@ private:
     std::string  _database;
     unsigned int _chunk;
     
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+
+    /// Request-specific parameters of the target request
+    DeleteRequestParams _targetRequestParams;
 
     /// Extended informationon on a status of the operation
     ReplicaInfo _responseData;
@@ -245,6 +250,9 @@ public:
  
     std::string const& database () const { return _database; }
     unsigned int       chunk    () const { return _chunk; }
+
+    /// Return target request specific parameters
+    DeleteRequestParams const& targetRequestParams () const { return _targetRequestParams; }
 
     /// Return request-specific extended data reported upon a successfull
     /// completion of the request
@@ -336,9 +344,11 @@ private:
     std::string  _database;
     unsigned int _chunk;
     
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+
+    /// Request-specific parameters of the target request
+    DeleteRequestParams _targetRequestParams;
 
     /// Extended informationon on a status of the operation
     ReplicaInfo _responseData;

@@ -396,6 +396,10 @@ DeleteRequestC::analyze (proto::ReplicationResponseDelete const& message) {
 
     _responseData = ReplicaInfo(&(message.replica_info()));
 
+    // Extract target request type-specific parameters from the response
+    if (message.has_request())
+        _targetRequestParams = DeleteRequestParams(message.request());
+
     switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
@@ -643,7 +647,11 @@ DeleteRequestM::analyze (bool                                                 su
         // reported by the worker service.
     
         _responseData = ReplicaInfo(&(message.replica_info()));
-    
+
+        // Extract target request type-specific parameters from the response
+        if (message.has_request())
+            _targetRequestParams = DeleteRequestParams(message.request());
+
         switch (message.status()) {
      
             case proto::ReplicationStatus::SUCCESS:

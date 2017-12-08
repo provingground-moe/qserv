@@ -199,6 +199,7 @@ VerifyJob::pointer
 VerifyJob::create (Controller::pointer const& controller,
                    callback_type              onFinish,
                    callback_type_on_diff      onReplicaDifference,
+                   size_t                     maxReplicas,
                    bool                       computeCheckSum,
                    int                        priority,
                    bool                       exclusive,
@@ -207,6 +208,7 @@ VerifyJob::create (Controller::pointer const& controller,
         new VerifyJob (controller,
                        onFinish,
                        onReplicaDifference,
+                       maxReplicas,
                        computeCheckSum,
                        priority,
                        exclusive,
@@ -216,6 +218,7 @@ VerifyJob::create (Controller::pointer const& controller,
 VerifyJob::VerifyJob (Controller::pointer const& controller,
                       callback_type              onFinish,
                       callback_type_on_diff      onReplicaDifference,
+                      size_t                     maxReplicas,
                       bool                       computeCheckSum,
                       int                        priority,
                       bool                       exclusive,
@@ -229,6 +232,7 @@ VerifyJob::VerifyJob (Controller::pointer const& controller,
 
         _onFinish            (onFinish),
         _onReplicaDifference (onReplicaDifference),
+        _maxReplicas         (maxReplicas),
         _computeCheckSum     (computeCheckSum) {
 }
 
@@ -246,11 +250,22 @@ VerifyJob::track (bool          progressReport,
     BlockPost blockPost (1000, 2000);
 
     while (_state != State::FINISHED) {
+
         blockPost.wait();
-        if (progressReport)
-            os  << "VerifyJob::track()  "
-                << "replica: " << _replica
-                << std::endl;
+
+        if (progressReport) {
+
+            // Grab the lock for a consistent view onto the rehostry of
+            // replicas
+            LOCK_GUARD;
+
+            os << "VerifyJob::track()  replicas:";
+            for (auto const& entry: _replicas) {
+                ReplicaInfo const& replica = entry.second;
+                os << " " << replica;
+            }
+            os << std::endl;
+        }
     }
 }
 
@@ -261,26 +276,30 @@ VerifyJob::startImpl () {
 
     auto self = shared_from_base<VerifyJob>();
     
-    // In theory this should never happen
+    // Launch the first batch of requests
 
-    if (not nextReplica()) {
+    std::vector<ReplicaInfo> replicas;
+    if (nextReplicas (replicas, _maxReplicas)) {
+        for (ReplicaInfo const& replica: replicas) {
+            auto request = _controller->findReplica (
+                replica.worker   (),
+                replica.database (),
+                replica.chunk    (),
+                [self] (FindRequest::pointer request) { self->onRequestFinish (request); },
+                _priority,          /* inherited from the one of the current job */
+                _computeCheckSum,
+                true,               /* keepTracking*/
+                _id                 /* jobId */
+            );
+            _replicas[request->id()] = replica;
+            _requests[request->id()] = request;
+        }
+        setState(State::IN_PROGRESS);
+
+    } else {
+        // In theory this should never happen
         setState(State::FINISHED);
-        return;
     }
-
-    // Launch the very first request
-    _request = _controller->findReplica (
-        _replica.worker   (),
-        _replica.database (),
-        _replica.chunk    (),
-        [self] (FindRequest::pointer request) { self->onRequestFinish (request); },
-        _priority,          /* inherited from the one of the current job */
-        _computeCheckSum,
-        true,               /* keepTracking*/
-        _id                 /* jobId */
-    );
-
-    setState(State::IN_PROGRESS);
 }
 
 void
@@ -292,17 +311,19 @@ VerifyJob::cancelImpl () {
     // job the request cancellation should be also followed (where it makes a sense)
     // by stopping the request at corresponding worker service.
 
-    if (_request) {
-        _request->cancel();
-        if (_request->state() != Request::State::FINISHED)
+    for (auto const& entry: _requests) {
+        auto const& request = entry.second;
+        request->cancel();
+        if (request->state() != Request::State::FINISHED)
             _controller->stopReplicaFind (
-                _request->worker(),
-                _request->id(),
+                request->worker(),
+                request->id(),
                 nullptr,    /* onFinish */
                 true,       /* keepTracking */
                 _id         /* jobId */);
     }
-    _request = nullptr;
+    _replicas.clear();
+    _requests.clear();
 
     setState(State::FINISHED, ExtendedState::CANCELLED);
 }
@@ -360,15 +381,16 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
             //             when no interest to be notified in the differences
             //             expressed by a caller (no callback provided).
 
-            selfReplicaDiff = ReplicaDiff (_replica, request->responseData());
+            ReplicaInfo const& oldReplica = _replicas[request->id()];
+            selfReplicaDiff = ReplicaDiff (oldReplica, request->responseData());
             if (selfReplicaDiff() and not _onReplicaDifference)
                 LOGS(_log, LOG_LVL_INFO, context() << "replica missmatch for self\n" << selfReplicaDiff);
 
             
             std::vector<ReplicaInfo> otherReplicas;
             _controller->serviceProvider().databaseServices()->findReplicas (otherReplicas,
-                                                                             _replica.chunk(),
-                                                                             _replica.database());
+                                                                             oldReplica.chunk(),
+                                                                             oldReplica.database());
             for (auto const& replica: otherReplicas) {
                 ReplicaDiff diff (request->responseData(), replica);
                 if (not diff.isSelf()) {
@@ -386,26 +408,40 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
                  << " database: " << request->database()
                  << " chunk: "    << request->chunk());
         }
-        if (nextReplica ()) {
 
-            _request = _controller->findReplica (
-                _replica.worker   (),
-                _replica.database (),
-                _replica.chunk    (),
-                [self] (FindRequest::pointer request) { self->onRequestFinish (request); },
-                _priority,          /* inherited from the one of the current job */
-                _computeCheckSum,
-                true,               /* keepTracking*/
-                _id                 /* jobId */
-            );
+        // Remove the processed replica, fetch another one and begin processing it
+
+        _replicas.erase(request->id());
+        _requests.erase(request->id());
+
+        std::vector<ReplicaInfo> replicas;
+        if (nextReplicas (replicas, 1)) {
+
+            for (ReplicaInfo const& replica: replicas) {
+                auto request = _controller->findReplica (
+                    replica.worker   (),
+                    replica.database (),
+                    replica.chunk    (),
+                    [self] (FindRequest::pointer request) { self->onRequestFinish (request); },
+                    _priority,          /* inherited from the one of the current job */
+                    _computeCheckSum,
+                    true,               /* keepTracking*/
+                    _id                 /* jobId */
+                );
+                _replicas[request->id()] = replica;
+                _requests[request->id()] = request;
+            }
 
         } else {
 
             // In theory this should never happen unless all replicas are gone
             // from the system or there was a problem to access the database.
+            //
+            // In any case check if no requests are in flight and finish if that's
+            // the case.
 
-            setState (State::FINISHED);
-            break;
+            if (not _replicas.size())
+                setState (State::FINISHED);
         }
     
     } while (false);
@@ -421,8 +457,11 @@ VerifyJob::onRequestFinish (FindRequest::pointer request) {
 }
 
 bool
-VerifyJob::nextReplica () {
-    return _controller->serviceProvider().databaseServices()->findOldestReplica(_replica);
+VerifyJob::nextReplicas (std::vector<ReplicaInfo>& replicas,
+                         size_t                    numReplicas) {
+    return _controller->serviceProvider().databaseServices()->findOldestReplicas (
+                replicas,
+                numReplicas);
 }
 
 }}} // namespace lsst::qserv::replica_core

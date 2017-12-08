@@ -396,6 +396,10 @@ FindAllRequestC::analyze (proto::ReplicationResponseFindAll const& message) {
     for (int num = message.replica_info_many_size(), idx = 0; idx < num; ++idx)
         _replicaInfoCollection.emplace_back(&(message.replica_info_many(idx)));
 
+    // Extract target request type-specific parameters from the response
+    if (message.has_request())
+        _targetRequestParams = FindAllRequestParams(message.request());
+
     switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
@@ -632,7 +636,11 @@ FindAllRequestM::analyze (bool                                     success,
     
         for (int num = message.replica_info_many_size(), idx = 0; idx < num; ++idx)
             _replicaInfoCollection.emplace_back(&(message.replica_info_many(idx)));
-    
+
+        // Extract target request type-specific parameters from the response
+        if (message.has_request())
+            _targetRequestParams = FindAllRequestParams(message.request());
+
         switch (message.status()) {
      
             case proto::ReplicationStatus::SUCCESS:

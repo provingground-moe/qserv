@@ -356,7 +356,11 @@ RebalanceJob::onPrecursorJobFinish () {
             size_t      const  numChunks = workerEntry.second;
 
             // Consider workers which are overpopulated above the upper bound
-            if (numChunks >= _replicaData.startChunksPerWorker) {
+            //
+            // ATTENTION: using '>' in the comparision instead of '>=' is meant to dumpen
+            //            a possibility of the jitrerring effect when 'startChunksPerWorker'
+            //            and 'stopChunksPerWorker' are off just by one.
+            if (numChunks > _replicaData.startChunksPerWorker) {
 
                 // shave chunks down to the lower bound
                 sourceWorker2numExtraChunks[worker] = numChunks - _replicaData.stopChunksPerWorker;

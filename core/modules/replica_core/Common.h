@@ -108,6 +108,72 @@ private:
     static std::mutex _mtx;
 };
 
+
+/**
+ * Parameters of the replica creation requests
+ */
+struct ReplicationRequestParams {
+
+    int          priority;
+    std::string  database;
+    unsigned int chunk;
+    std::string  sourceWorker;
+
+    /// The default constructor
+    ReplicationRequestParams ();
+
+    /// The normal constructor
+    explicit ReplicationRequestParams (lsst::qserv::proto::ReplicationRequestReplicate const& message);
+};
+
+/**
+ * Parameters of the replica deletion requests
+ */
+struct DeleteRequestParams {
+
+    int          priority;
+    std::string  database;
+    unsigned int chunk;
+    std::string  sourceWorker;
+
+    /// The default constructor
+    DeleteRequestParams ();
+
+    /// The normal constructor
+    explicit DeleteRequestParams (lsst::qserv::proto::ReplicationRequestDelete const& message);
+};
+
+/**
+ * Parameters of the replica lookup requests
+ */
+struct FindRequestParams {
+
+    int          priority;
+    std::string  database;
+    unsigned int chunk;
+
+    /// The default constructor
+    FindRequestParams ();
+
+    /// The normal constructor
+    explicit FindRequestParams (lsst::qserv::proto::ReplicationRequestFind const& message);
+};
+
+/**
+ * Parameters of the many replica lookup requests
+ */
+struct FindAllRequestParams {
+
+    int          priority;
+    std::string  database;
+
+    /// The default constructor
+    FindAllRequestParams ();
+
+    /// The normal constructor
+    explicit FindAllRequestParams (lsst::qserv::proto::ReplicationRequestFindAll const& message);
+};
+
 }}} // namespace lsst::qserv::replica_core
 
 #endif // LSST_QSERV_REPLICA_CORE_COMMON_H
