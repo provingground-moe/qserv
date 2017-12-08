@@ -89,11 +89,16 @@ struct StatusReplicationRequestPolicy {
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_CREATE; }
 
-    using responseMessageType = lsst::qserv::proto::ReplicationResponseReplicate;
-    using responseDataType    = ReplicaInfo;
+    using responseMessageType     = lsst::qserv::proto::ReplicationResponseReplicate;
+    using responseDataType        = ReplicaInfo;
+    using targetRequestParamsType = ReplicationRequestParams;
 
     static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
         data = responseDataType(&(msg.replica_info()));
+    }
+    static void extractTargetRequestParams (const responseMessageType& msg, targetRequestParamsType& params) {
+        if (msg.has_request())
+            params = targetRequestParamsType(msg.request());
     }
 };
 
@@ -104,11 +109,16 @@ struct StatusDeleteRequestPolicy {
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_DELETE; }
 
-    using responseMessageType = lsst::qserv::proto::ReplicationResponseDelete;
-    using responseDataType    = ReplicaInfo;
+    using responseMessageType     = lsst::qserv::proto::ReplicationResponseDelete;
+    using responseDataType        = ReplicaInfo;
+    using targetRequestParamsType = DeleteRequestParams;
 
     static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
         data = responseDataType(&(msg.replica_info()));
+    }
+    static void extractTargetRequestParams (const responseMessageType& msg, targetRequestParamsType& params) {
+        if (msg.has_request())
+            params = targetRequestParamsType(msg.request());
     }
 };
 
@@ -119,11 +129,16 @@ struct StatusFindRequestPolicy {
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND; }
 
-    using responseMessageType = lsst::qserv::proto::ReplicationResponseFind;
-    using responseDataType    = ReplicaInfo;
+    using responseMessageType     = lsst::qserv::proto::ReplicationResponseFind;
+    using responseDataType        = ReplicaInfo;
+    using targetRequestParamsType = FindRequestParams;
 
     static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
         data = ReplicaInfo(&(msg.replica_info()));
+    }
+    static void extractTargetRequestParams (const responseMessageType& msg, targetRequestParamsType& params) {
+        if (msg.has_request())
+            params = targetRequestParamsType(msg.request());
     }
 };
 
@@ -134,12 +149,17 @@ struct StatusFindAllRequestPolicy {
     static lsst::qserv::proto::ReplicationReplicaRequestType requestType () {
         return lsst::qserv::proto::ReplicationReplicaRequestType::REPLICA_FIND_ALL; }
 
-    using responseMessageType = lsst::qserv::proto::ReplicationResponseFindAll;
-    using responseDataType    = ReplicaInfoCollection;
+    using responseMessageType     = lsst::qserv::proto::ReplicationResponseFindAll;
+    using responseDataType        = ReplicaInfoCollection;
+    using targetRequestParamsType = FindAllRequestParams;
 
     static void extractResponseData (const responseMessageType& msg, responseDataType& data) {
         for (int num = msg.replica_info_many_size(), idx = 0; idx < num; ++idx)
             data.emplace_back(&(msg.replica_info_many(idx)));
+    }
+    static void extractTargetRequestParams (const responseMessageType& msg, targetRequestParamsType& params) {
+        if (msg.has_request())
+            params = targetRequestParamsType(msg.request());
     }
 };
 
@@ -149,7 +169,7 @@ struct StatusFindAllRequestPolicy {
 // =============================================
 
 /**
-  * Class StatusRequestBaseC represents teh base class for a family of requests
+  * Class StatusRequestBaseC represents the base class for a family of requests
   * pulling a status of on-going operationd.
   */
 class StatusRequestBaseC
@@ -281,6 +301,9 @@ public:
     ~StatusRequestC () final {
     }
 
+    /// Return target request specific parameters
+    typename POLICY::targetRequestParamsType const& targetRequestParams () const { return _targetRequestParams; }
+
     /// Return request-specific extended data reported upon asuccessfull completion
     /// of the request
     typename POLICY::responseDataType const& responseData () const { return _responseData; }
@@ -368,6 +391,9 @@ private:
         typename POLICY::responseMessageType message;
         _bufferPtr->parse(message, _bufferPtr->size());
 
+        // Extract target request-specific parameters from the response if available
+        POLICY::extractTargetRequestParams(message, _targetRequestParams);
+
         // Extract request-specific data from the response regardless of
         // the completion status of the request.
         POLICY::extractResponseData(message, _responseData);
@@ -392,7 +418,10 @@ private:
 
     /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
-    
+
+    /// Request-specific parameters of the target request
+    typename POLICY::targetRequestParamsType _targetRequestParams;
+
     /// Request-specific data
     typename POLICY::responseDataType _responseData;
 };
@@ -515,6 +544,9 @@ public:
     ~StatusRequestM () final {
     }
 
+    /// Return target request specific parameters
+    typename POLICY::targetRequestParamsType const& targetRequestParams () const { return _targetRequestParams; }
+
     /// Return request-specific extended data reported upon asuccessfull completion
     /// of the request
     typename POLICY::responseDataType const& responseData () const { return _responseData; }
@@ -629,6 +661,9 @@ private:
     lsst::qserv::proto::ReplicationStatus parseResponse (
             typename POLICY::responseMessageType const& message) {
 
+        // Extract target request-specific parameters from the response if available
+        POLICY::extractTargetRequestParams(message, _targetRequestParams);
+
         // Extract request-specific data from the response regardless of
         // the completion status of the request.
         POLICY::extractResponseData(message, _responseData);
@@ -654,6 +689,9 @@ private:
     /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
     
+    /// Request-specific parameters of the target request
+    typename POLICY::targetRequestParamsType _targetRequestParams;
+
     /// Request-specific data
     typename POLICY::responseDataType _responseData;
 };

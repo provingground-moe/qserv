@@ -97,6 +97,9 @@ public:
  
     std::string const& database () const { return _database; }
 
+    /// Return target request specific parameters
+    FindAllRequestParams const& targetRequestParams () const { return _targetRequestParams; }
+
     /**
      * Return a refernce to a result of the completed request.
      *
@@ -200,9 +203,11 @@ private:
 
     std::string _database;
 
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+
+    /// Request-specific parameters of the target request
+    FindAllRequestParams _targetRequestParams;
 
     /// Result of the operation
     ReplicaInfoCollection _replicaInfoCollection;
@@ -240,6 +245,9 @@ public:
     // Trivial acccessors
  
     std::string const& database () const { return _database; }
+
+    /// Return target request specific parameters
+    FindAllRequestParams const& targetRequestParams () const { return _targetRequestParams; }
 
     /**
      * Return a refernce to a result of the completed request.
@@ -325,9 +333,11 @@ private:
 
     std::string _database;
 
-    // Registered callback to be called when the operation finishes
-
+    /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
+
+    /// Request-specific parameters of the target request
+    FindAllRequestParams _targetRequestParams;
 
     /// Result of the operation
     ReplicaInfoCollection _replicaInfoCollection;

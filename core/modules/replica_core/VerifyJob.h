@@ -169,23 +169,27 @@ public:
      * and memory management of instances created otherwise (as values or via
      * low-level pointers).
      *
-     * @param controller  - for launching requests
-     * @param onFinish    - a callback function to be called upon a completion of the job
+     * @param controller          - for launching requests
+     * @param onFinish            - a callback function to be called upon a completion of the job
      @ @param onReplicaDifference - a callback function to be called when two replicas won't match
      * @param computeCheckSum     - tell a worker server to compute check/control sum on each file
-     * @param priority    - set the desired job priority (larger values
-     *                      mean higher priorities). A job with the highest
-     *                      priority will be select from an input queue by
-     *                      the JobScheduler.
-     * @param exclusive   - set to 'true' to indicate that the job can't be
-     *                      running simultaneously alongside other jobs.
-     * @param preemptable - set to 'true' to indicate that this job can be
-     *                      interrupted to give a way to some other job of
-     *                      high importancy.
+     * @param maxReplicas         - the maximum number of replicas to process simultaneously.
+     *                              If the parameter is set to 0 (the default value) then 1 replica
+     *                              will be assumed.
+     * @param priority            - set the desired job priority (larger values
+     *                              mean higher priorities). A job with the highest
+     *                              priority will be select from an input queue by
+     *                              the JobScheduler.
+     * @param exclusive           - set to 'true' to indicate that the job can't be
+     *                              running simultaneously alongside other jobs.
+     * @param preemptable         - set to 'true' to indicate that this job can be
+     *                              interrupted to give a way to some other job of
+     *                              high importancy.
      */
     static pointer create (Controller::pointer const& controller,
                            callback_type              onFinish,
                            callback_type_on_diff      onReplicaDifference,
+                           size_t                     maxReplicas=0,
                            bool                       computeCheckSum=false,
                            int                        priority    = 0,
                            bool                       exclusive   = false,
@@ -223,6 +227,7 @@ protected:
     VerifyJob (Controller::pointer const& controller,
                callback_type              onFinish,
                callback_type_on_diff      onReplicaDifference,
+               size_t                     maxReplicas,
                bool                       computeCheckSum,
                int                        priority,
                bool                       exclusive,
@@ -257,12 +262,16 @@ protected:
     void onRequestFinish (FindRequest::pointer request);
 
     /**
-     * Find the next replica to be inspected and return 'true' if the one
-     * is found. Normally the method should never return 'false' unless
+     * Find the next replicas to be inspected and return 'true' if no suitable
+     * candidates found. Normally the method should never return 'false' unless
      * no single replica exists in the system or there was a failure to find
-     * a replica info in the database.
+     * replicas in the database.
+     *
+     * @param replicas    - a collection of replicas returned from the database
+     * @param numReplicas - a desired number of replicas to be pulled from the database
      */
-    bool nextReplica ();
+    bool nextReplicas (std::vector<ReplicaInfo>& replicas,
+                       size_t                    numReplicas);
     
 protected:
 
@@ -272,14 +281,18 @@ protected:
     /// Client-defined function to be called when two replicas won't match
     callback_type_on_diff _onReplicaDifference;
 
+    /// The maximum number of replicas to be allowed processed simultaneously
+    size_t _maxReplicas;
+
     /// This option will be passed on to the worker services
     bool _computeCheckSum;
 
-    // The current (last) replica which is inspected
-    ReplicaInfo _replica;
+    /// The current (last) batch if replicas which are being inspected.
+    /// The replicas are registered by the corresponding request IDs.
+    std::map<std::string, ReplicaInfo> _replicas;
  
-    /// The current (last) request
-    FindRequest::pointer _request;
+    /// The current (last) batch of requests registered by their IDs
+    std::map<std::string, FindRequest::pointer> _requests;
 };
 
 }}} // namespace lsst::qserv::replica_core

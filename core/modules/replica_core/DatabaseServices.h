@@ -134,19 +134,22 @@ public:
     virtual void saveState (Request_pointer const& request);
 
     /**
-     * Locate a replica which has the has the oldest verification timestamp.
-     * Return 'true' and set the reference if the one is found.
+     * Locate replicas which have the oldest verification timestamps.
+     * Return 'true' and populate a collection with up to the 'maxReplicas'
+     * if any found.
      *
      * ATTENTION: no assumption on a new status of the replica object
      * passed into the method should be made if the operation fails
      * (returns 'false').
      *
      * @param replica            - a reference to an object to be initialized
+     * @param maxReplicas        - the maximum number of replicas to be returned
      * @param enabledWorkersOnly - if set to 'true' then only consider known
      *                             workers which are enabled in the Configuration
      */
-    virtual bool findOldestReplica (ReplicaInfo& replica,
-                                    bool         enabledWorkersOnly=true) const;
+    virtual bool findOldestReplicas (std::vector<ReplicaInfo>& replicas,
+                                     size_t                    maxReplicas=1,
+                                     bool                      enabledWorkersOnly=true) const;
     
     /**
      * Find all replicas for the specified chunk and the database.
@@ -171,7 +174,8 @@ public:
                                bool                      enabledWorkersOnly=true) const;
 
     /**
-     * Find all replicas for the specified worker.
+     * Find all replicas for the specified worker and a database (or all
+     * databases if no specific one is requested).
      *
      * ATTENTION: no assumption on a new status of the replica collection
      * passed into the method should be made if the operation fails
@@ -179,16 +183,20 @@ public:
      *
      * @param replicas - a collection of replicas (if any found)
      * @param worker   - the name of a worker
+     * @param database - the optional name of a database
      *
      * @return 'true' in case of success (even if no replicas were found)
      *
-     * @throw std::invalid_argument - if the worker is unknown or its name is empty
+     * @throw std::invalid_argument - if the worker is unknown or its name
+     *                                is empty, or if the database family is
+     *                                unknown (if provided)
      */
     virtual bool findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
-                                     std::string const&        worker) const;
+                                     std::string const&        worker,
+                                     std::string const&        database=std::string()) const;
 
     /**
-     * Find all replicas for the specified chubk on a worker.
+     * Find all replicas for the specified chunk on a worker.
      *
      * ATTENTION: no assumption on a new status of the replica collection
      * passed into the method should be made if the operation fails

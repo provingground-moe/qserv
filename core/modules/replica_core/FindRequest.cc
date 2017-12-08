@@ -410,6 +410,10 @@ FindRequestC::analyze (proto::ReplicationResponseFind const& message) {
 
     _replicaInfo = ReplicaInfo(&(message.replica_info()));
 
+    // Extract target request type-specific parameters from the response
+    if (message.has_request())
+        _targetRequestParams = FindRequestParams(message.request());
+
     switch (message.status()) {
  
         case proto::ReplicationStatus::SUCCESS:
@@ -660,7 +664,11 @@ FindRequestM::analyze (bool                                  success,
         // reported by the worker service.
     
         _replicaInfo = ReplicaInfo(&(message.replica_info()));
-    
+
+        // Extract target request type-specific parameters from the response
+        if (message.has_request())
+            _targetRequestParams = FindRequestParams(message.request());
+
         switch (message.status()) {
      
             case proto::ReplicationStatus::SUCCESS:

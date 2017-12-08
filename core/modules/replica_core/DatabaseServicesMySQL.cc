@@ -188,6 +188,26 @@ ReplicaInfo const& replicaInfo (Request::pointer const& request) {
 }
 
 /**
+ * Return the name of a database from the target parameters of eligible requests
+ *
+ * @param request - a request to be analyzed
+ * @return        - the name of a database
+ *
+ * @throw std::logic_error for unsupported requsts
+ */
+std::string const& databaseNameOfRequest (Request::pointer const& request) {
+
+    std::string const& context = "DatabaseServicesMySQL::databaseNameOfRequest  ";
+
+    if ("REPLICA_FIND_ALL"                == request->type()) return safeAssign<FindAllRequest>       (request)->targetRequestParams().database;
+    if ("REQUEST_STATUS:REPLICA_FIND_ALL" == request->type()) return safeAssign<StatusFindAllRequest> (request)->targetRequestParams().database;
+    if ("REQUEST_STOP:REPLICA_FIND_ALL"   == request->type()) return safeAssign<StopFindAllRequest>   (request)->targetRequestParams().database;
+
+    throw std::logic_error (context + "operation is not supported for request id: " +
+                            request->id() + ", type: " + request->type());
+}
+
+/**
  * Return a collection of the replica info data from eligible requests
  *
  * @param request - a request to be analyzed
@@ -594,7 +614,10 @@ DatabaseServicesMySQL::saveState (Request::pointer const& request) {
             request->extendedState() == Request::ExtendedState::SUCCESS) {
             try {
                 _conn->begin ();
-                saveReplicaInfoCollection (::replicaInfoCollection (request));
+                saveReplicaInfoCollection (
+                    request->worker(),
+                    ::databaseNameOfRequest (request),
+                    ::replicaInfoCollection (request));
                 _conn->commit ();
             } catch (database::mysql::Error const& ex) {
                 if (_conn->inTransaction()) _conn->rollback();
@@ -687,23 +710,60 @@ DatabaseServicesMySQL::saveReplicaInfo (ReplicaInfo const& info) {
 }
 
 void
-DatabaseServicesMySQL::saveReplicaInfoCollection (ReplicaInfoCollection const& infoCollection) {
+DatabaseServicesMySQL::saveReplicaInfoCollection (std::string const&           worker,
+                                                  std::string const&           database,
+                                                  ReplicaInfoCollection const& infoCollection) {
 
-    // TODO: the current implementation of the algorithm won't properly
-    // handle replicas which disappear w/o being reported by the Replication
-    // system. This may leave "dead" replica entries witin this database.
-    //
-    // This problem may have different solutions (some of them may be at a higher
-    // level than this code, for example by launching a single replica-lookup
-    // scanners to check for a presence of each replica, recompute their size,
-    // control/check sum).
-    //
-    // Another solution might be to assume that each collection passed into this
-    // carries a complete snapshot of all replicas which exist in a well defined
-    // scope (worker + database, or just worker). In that case it would be possible
-    // to cross-check all replicas exising within the database vs what's reported
-    // in the input collection and take proper actions if needed.
+    std::string const context = "DatabaseServicesMySQL::saveReplicaInfoCollection  ";
 
+    LOGS(_log, LOG_LVL_DEBUG, context << "infoCollection.size(): " << infoCollection.size());
+
+    // Group new replicas by categories
+    std::map<std::string,                       // worker
+             std::map<std::string,              // database
+                      std::map<unsigned int,    // chunk
+                               bool>>> newReplicas;
+
+    for (auto const& info: infoCollection)
+        newReplicas[info.worker()][info.database()][info.chunk()] = true;
+
+    // Note that this algorithm will also work if the input collection has
+    // multiple contexts. The algorithm will affect database stored replicas
+    // in the requested ('worker' and 'database' parameters of the method)
+    // context only.
+
+    if (newReplicas.count (worker) and
+        newReplicas.at    (worker).count(database) and
+        not newReplicas.at(worker).at   (database).empty()) {
+
+        // Check each old replicas to see if it's present in the new collection
+        std::vector<ReplicaInfo> oldReplicas;
+        if (findWorkerReplicasNoLock (oldReplicas, worker, database)) {
+    
+            for (ReplicaInfo const& replica: oldReplicas) {
+                unsigned int const chunk = replica.chunk();
+    
+                // Eliminate the 'dead' chunks entry from the database
+                if (not newReplicas.at(worker).at(database).count(chunk))
+                    _conn->execute (
+                        "DELETE FROM " + _conn->sqlId    ("replica") +
+                        "  WHERE " +     _conn->sqlEqual ("worker",   worker) +
+                        "    AND " +     _conn->sqlEqual ("database", database) +
+                        "    AND " +     _conn->sqlEqual ("chunk",    chunk));
+            }
+        }
+
+    } else {
+
+        // Bulk delete if the input collection is empty or has no context
+        _conn->execute (
+            "DELETE FROM " + _conn->sqlId    ("replica") +
+            "  WHERE " +     _conn->sqlEqual ("worker",   worker) +
+            "    AND " +     _conn->sqlEqual ("database", database));
+    }
+
+    // Finally push new (or update existing) replicas info into the database
+    // (some of those replicas will be brand new, others - will need to be updated)
     for (auto const& info: infoCollection)
         saveReplicaInfo (info);
 }
@@ -711,27 +771,29 @@ DatabaseServicesMySQL::saveReplicaInfoCollection (ReplicaInfoCollection const& i
 
 
 bool
-DatabaseServicesMySQL::findOldestReplica (ReplicaInfo& replica,
-                                          bool         enabledWorkersOnly) const {
+DatabaseServicesMySQL::findOldestReplicas (std::vector<ReplicaInfo>& replicas,
+                                           size_t                    maxReplicas,
+                                           bool                      enabledWorkersOnly) const {
 
-    std::string const context = "DatabaseServicesMySQL::findOldestReplica  ";
-
-    LOGS(_log, LOG_LVL_DEBUG, context);
+    std::string const context = "DatabaseServicesMySQL::findOldestReplicas  ";
 
     LOCK_GUARD;
 
-    std::vector<ReplicaInfo> replicas;
+    LOGS(_log, LOG_LVL_DEBUG, context);
+
+    if (not maxReplicas)
+        throw std::invalid_argument (context + "maxReplicas is not allowed to be 0");
+
     if (not findReplicas (
                 replicas,
                 "SELECT * FROM " + _conn->sqlId ("replica") +
                 (enabledWorkersOnly ?
                 " WHERE " +        _conn->sqlIn ("worker", _configuration->workers(true)) : "") +
-                " ORDER BY "     + _conn->sqlId ("verify_time") + " ASC LIMIT 1") or (replicas.size() != 1)) {
+                " ORDER BY "     + _conn->sqlId ("verify_time") + " ASC LIMIT " + std::to_string(maxReplicas)) or not replicas.size()) {
 
-        LOGS(_log, LOG_LVL_ERROR, context << "failed to find the oldest replica");
+        LOGS(_log, LOG_LVL_ERROR, context << "failed to find the oldest replica(s)");
         return false;
     }
-    replica = replicas[0];
     return true;
 }
  
@@ -768,36 +830,50 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
 
 bool
 DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
-                                           std::string const&        worker) const {
+                                           std::string const&        worker,
+                                           std::string const&        database) const {
+    LOCK_GUARD;
+    return findWorkerReplicasNoLock (replicas,
+                                     worker,
+                                     database);
+}
+
+bool
+DatabaseServicesMySQL::findWorkerReplicasNoLock (std::vector<ReplicaInfo>& replicas,
+                                                 std::string const&        worker,
+                                                 std::string const&        database) const {
     std::string const context = 
-         "DatabaseServicesMySQL::findWorkerReplicas  worker: " + worker + "  ";
+         "DatabaseServicesMySQL::findWorkerReplicasNoLock  worker: " + worker + 
+         " database: " + database;
 
     LOGS(_log, LOG_LVL_DEBUG, context);
-
-    LOCK_GUARD;
 
     if (not _configuration->isKnownWorker(worker))
         throw std::invalid_argument (context + "unknow worker");
 
+    if (not _configuration->isKnownDatabase(database))
+        throw std::invalid_argument (context + "unknow database");
+
     if (not findReplicas (
                 replicas,
                 "SELECT * FROM " + _conn->sqlId    ("replica") +
-                "  WHERE " +       _conn->sqlEqual ("worker", worker))) {
+                "  WHERE " +       _conn->sqlEqual ("worker",   worker) +
+                (database.empty() ? "" :
+                "  AND "   +       _conn->sqlEqual ("database", database)))) {
 
         LOGS(_log, LOG_LVL_ERROR, context << "failed to find replicas");
         return false;
     }
     return true;
 }
-
 bool
 DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
                                            unsigned int              chunk,
                                            std::string const&        worker,
                                            std::string const&        databaseFamily) const {
     std::string const context = 
-         "DatabaseServicesMySQL::findWorkerReplicas  worker: " + worker + " " +
-         std::string("chunk: " + std::to_string(chunk) + "  database family: " + databaseFamily);
+         "DatabaseServicesMySQL::findWorkerReplicas  worker: " + worker +
+         " chunk: " + std::to_string(chunk) + "  database family: " + databaseFamily;
 
     LOGS(_log, LOG_LVL_DEBUG, context);
 
@@ -823,6 +899,7 @@ DatabaseServicesMySQL::findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
     LOGS(_log, LOG_LVL_DEBUG, context << "num replicas found: " << replicas.size());
     return true;
 }
+
 bool
 DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
                                      std::string const&        query) const {
@@ -833,11 +910,19 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
 
     bool result = false;
 
+    bool startedTransaction  = false;
+    bool startedTransaction2 = false;
     try {
-        _conn->begin();
+        if (not _conn->inTransaction()) {
+            _conn->begin();
+            startedTransaction = true;
+        }
         _conn->execute (query);
 
-        _conn2->begin();
+        if (not _conn2->inTransaction()) {
+            _conn2->begin();
+            startedTransaction2 = true;
+        }
 
         if (_conn->hasResult()) {
 
@@ -921,8 +1006,8 @@ DatabaseServicesMySQL::findReplicas (std::vector<ReplicaInfo>& replicas,
         LOGS(_log, LOG_LVL_ERROR, context
              << "database operation failed due to: " << ex.what());
     }    
-    if (_conn ->inTransaction()) _conn ->rollback();
-    if (_conn2->inTransaction()) _conn2->rollback();
+    if (startedTransaction  and _conn ->inTransaction()) _conn ->rollback();
+    if (startedTransaction2 and _conn2->inTransaction()) _conn2->rollback();
 
     return result;
 }

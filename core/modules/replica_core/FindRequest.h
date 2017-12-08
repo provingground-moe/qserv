@@ -99,6 +99,9 @@ public:
     unsigned int       chunk           () const { return _chunk; }
     bool               computeCheckSum () const { return _computeCheckSum; }
 
+    /// Return target request specific parameters
+    FindRequestParams const& targetRequestParams () const { return _targetRequestParams; }
+
     /**
      * Return a refernce to a result obtained from a remote service.
      *
@@ -213,7 +216,10 @@ private:
 
     /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
-    
+
+    /// Request-specific parameters of the target request
+    FindRequestParams _targetRequestParams;
+
     /// The results reported by a worker service
     ReplicaInfo _replicaInfo;
 };
@@ -252,6 +258,9 @@ public:
     std::string const& database        () const { return _database; }
     unsigned int       chunk           () const { return _chunk; }
     bool               computeCheckSum () const { return _computeCheckSum; }
+
+    /// Return target request specific parameters
+    FindRequestParams const& targetRequestParams () const { return _targetRequestParams; }
 
     /**
      * Return a refernce to a result obtained from a remote service.
@@ -347,6 +356,9 @@ private:
     /// Registered callback to be called when the operation finishes
     callback_type _onFinish;
     
+    /// Request-specific parameters of the target request
+    FindRequestParams _targetRequestParams;
+
     /// The results reported by a worker service
     ReplicaInfo _replicaInfo;
 };

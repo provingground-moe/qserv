@@ -314,13 +314,22 @@ message ReplicationResponseReplicate {
     /// The performance of this operation
     required ReplicationPerformance performance = 4;
 
+    // --------------------------------------------------------------
+    // The following optional fields et upon a successfull completion
+    // of the request
+    // --------------------------------------------------------------
+
     /// The performance of the target operation. This field represents
     /// stats of the replica creation request obtained by the request
-    /// management operations
+    /// management operations.
     optional ReplicationPerformance target_performance = 5;
 
     /// Extended information on the replica
     optional ReplicationReplicaInfo replica_info = 6;
+
+    /// Parameters of the original request to which this response
+    /// is related.
+    optional ReplicationRequestReplicate request = 7;
 }
 
 message ReplicationResponseDelete {
@@ -337,6 +346,11 @@ message ReplicationResponseDelete {
     /// The performance of this operation
     required ReplicationPerformance performance = 4;
 
+    // --------------------------------------------------------------
+    // The following optional fields et upon a successfull completion
+    // of the request
+    // --------------------------------------------------------------
+
     /// The performance of the target operation. This field represents
     /// stats of the replica deletion request obtained by the request
     /// management operations
@@ -344,6 +358,11 @@ message ReplicationResponseDelete {
     
     /// Extended information on the request
     optional ReplicationReplicaInfo replica_info = 6;
+
+    /// Parameters of the original request to which this response
+    /// is related
+    optional ReplicationRequestDelete request = 7;
+
 }
 
 message ReplicationResponseFind {
@@ -357,6 +376,11 @@ message ReplicationResponseFind {
     /// The performance of this operation
     required ReplicationPerformance performance = 3;
 
+    // --------------------------------------------------------------
+    // The following optional fields et upon a successfull completion
+    // of the request
+    // --------------------------------------------------------------
+
     /// The performance of the target operation. This field represents
     /// stats of the replica deletion request obtained by the request
     /// management operations
@@ -364,6 +388,10 @@ message ReplicationResponseFind {
 
     /// Extended information on the request
     optional ReplicationReplicaInfo replica_info = 5;
+    
+    /// Parameters of the original request to which this response
+    /// is related
+    optional ReplicationRequestFind request = 6;
 }
 
 message ReplicationResponseFindAll {
@@ -384,6 +412,15 @@ message ReplicationResponseFindAll {
 
     /// Extended information on the request
     repeated ReplicationReplicaInfo replica_info_many = 5;
+
+    // --------------------------------------------------------------
+    // The following optional fields et upon a successfull completion
+    // of the request
+    // --------------------------------------------------------------
+
+    /// Parameters of the original request to which this response
+    /// is related
+    optional ReplicationRequestFindAll request = 6;
 }
 
 /////////////////////////////////////////////////////////////////////////

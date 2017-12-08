@@ -776,12 +776,11 @@ WorkerProcessor::setInfo (WorkerRequest::pointer const&        request,
 
     if (!request) return;
 
-    WorkerReplicationRequest::pointer ptr =
-        std::dynamic_pointer_cast<WorkerReplicationRequest>(request);
-
+    auto ptr = std::dynamic_pointer_cast<WorkerReplicationRequest>(request);
     if (!ptr)
-        throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
-                               " in WorkerProcessor::setInfo(WorkerReplicationRequest)");
+        throw std::logic_error (
+                "incorrect dynamic type of request id: " + request->id() +
+                " in WorkerProcessor::setInfo(WorkerReplicationRequest)");
 
     // Return the performance of the target request
 
@@ -791,7 +790,18 @@ WorkerProcessor::setInfo (WorkerRequest::pointer const&        request,
     // from  ReplicaInfo object in the call below. The protobuf
     // runtime will take care of deleting the intermediate objects.
 
-    response.set_allocated_replica_info (ptr->replicaInfo    ().info());
+    response.set_allocated_replica_info (ptr->replicaInfo().info());
+
+    // Same comment on the ownership transfer applies here
+
+    auto protoRequestPtr = new proto::ReplicationRequestReplicate();
+
+    protoRequestPtr->set_priority (ptr->priority    ());
+    protoRequestPtr->set_database (ptr->database    ());
+    protoRequestPtr->set_chunk    (ptr->chunk       ());
+    protoRequestPtr->set_worker   (ptr->sourceWorker());
+
+    response.set_allocated_request (protoRequestPtr);
 }
 
 
@@ -799,12 +809,11 @@ void
 WorkerProcessor::setInfo (WorkerRequest::pointer const&     request,
                           proto::ReplicationResponseDelete& response) {
 
-    WorkerDeleteRequest::pointer ptr =
-        std::dynamic_pointer_cast<WorkerDeleteRequest>(request);
-
+    auto ptr = std::dynamic_pointer_cast<WorkerDeleteRequest>(request);
     if (!ptr)
-        throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
-                               " in WorkerProcessor::setInfo(WorkerDeleteRequest)");
+        throw std::logic_error (
+                "incorrect dynamic type of request id: " + request->id() +
+                " in WorkerProcessor::setInfo(WorkerDeleteRequest)");
 
     // Return the performance of the target request
 
@@ -815,6 +824,16 @@ WorkerProcessor::setInfo (WorkerRequest::pointer const&     request,
     // care of deleting the intermediate object.
 
     response.set_allocated_replica_info(ptr->replicaInfo().info());
+
+    // Same comment on the ownership transfer applies here
+
+    auto protoRequestPtr = new proto::ReplicationRequestDelete();
+
+    protoRequestPtr->set_priority (ptr->priority    ());
+    protoRequestPtr->set_database (ptr->database    ());
+    protoRequestPtr->set_chunk    (ptr->chunk       ());
+
+    response.set_allocated_request (protoRequestPtr);
 }
 
 
@@ -822,9 +841,7 @@ void
 WorkerProcessor::setInfo (WorkerRequest::pointer const&   request,
                           proto::ReplicationResponseFind& response) {
 
-    WorkerFindRequest::pointer ptr =
-        std::dynamic_pointer_cast<WorkerFindRequest>(request);
-
+    auto ptr = std::dynamic_pointer_cast<WorkerFindRequest>(request);
     if (!ptr)
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
                                " in WorkerProcessor::setInfo(WorkerFindRequest)");
@@ -838,15 +855,23 @@ WorkerProcessor::setInfo (WorkerRequest::pointer const&   request,
     // care of deleting the intermediate object.
 
     response.set_allocated_replica_info(ptr->replicaInfo().info());
+
+    // Same comment on the ownership transfer applies here
+
+    auto protoRequestPtr = new proto::ReplicationRequestFind();
+
+    protoRequestPtr->set_priority (ptr->priority    ());
+    protoRequestPtr->set_database (ptr->database    ());
+    protoRequestPtr->set_chunk    (ptr->chunk       ());
+
+    response.set_allocated_request (protoRequestPtr);
 }
 
 void
 WorkerProcessor::setInfo (WorkerRequest::pointer const&      request,
                           proto::ReplicationResponseFindAll& response) {
 
-    WorkerFindAllRequest::pointer ptr =
-        std::dynamic_pointer_cast<WorkerFindAllRequest>(request);
-
+    auto ptr = std::dynamic_pointer_cast<WorkerFindAllRequest>(request);
     if (!ptr)
         throw std::logic_error("incorrect dynamic type of request id: " + request->id() +
                                " in WorkerProcessor::setInfo(WorkerFindAllRequest)");
@@ -863,6 +888,15 @@ WorkerProcessor::setInfo (WorkerRequest::pointer const&      request,
         proto::ReplicationReplicaInfo* info = response.add_replica_info_many();
         replicaInfo.setInfo(info);
     }
+
+    // Same comment on the ownership transfer applies here
+
+    auto protoRequestPtr = new proto::ReplicationRequestFindAll();
+
+    protoRequestPtr->set_priority (ptr->priority());
+    protoRequestPtr->set_database (ptr->database());
+
+    response.set_allocated_request (protoRequestPtr);
 }
                      
     

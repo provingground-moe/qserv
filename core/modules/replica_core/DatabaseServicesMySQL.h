@@ -102,9 +102,10 @@ public:
      *
      * @see DatabaseServices::findOldestReplica()
      */
-    bool findOldestReplica (ReplicaInfo& replica,
-                            bool         enabledWorkersOnly) const override;
-    
+    bool findOldestReplicas (std::vector<ReplicaInfo>& replicas,
+                             size_t                    maxReplicas,
+                             bool                      enabledWorkersOnly) const override;
+
     /**
      * Implement the corresponding method defined in the base class
      *
@@ -121,7 +122,8 @@ public:
      * @see DatabaseServices::findWorkerReplicas()
      */
     bool findWorkerReplicas (std::vector<ReplicaInfo>& replicas,
-                             std::string const&        worker) const override;
+                             std::string const&        worker,
+                             std::string const&        database) const override;
 
     /**
      * Implement the corresponding method defined in the base class
@@ -132,8 +134,19 @@ public:
                              unsigned int              chunk,
                              std::string const&        worker,
                              std::string const&        databaseFamily) const override;
-
+                             
 private:
+
+    /**
+     * Thread unsafe implementation of the corresponiding public method.
+     * This operation is supposed to be invoken in a context where proper
+     * thread safety synchronization has been taken care of.
+     *
+     * @see DatabaseServices::findWorkerReplicas()
+     */
+    bool findWorkerReplicasNoLock (std::vector<ReplicaInfo>& replicas,
+                                   std::string const&        worker,
+                                   std::string const&        database) const;
 
     /**
      * Update the status of replica in the corresponidng tables. Actual actions
@@ -151,13 +164,25 @@ private:
     void saveReplicaInfo (ReplicaInfo const& info);
 
     /**
-     * Update the status of multiple replicas
+     * Update the status of multiple replicas using a collection reported
+     * by a request. The method will cross-check replicas reported by the
+     * request in a context of the specific worker and a database and resync
+     * the database state in this context. Specifically, this means
+     * the following:
+     *
+     * - replicas not present in the colleciton will be deleted from the database
+     * - new replicas not present in the database will be registered in there
+     * - existing replicas will be updated in the database
      *
      * @see DatabaseServiceseMySQL::saveReplicaInfo()
      *
+     * @param worker         - the name of a worker (as per the request)
+     * @param database       - the name of a database (as per the request)
      * @param infoCollection - a collection of replicas
      */
-    void saveReplicaInfoCollection (ReplicaInfoCollection const& infoCollection);
+    void saveReplicaInfoCollection (std::string const&           worker,
+                                    std::string const&           database,
+                                    ReplicaInfoCollection const& infoCollection);
 
     /**
      * Fetch replicas satisfying the specified query

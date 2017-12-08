@@ -47,11 +47,12 @@ namespace {
 // Command line parameters
 
 std::string configUrl;
-bool computeCheckSum;
-bool progressReport;
-bool errorReport;
-bool detailedReport;
-bool chunkLocksReport = false;
+size_t maxReplicas;
+bool   computeCheckSum;
+bool   progressReport;
+bool   errorReport;
+bool   detailedReport;
+bool   chunkLocksReport = false;
 
 /// Run the test
 bool run () {
@@ -104,6 +105,7 @@ bool run () {
                             << std::endl;
                     }
                 },
+                maxReplicas,
                 computeCheckSum
             );
 
@@ -141,6 +143,7 @@ int main (int argc, const char* const argv[]) {
             "\n"
             "Usage:\n"
             "  [--config=<url>]\n"
+            "  [--max-replicas]\n"
             "  [--check-sum]\n"
             "  [--progress-report]\n"
             "  [--error-report]\n"
@@ -149,16 +152,19 @@ int main (int argc, const char* const argv[]) {
             "Flags and options:\n"
             "  --config           - a configuration URL (a configuration file or a set of the database\n"
             "                       connection parameters [ DEFAULT: file:replication.cfg ]\n"
+            "  --max-replicas     - the maximum number of replicas to be processed simultaneously\n"
+            "                       [ DEFAULT: 1 ]\n"
             "  --check-sum        - compute check/control sum of files\n"
             "  --progress-report  - progress report when executing batches of requests\n"
             "  --error-report     - detailed report on failed requests\n"
             "  --detailed-report  - detailed report on results\n");
 
-        ::configUrl       = parser.option<std::string>("config", "file:replication.cfg");
-        ::computeCheckSum = parser.flag               ("check-sum");
-        ::progressReport  = parser.flag               ("progress-report");
-        ::errorReport     = parser.flag               ("error-report");
-        ::detailedReport  = parser.flag               ("detailed-report");
+        ::configUrl       = parser.option<std::string> ("config", "file:replication.cfg");
+        ::maxReplicas     = parser.option<unsigned int>("max-replicas", 1);
+        ::computeCheckSum = parser.flag                ("check-sum");
+        ::progressReport  = parser.flag                ("progress-report");
+        ::errorReport     = parser.flag                ("error-report");
+        ::detailedReport  = parser.flag                ("detailed-report");
 
     } catch (std::exception const& ex) {
         return 1;

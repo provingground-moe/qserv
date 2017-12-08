@@ -137,12 +137,8 @@ bool test () {
         std::map<std::string, std::map<unsigned int, std::map<std::string,bool>>> worker2chunks2databases;
 
         for (rc::ReplicaInfoCollection const& replicaCollection: replicaData.replicas)
-            for (rc::ReplicaInfo const& replica: replicaCollection) {
+            for (rc::ReplicaInfo const& replica: replicaCollection)
                 worker2chunks2databases[replica.worker()][replica.chunk()][replica.database()] = true;
-                if (replica.worker() == "worker-1") {
-                    std::cout << replica.worker() << ": " << replica.chunk() << " " << replica.database() << std::endl;
-                }
-            }
 
         std::cout
             << "\n"
