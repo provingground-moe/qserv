@@ -128,7 +128,7 @@ class DataLoader(object):
         self.emptyChunks = emptyChunks
         self.deleteTables = deleteTables
 
-        self.chunkRe = re.compile('^' + self.chunkPrefix + '_(?P<id>[0-9]+)(?P<ov>_overlap)?[.]txt$')
+        self.chunkRe = re.compile('^([0-9]+_)?' + self.chunkPrefix + '_(?P<id>[0-9]+)(?P<ov>_overlap)?[.]txt(?P<gz>[.]gz)?$')
         self.cleanupDirs = []
         self.cleanupFiles = []
         self.unzipDir = None   # directory used for uncompressed data
