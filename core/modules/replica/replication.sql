@@ -317,8 +317,6 @@ CREATE TABLE IF NOT EXISTS `job_rebalance` (
   `job_id`  VARCHAR(255) NOT NULL ,
 
   `database_family`  VARCHAR(255) NOT NULL ,
-  `start_percent`    INT UNSIGNED NOT NULL ,
-  `stop_percent`     INT UNSIGNED NOT NULL ,
 
   CONSTRAINT `job_rebalance_fk_1`
     FOREIGN KEY (`job_id` )

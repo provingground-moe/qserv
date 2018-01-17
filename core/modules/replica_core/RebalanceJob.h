@@ -96,10 +96,7 @@ struct RebalanceJobResult {
 
     size_t totalWorkers    {0};     // not counting workers which failed to report chunks
     size_t totalGoodChunks {0};     // good chunks reported by the precursor job
-
-    size_t avgChunksPerWorker   {0};
-    size_t startChunksPerWorker {0};
-    size_t stopChunksPerWorker  {0};
+    size_t avgChunks       {0};     // per worker average
 
     /// The total number of iterations the job has gone so far
     size_t numIterations {0};
@@ -124,25 +121,15 @@ struct RebalanceJobResult {
   * - a subject of each move is (chunk,all databases of the family) residing
   *   on a node
   *
-  * - the operation deals with 'colocated' and 'complete' chunk replicas only
+  * - the operation deals with 'good' (meaning 'colocated' and 'complete')
+  *   chunk replicas only
   *
   * - the operation won't affect the number of replicas, it will only
   *   move replicas between workers
   *
-  * - the goal is to have nodes being populated within (say) 5% margin around
-  *   the average (number of replicas per node)
-  *
-  * - the operation starts for nodes which are 10% or nore farer from the average,
-  *   and it stops when the target number is met. This will make the rebalancer stable
-  *   and it will avoid occilations.
-  *
   * - when rebalancing is over then investigate two options: finish it and launch
   *   it again externally using some sort of a scheduler, or have an internal ASYNC
-  *   timer (based on Boost ASIO). Tha later will also require to maintain a state
-  *   to diffirentiate between the initial investigation state (the one which triggers
-  *   chunk movement for workers not meeting the 10% goal) and the on-going chunk
-  *   migration targeting the 5% margin. IN either case both the timeout and
-  *   the margines need to be configured
+  *   timer (based on Boost ASIO).
   *
   * - in the pilot implementation replica disposition should be requested directly
   *   from the worker nodes using precursor FindAllJob. More advanced implementation
@@ -170,8 +157,6 @@ public:
      * low-level pointers).
      *
      * @param databaseFamily - the name of a database family
-     * @param startPercent   - the upper shreshold (a deviation in % of the average) when the algorithm starts
-     * @param stopPercent    - the lower threshold (a deviation in % of the average) when the algorithm finishes
      * @param estimateOnly   - do not perform any changes to chunk disposition. Just produce an estimate report.
      * @param controller     - for launching requests
      * @param onFinish       - a callback function to be called upon a completion of the job
@@ -189,8 +174,6 @@ public:
      *                         high importancy.
      */
     static pointer create (std::string const&         databaseFamily,
-                           unsigned int               startPercent,
-                           unsigned int               stopPercent,
                            bool                       estimateOnly,
                            Controller::pointer const& controller,
                            callback_type              onFinish,
@@ -210,12 +193,6 @@ public:
 
     /// Return the name of a database defining a scope of the operation
     std::string const& databaseFamily () const { return _databaseFamily; }
-
-    /// Return the upper shreshold (a deviation in % of the average) when the algorithm starts
-    unsigned int startPercent () const { return _startPercent; }
-
-    /// Return the lower threshold (a deviation in % of the average) when the algorithm finishes
-    unsigned int stopPercent () const { return _stopPercent; }
 
     /**
      * Return the result of the operation.
@@ -254,8 +231,6 @@ protected:
      * @see RebalanceJob::create()
      */
     RebalanceJob (std::string const&         databaseFamily,
-                  unsigned int               startPercent,
-                  unsigned int               stopPercent,
                   bool                       estimateOnly,
                   Controller::pointer const& controller,
                   callback_type              onFinish,
@@ -310,12 +285,6 @@ protected:
 
     /// The name of the database
     std::string _databaseFamily;
-
-    /// The upper threshold triggering the operation
-    unsigned int _startPercent;
-
-    /// The lower threshold when the operation finishes
-    unsigned int _stopPercent;
 
     /// Estimate mode option
     bool _estimateOnly;
