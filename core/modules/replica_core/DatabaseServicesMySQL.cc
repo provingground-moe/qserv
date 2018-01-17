@@ -377,9 +377,7 @@ DatabaseServicesMySQL::saveState (Job::pointer const& job) {
             _conn->executeInsertQuery (
                 "job_rebalance",
                 ptr->id(),
-                ptr->databaseFamily(),
-                ptr->startPercent(),
-                ptr->stopPercent());
+                ptr->databaseFamily());
 
         } else if ("DELETE_WORKER" == job->type()) {
             auto ptr = safeAssign<DeleteWorkerJob>(job);

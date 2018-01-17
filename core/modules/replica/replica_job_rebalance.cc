@@ -47,25 +47,21 @@ namespace {
 
 // Command line parameters
 
-std::string  databaseFamily;
-unsigned int startPercent;
-unsigned int stopPercent;
-std::string  configUrl;
-bool         estimateOnly;
-bool         progressReport;
-bool         errorReport;
-bool         chunkLocksReport;
+std::string databaseFamily;
+std::string configUrl;
+bool        estimateOnly;
+bool        progressReport;
+bool        errorReport;
+bool        chunkLocksReport;
 
 
 void
 printPlan (rc::RebalanceJobResult const& r) {
     std::cout
         << "THE REBALANCE PLAN:\n"
-        << "  totalWorkers:         " << r.totalWorkers         << "  (not counting workers which failed to report chunks)\n"
-        << "  totalGoodChunks:      " << r.totalGoodChunks      << "  (good chunks reported by the precursor job)\n"
-        << "  avgChunksPerWorker:   " << r.avgChunksPerWorker   << "\n"
-        << "  startChunksPerWorker: " << r.startChunksPerWorker << "\n"
-        << "  stopChunksPerWorker:  " << r.stopChunksPerWorker  << "\n"
+        << "  totalWorkers:    " << r.totalWorkers    << "  (not counting workers which failed to report chunks)\n"
+        << "  totalGoodChunks: " << r.totalGoodChunks << "  (good chunks reported by the precursor job)\n"
+        << "  avgChunks:       " << r.avgChunks       << "\n"
         << "\n"
         << "--------+--------------------------+--------------------------\n"
         << "  chunk |            source worker |       destination worker \n"
@@ -154,8 +150,6 @@ bool test () {
         auto job =
             rc::RebalanceJob::create (
                 databaseFamily,
-                startPercent,
-                stopPercent,
                 estimateOnly,
                 controller,
                 [](rc::RebalanceJob::pointer job) {
@@ -207,21 +201,15 @@ int main (int argc, const char* const argv[]) {
             argv,
             "\n"
             "Usage:\n"
-            "  <database-family> <start-percent> <stop-percent>\n"
-            "    [--config=<url>]\n"
-            "    [--estimate-only]\n"
-            "    [--progress-report]\n"
-            "    [--error-report]\n"
-            "    [--chunk-locks-report]\n"
+            "  <database-family>\n"
+            "  [--config=<url>]\n"
+            "  [--estimate-only]\n"
+            "  [--progress-report]\n"
+            "  [--error-report]\n"
+            "  [--chunk-locks-report]\n"
             "\n"
             "Parameters:\n"
             "  <database-family> - the name of a database family to inspect\n"
-            "  <start-percent>   - the deviation (in %) from the average when the rebalance starts\n"
-            "                      The value must be in a range of 10 to 50. The value must be at\n"
-            "                      least 5 units larger than the one of <stop-percent>.\n"
-            "  <stop-percent>    - the deviation (in %) from the average when the rebalance stops\n"
-            "                      The value must be in a range of 5 to 45. The value must be at\n"
-            "                      least 5 units smaller than the one of <start-percent>.\n"
             "\n"
             "Flags and options:\n"
             "  --config             - a configuration URL (a configuration file or a set of the database\n"
@@ -232,14 +220,12 @@ int main (int argc, const char* const argv[]) {
             "  --error-report       - the flag triggering detailed report on failed requests\n"
             "  --chunk-locks-report - report chunks which are locked\n");
 
-        ::databaseFamily    = parser.parameter<std::string> (1);
-        ::startPercent      = parser.parameter<unsigned int>(2);
-        ::stopPercent       = parser.parameter<unsigned int>(3);
-        ::configUrl         = parser.option   <std::string> ("config", "file:replication.cfg");
-        ::estimateOnly      = parser.flag                   ("estimate-only");
-        ::progressReport    = parser.flag                   ("progress-report");
-        ::errorReport       = parser.flag                   ("error-report");
-        ::chunkLocksReport  = parser.flag                   ("chunk-locks-report");
+        ::databaseFamily   = parser.parameter<std::string> (1);
+        ::configUrl        = parser.option   <std::string> ("config", "file:replication.cfg");
+        ::estimateOnly     = parser.flag                   ("estimate-only");
+        ::progressReport   = parser.flag                   ("progress-report");
+        ::errorReport      = parser.flag                   ("error-report");
+        ::chunkLocksReport = parser.flag                   ("chunk-locks-report");
 
     } catch (std::exception &ex) {
         return 1;
