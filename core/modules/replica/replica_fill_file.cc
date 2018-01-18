@@ -1,6 +1,7 @@
 #include "replica/CmdParser.h"
+#if 0
 #include "XrdCl/XrdClFile.hh"
-
+#endif
 #include <memory>       // std::unique_ptr
 #include <iostream>
 #include <stdexcept>
@@ -22,6 +23,7 @@ bool progressReport;
 /// The test
 int test () {
 
+#if 0
     // Data buffer to be allocated for the specified record size
     std::unique_ptr<char> recordPtr (new char[recordSizeBytes]);
 
@@ -54,6 +56,9 @@ int test () {
     }
     file.Sync();
     return file.Close().GetShellCode();
+#else
+    return 0;
+#endif
 }
 } // namespace
 

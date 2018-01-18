@@ -138,7 +138,7 @@ void query (database::Connection::pointer const conn) {
 
         std::ifstream fs (fileName);
         if (!fs) {
-            std::cerr << "faild to read the contents of file: " << fileName << std::cerr;
+            std::cerr << "faild to read the contents of file: " << fileName << std::endl;
             return;
         }
         fs.seekg      (0, std::ios::end);   
