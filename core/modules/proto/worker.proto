@@ -123,3 +123,16 @@ message Result {
 // Byte 1-N: ProtoHeader message
 // Byte N+1, extent = ProtoHeader.size, Result msg
 // (successive Result msgs indicated by size markers in previous Result msgs)
+
+message WorkerCmdMsg {
+
+    // Types of commands
+    enum Cmd {
+        RELOAD_CHUNK_LIST = 1;  // reload the list of available chunks
+    }
+    required Cmd cmd = 1; // the type of a command
+
+    // Variable parameters of a command depending on the type of
+    // the command
+}
+

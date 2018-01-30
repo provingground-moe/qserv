@@ -25,6 +25,7 @@ for f in env.Glob(os.path.join(path, "replica_*.cc"), source=True, strings=True)
         target=target,
         source=[source],
         LIBS  =["XrdCl",
+                "XrdSsiLib",
                 "replica",
                 "replica_core",
                 "qserv_common",
