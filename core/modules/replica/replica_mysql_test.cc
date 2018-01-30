@@ -134,7 +134,7 @@ void query (database::Connection::pointer const conn) {
 
         // Note a little optimization in which the algorithm detemines the file
         // size and preallocates the string buffer before
-        // perforing the actual read.
+        // perforмing the actual read.
 
         std::ifstream fs (fileName);
         if (!fs) {
