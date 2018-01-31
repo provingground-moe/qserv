@@ -86,7 +86,10 @@ public:
                 << ", blen: " << blen
                 << ", last: " << (last ? "yes" : "no")
                 << std::endl;
-            std::cout << buff << std::endl;
+            proto::WorkerCmdReply reply;
+            reply.ParseFromString(std::string(buff, blen));
+
+            std::cout << "status returned in the reply: " << proto::WorkerCmdReply_Status_Name(reply.status()) << std::endl;
             //std::copy(buff, buff + blen, std::ostream_iterator<char>(std::cout));
 
             if (last) Finished();
