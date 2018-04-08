@@ -184,10 +184,6 @@ void ProtoRowBuffer::_initSchema() {
         if (pcs.has_name()) {
             cs.name = pcs.name();
         }
-        cs.hasDefault = pcs.has_defaultvalue();
-        if (cs.hasDefault) {
-            cs.defaultValue = pcs.defaultvalue();
-        }
         cs.colType.sqlType = pcs.sqltype();
         if (pcs.has_mysqltype()) {
             cs.colType.mysqlType = pcs.mysqltype();
@@ -195,6 +191,7 @@ void ProtoRowBuffer::_initSchema() {
         _schema.columns.push_back(cs);
     }
 }
+
 /// Import the next row into the buffer
 void ProtoRowBuffer::_readNextRow() {
     ++_rowIdx;

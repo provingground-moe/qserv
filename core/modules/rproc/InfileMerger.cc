@@ -297,17 +297,10 @@ bool InfileMerger::_setupTable(proto::WorkerResponse const& response) {
             proto::ColumnSchema const& cs = rs.columnschema(i);
             sql::ColSchema scs;
             scs.name = cs.name();
-            if (cs.hasdefault()) {
-                scs.defaultValue = cs.defaultvalue();
-                scs.hasDefault = true;
-            } else {
-                scs.hasDefault = false;
-            }
             if (cs.has_mysqltype()) {
                 scs.colType.mysqlType = cs.mysqltype();
             }
             scs.colType.sqlType = cs.sqltype();
-
             s.columns.push_back(scs);
         }
         std::string createStmt = sql::formCreateTable(_mergeTable, s);
