@@ -64,6 +64,11 @@ FuncExpr::getName() const {
     return _name;
 }
 
+const ValueExprPtrVector &
+FuncExpr::getParams() const {
+    return params;
+}
+
 FuncExpr::Ptr
 FuncExpr::newLike(FuncExpr const& src, std::string const& newName) {
     FuncExpr::Ptr e = std::make_shared<FuncExpr>();

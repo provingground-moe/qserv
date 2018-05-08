@@ -27,6 +27,8 @@
 #include <sstream>
 #include <vector>
 
+#include "boost/algorithm/string.hpp"
+
 #include "lsst/log/Log.h"
 
 #include "parser/SelectListFactory.h"
@@ -121,14 +123,28 @@ void QSMySqlListener::exit##NAME(QSMySqlParser::NAME##Context* ctx) {\
 } \
 
 
+#define DO_ASSERT_CONDITION(MESSAGE, CTX, CLASS_NAME) \
+{ \
+    ostringstream msg; \
+    msg << CLASS_NAME << "::" << __FUNCTION__; \
+    msg << " messsage:\"" << MESSAGE << "\""; \
+    msg << ", in or around query segment: '" << getQueryString(CTX) << "'"; \
+    throw QSMySqlListener::adapter_execution_error(msg.str()); \
+} \
+
+
 #define ASSERT_EXECUTION_CONDITION(CONDITION, MESSAGE, CTX) \
 if (false == (CONDITION)) { \
     { \
-        ostringstream msg; \
-        msg << getTypeName(this) << "::" << __FUNCTION__; \
-        msg << " messsage:\"" << MESSAGE << "\""; \
-        msg << ", in or around query segment: '" << getQueryString(CTX) << "'"; \
-        throw QSMySqlListener::adapter_execution_error(msg.str()); \
+        DO_ASSERT_CONDITION(MESSAGE, CTX, getTypeName(this)) \
+    } \
+} \
+
+
+#define FUNC_ASSERT_EXECUTION_CONDITION(CONDITION, MESSAGE, CTX) \
+if (false == (CONDITION)) { \
+    { \
+        DO_ASSERT_CONDITION(MESSAGE, CTX, "free function") \
     } \
 } \
 
@@ -136,6 +152,37 @@ if (false == (CONDITION)) { \
 namespace lsst {
 namespace qserv {
 namespace parser {
+
+
+struct QservFunctionInfo {
+    string name;
+    vector<shared_ptr<lsst::qserv::query::ValueFactor>> args;
+};
+
+QservFunctionInfo convertToQservFunctioninfo(shared_ptr<lsst::qserv::query::ValueExpr>& valueExpr,
+                                             antlr4::ParserRuleContext* ctx) {
+    auto&& factorOps = valueExpr->getFactorOps();
+    FUNC_ASSERT_EXECUTION_CONDITION(factorOps.size() == 1,
+            "Expected ValueExpr's factorOp vector to have exactly one element.. " << valueExpr , ctx);
+    FUNC_ASSERT_EXECUTION_CONDITION(factorOps[0].factor != nullptr,
+            "Expected factorOps[0].factor to be non-null", ctx);
+    auto&& funcExpr = factorOps[0].factor->getFuncExpr();
+    FUNC_ASSERT_EXECUTION_CONDITION(funcExpr != nullptr,
+            "Expected factorOps[0].factor type to be FUNCTION", ctx);
+    QservFunctionInfo qservFunctionInfo;
+    qservFunctionInfo.name = funcExpr->getName();
+    // verify that the function name starts with "qserv_" (case insensitive); all qserv restrictor functions
+    // start with "qserv_".
+    FUNC_ASSERT_EXECUTION_CONDITION(boost::iequals(string("qserv_"), qservFunctionInfo.name.substr(0, 5)),
+            "Expected qserv restrictor function to start with 'qserv_'", ctx);
+    for (auto&& parameter : funcExpr->getParams()) {
+        auto && factors = parameter->getFactorOps();
+        // todo assert that factorOps size is 1
+        qservFunctionInfo.args.push_back(factors[0].factor);
+    }
+    return qservFunctionInfo;
+}
+
 
 /// Callback Handler classes
 
@@ -689,7 +736,8 @@ public:
     }
 
     void handlePredicateExpression(shared_ptr<query::ValueExpr>& valueExpr) override {
-        ASSERT_EXECUTION_CONDITION(false, "Unhandled valueExpr predicateExpression.", _ctx);
+        auto qservFunctionInfo = convertToQservFunctioninfo(valueExpr, _ctx);
+        handleQservFunctionSpec(qservFunctionInfo.name, qservFunctionInfo.args);
     }
 
     void handleLogicalExpression(shared_ptr<query::LogicalTerm>& logicalTerm,
@@ -985,49 +1033,6 @@ public:
 
 private:
     QSMySqlParser::ExpressionAtomPredicateContext* _ctx;
-};
-
-
-class QservFunctionSpecAdapter :
-        public AdapterT<QservFunctionSpecCBH>,
-        public ConstantsCBH {
-public:
-    QservFunctionSpecAdapter(shared_ptr<QservFunctionSpecCBH> & parent,
-            QSMySqlParser::QservFunctionSpecContext* ctx)
-    : AdapterT(parent)
-    , _ctx(ctx) {}
-
-    void handleConstants(const vector<shared_ptr<query::ValueFactor>>& valueFactors) override {
-        ASSERT_EXECUTION_CONDITION(_args.empty(), "args should be set exactly once.", _ctx);
-        _args = valueFactors;
-    }
-
-    void onExit() override {
-        lockedParent()->handleQservFunctionSpec(getFunctionName(), _args);
-    }
-
-private:
-    string getFunctionName() {
-        if (_ctx->QSERV_AREASPEC_BOX() != nullptr){
-            return _ctx->QSERV_AREASPEC_BOX()->getSymbol()->getText();
-        }
-        if (_ctx->QSERV_AREASPEC_CIRCLE() != nullptr){
-            return _ctx->QSERV_AREASPEC_CIRCLE()->getSymbol()->getText();
-        }
-        if (_ctx->QSERV_AREASPEC_ELLIPSE() != nullptr){
-            return _ctx->QSERV_AREASPEC_ELLIPSE()->getSymbol()->getText();
-        }
-        if (_ctx->QSERV_AREASPEC_POLY() != nullptr){
-            return _ctx->QSERV_AREASPEC_POLY()->getSymbol()->getText();
-        }
-        if (_ctx->QSERV_AREASPEC_HULL() != nullptr){
-            return _ctx->QSERV_AREASPEC_HULL()->getSymbol()->getText();
-        }
-        ASSERT_EXECUTION_CONDITION(false, "could not get qserv function name.", _ctx);
-    }
-
-    QSMySqlParser::QservFunctionSpecContext* _ctx;
-    vector<shared_ptr<query::ValueFactor>> _args;
 };
 
 
@@ -1832,7 +1837,8 @@ public:
     }
 
     void handlePredicateExpression(shared_ptr<query::ValueExpr>& valueExpr) override {
-        ASSERT_EXECUTION_CONDITION(false, "Unhandled PredicateExpression with ValueExpr.", _ctx);
+        auto qservFunctionInfo = convertToQservFunctioninfo(valueExpr, _ctx);
+        lockedParent()->handleQservFunctionSpec(qservFunctionInfo.name, qservFunctionInfo.args);
     }
 
     void handleQservFunctionSpec(const string& functionName,
@@ -2335,7 +2341,6 @@ IGNORED(DecimalLiteral)
 IGNORED(StringLiteral)
 ENTER_EXIT_PARENT(PredicateExpression)
 ENTER_EXIT_PARENT(ExpressionAtomPredicate)
-ENTER_EXIT_PARENT(QservFunctionSpec)
 ENTER_EXIT_PARENT(BinaryComparasionPredicate)
 ENTER_EXIT_PARENT(ConstantExpressionAtom)
 ENTER_EXIT_PARENT(FullColumnNameExpressionAtom)
@@ -2806,7 +2811,6 @@ ENTER_EXIT_PARENT(FunctionArgs)
 ENTER_EXIT_PARENT(FunctionArg)
 UNHANDLED(IsExpression)
 UNHANDLED(NotExpression)
-IGNORED(QservFunctionSpecExpression)
 ENTER_EXIT_PARENT(LogicalExpression)
 UNHANDLED(SoundsLikePredicate)
 ENTER_EXIT_PARENT(InPredicate)

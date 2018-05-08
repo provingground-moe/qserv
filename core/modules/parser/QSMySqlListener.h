@@ -1530,17 +1530,11 @@ protected:
     virtual void enterNotExpression(QSMySqlParser::NotExpressionContext * /*ctx*/) override;
     virtual void exitNotExpression(QSMySqlParser::NotExpressionContext * /*ctx*/) override;
 
-    virtual void enterQservFunctionSpecExpression(QSMySqlParser::QservFunctionSpecExpressionContext *ctx) override;
-    virtual void exitQservFunctionSpecExpression(QSMySqlParser::QservFunctionSpecExpressionContext *ctx) override;
-
     virtual void enterLogicalExpression(QSMySqlParser::LogicalExpressionContext * /*ctx*/) override;
     virtual void exitLogicalExpression(QSMySqlParser::LogicalExpressionContext * /*ctx*/) override;
 
     virtual void enterPredicateExpression(QSMySqlParser::PredicateExpressionContext * /*ctx*/) override;
     virtual void exitPredicateExpression(QSMySqlParser::PredicateExpressionContext * /*ctx*/) override;
-
-    virtual void enterQservFunctionSpec(QSMySqlParser::QservFunctionSpecContext * /*ctx*/) override;
-    virtual void exitQservFunctionSpec(QSMySqlParser::QservFunctionSpecContext * /*ctx*/) override;
 
     virtual void enterSoundsLikePredicate(QSMySqlParser::SoundsLikePredicateContext * /*ctx*/) override;
     virtual void exitSoundsLikePredicate(QSMySqlParser::SoundsLikePredicateContext * /*ctx*/) override;

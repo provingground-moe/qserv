@@ -4,21 +4,6 @@ import MySqlParser;
 
 options { tokenVocab=QSMySqlLexer; }
 
-// same as MySqlParser, adds qservFunctionSpecExpression
-// Simplified approach for expression
-expression
-    : notOperator=(NOT | '!') expression                            #notExpression
-    | expression logicalOperator expression                         #logicalExpression
-    | predicate IS NOT? testValue=(TRUE | FALSE | UNKNOWN)          #isExpression
-    | predicate                                                     #predicateExpression
-    | qservFunctionSpec                                             #qservFunctionSpecExpression
-    ;
-    
-qservFunctionSpec
-	: (	QSERV_AREASPEC_BOX | QSERV_AREASPEC_CIRCLE  
-	  | QSERV_AREASPEC_ELLIPSE | QSERV_AREASPEC_POLY   	
-	  | QSERV_AREASPEC_HULL) '(' constants ')'
-	;  	
  
 // same as MySqlParser except:
 // * adds (val, min, max) keywords to betweenPredicate

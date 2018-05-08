@@ -53,7 +53,7 @@ public:
     typedef std::shared_ptr<FuncExpr> Ptr;
 
     const std::string& getName() const;
-    ValueExprPtrVector getParams() const;
+    const ValueExprPtrVector& getParams() const;
 
     /// Construct a new FuncExpr like an existing one.
     static FuncExpr::Ptr newLike(FuncExpr const& src, std::string const& newName);

@@ -101,6 +101,12 @@ static const std::vector< std::string > QUERIES = {
     //"SELECT * FROM Object WHERE qserv_areaspec_box(0.,1.,0.,1.) ORDER BY ra_PS", // case01/queries/3005_orderByRA.sql.FIXME
     "SELECT ra_PS AS ra, decl_PS AS decl FROM Object WHERE ra_PS BETWEEN 0. AND 1. AND decl_PS BETWEEN 0. AND 1. ORDER BY ra, decl;", // case01/queries/3006.1_selectAs.sql
     "SELECT ra_PS AS ra FROM Object WHERE ra_PS BETWEEN 0. AND 1. AND decl_PS BETWEEN 0. AND 1. ORDER BY ra;", // case01/queries/3006_selectAs.sql
+
+
+
+
+
+
 //    //"SELECT count(src.sourceId), avg(o.ra_PS), avg(o.decl_PS) FROM Object o, Source src WHERE ra_PS  BETWEEN 0. AND 1. AND decl_PS BETWEEN 0. AND 1. GROUP BY src.objectId ;", // case01/queries/3007_countGroupBy.sql.FIXME
 //    //"SHOW COLUMNS FROM Object;", // case01/queries/3008_showColumns.sql.FIXME
 //    //"SELECT src.sourceId FROM Source src WHERE src.objectId IN ( SELECT objectId FROM Object o WHERE ra_PS  BETWEEN 0. AND 1. AND decl_PS BETWEEN 0. AND 1. ) ;", // case01/queries/3009_subquery.sql.FIXME
