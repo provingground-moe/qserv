@@ -1575,8 +1575,8 @@ protected:
     virtual void enterCollateExpressionAtom(QSMySqlParser::CollateExpressionAtomContext * /*ctx*/) override;
     virtual void exitCollateExpressionAtom(QSMySqlParser::CollateExpressionAtomContext * /*ctx*/) override;
 
-    virtual void enterSubqueryExpessionAtom(QSMySqlParser::SubqueryExpessionAtomContext * /*ctx*/) override;
-    virtual void exitSubqueryExpessionAtom(QSMySqlParser::SubqueryExpessionAtomContext * /*ctx*/) override;
+    virtual void enterSubqueryExpressionAtom(QSMySqlParser::SubqueryExpressionAtomContext * /*ctx*/) override;
+    virtual void exitSubqueryExpressionAtom(QSMySqlParser::SubqueryExpressionAtomContext * /*ctx*/) override;
 
     virtual void enterMysqlVariableExpressionAtom(QSMySqlParser::MysqlVariableExpressionAtomContext * /*ctx*/) override;
     virtual void exitMysqlVariableExpressionAtom(QSMySqlParser::MysqlVariableExpressionAtomContext * /*ctx*/) override;
@@ -1593,8 +1593,8 @@ protected:
     virtual void enterIntervalExpressionAtom(QSMySqlParser::IntervalExpressionAtomContext * /*ctx*/) override;
     virtual void exitIntervalExpressionAtom(QSMySqlParser::IntervalExpressionAtomContext * /*ctx*/) override;
 
-    virtual void enterExistsExpessionAtom(QSMySqlParser::ExistsExpessionAtomContext * /*ctx*/) override;
-    virtual void exitExistsExpessionAtom(QSMySqlParser::ExistsExpessionAtomContext * /*ctx*/) override;
+    virtual void enterExistsExpressionAtom(QSMySqlParser::ExistsExpressionAtomContext * /*ctx*/) override;
+    virtual void exitExistsExpressionAtom(QSMySqlParser::ExistsExpressionAtomContext * /*ctx*/) override;
 
     virtual void enterConstantExpressionAtom(QSMySqlParser::ConstantExpressionAtomContext * /*ctx*/) override;
     virtual void exitConstantExpressionAtom(QSMySqlParser::ConstantExpressionAtomContext * /*ctx*/) override;
