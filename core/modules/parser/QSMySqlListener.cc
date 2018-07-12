@@ -440,6 +440,11 @@ public:
 };
 
 
+class SubqueryExpressionAtomCBH : public BaseCBH {
+public:
+	virtual void handleSubqueryExpressionAtom() = 0;
+};
+
 class NestedExpressionAtomCBH : public BaseCBH {
 public:
     virtual void handleNestedExpressionAtom(shared_ptr<query::BoolFactorTerm> const & boolFactorTerm) = 0;
@@ -997,7 +1002,8 @@ class ExpressionAtomPredicateAdapter :
         public FunctionCallExpressionAtomCBH,
         public NestedExpressionAtomCBH,
         public MathExpressionAtomCBH,
-        public UnaryExpressionAtomCBH {
+        public UnaryExpressionAtomCBH,
+		public SubqueryExpressionAtomCBH {
 public:
     ExpressionAtomPredicateAdapter(shared_ptr<ExpressionAtomPredicateCBH> const & parent,
                                    QSMySqlParser::ExpressionAtomPredicateContext* ctx)
@@ -1033,6 +1039,10 @@ public:
     void handleUnaryExpressionAtom(shared_ptr<query::ValueFactor> const & valueFactor) override {
         auto valueExpr = query::ValueExpr::newSimple(valueFactor);
         lockedParent()->handleExpressionAtomPredicate(valueExpr, _ctx);
+    }
+
+    void handleSubqueryExpressionAtom() override {
+    	// todo
     }
 
     void onEnter() override {
@@ -2201,6 +2211,27 @@ private:
 };
 
 
+class SubqueryExpressionAtomAdapter :
+        public AdapterT<SubqueryExpressionAtomCBH>,
+		public SimpleSelectCBH {
+public:
+	SubqueryExpressionAtomAdapter(shared_ptr<SubqueryExpressionAtomCBH> parent,
+                               QSMySqlParser::SubqueryExpressionAtomContext* ctx)
+    : AdapterT(parent)
+    , _ctx(ctx)
+    {}
+
+    void handleSelectStatement(shared_ptr<query::SelectStmt> const & selectStatement) override {
+    	// todo
+    }
+
+	void onExit() override {}
+
+private:
+	QSMySqlParser::SubqueryExpressionAtomContext* _ctx;
+};
+
+
 class NestedExpressionAtomAdapter :
         public AdapterT<NestedExpressionAtomCBH>,
         public PredicateExpressionCBH {
@@ -2976,7 +3007,7 @@ ENTER_EXIT_PARENT(LikePredicate)
 UNHANDLED(RegexpPredicate)
 ENTER_EXIT_PARENT(UnaryExpressionAtom)
 UNHANDLED(CollateExpressionAtom)
-UNHANDLED(SubqueryExpressionAtom)
+ENTER_EXIT_PARENT(SubqueryExpressionAtom)
 UNHANDLED(MysqlVariableExpressionAtom)
 ENTER_EXIT_PARENT(NestedExpressionAtom)
 UNHANDLED(NestedRowExpressionAtom)
