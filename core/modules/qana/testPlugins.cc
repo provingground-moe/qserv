@@ -260,6 +260,36 @@ static const std::vector<ColumnDifferenceData> COLUMN_REF_DIFFERENCE_QUERIES = {
             std::make_shared<query::ColumnRef>("", "", "foo"),
         },
         true
+    ),
+    ColumnDifferenceData(
+        {   // available:
+            std::make_shared<query::ColumnRef>("", "foo", "bar"),
+            std::make_shared<query::ColumnRef>("", "", "baz"),
+        },
+        {   // required:
+            std::make_shared<query::ColumnRef>("", "", "bar"),
+        },
+        true
+    ),
+    ColumnDifferenceData(
+        {   // available:
+            std::make_shared<query::ColumnRef>("", "foo", "bar"),
+            std::make_shared<query::ColumnRef>("", "baz", "bar"),
+        },
+        {   // required:
+            std::make_shared<query::ColumnRef>("", "", "bar"),
+        },
+        false
+    ),
+    ColumnDifferenceData(
+        {   // available:
+            std::make_shared<query::ColumnRef>("", "", "foo"),
+            std::make_shared<query::ColumnRef>("", "", "bar"),
+        },
+        {   // required:
+            std::make_shared<query::ColumnRef>("", "baz", "foo"),
+        },
+        false // since we don't know if the select foo comes from the baz table or not.
     )
 };
 

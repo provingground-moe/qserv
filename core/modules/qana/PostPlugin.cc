@@ -188,6 +188,30 @@ bool PostPlugin::verifyColumnsForOrderBy(query::ColumnRef::Vector const & availa
             required.begin(), required.end());
     std::set_difference(requiredSet.begin(), requiredSet.end(), availableSet.begin(), availableSet.end(),
             std::inserter(missing, missing.end()), util::Compare<query::ColumnRef>());
+    auto mItr = missing.rbegin();
+    // TODO write/fix the algorithm for allowing a less-qualified ORDER BY column to be used with a more-qualified
+    // SELECT column. Maybe get the algorithm from MariaDb if possible?
+    while (mItr != missing.rend()) {
+        bool removed = false;
+        for (auto&& a : availableSet) {
+            if (false == (*mItr)->db.empty() && (*mItr)->db != a->db) {
+                continue;
+            }
+            if (false == (*mItr)->table.empty() && (*mItr)->table != a->table) {
+                continue;
+            }
+            if ((*mItr)->column == a->column) {
+                missing.erase((++mItr).base());
+                removed = true;
+                break;
+            }
+        }
+        if (!removed) {
+            ++mItr;
+        }
+    }
+
+
     return missing.empty();
 }
 
