@@ -179,15 +179,34 @@ query::ColumnRef::Vector PostPlugin::getUsedOrderByColumns(query::SelectStmt con
 }
 
 
+template <typename T>
+struct Match
+{
+    using is_transparent = void;
+
+    bool operator() (const std::shared_ptr<T>& a, const std::shared_ptr<T>& b) const {
+        return a->matches(b);
+    }
+};
+
+
 bool PostPlugin::verifyColumnsForOrderBy(query::ColumnRef::Vector const & available,
         query::ColumnRef::Vector const & required, query::ColumnRef::Vector & missing) {
     missing.clear();
+
+    // convert `available` and `required` to sets:
     std::set<query::ColumnRef::Ptr, util::Compare<query::ColumnRef>> availableSet(
             available.begin(), available.end());
     std::set<query::ColumnRef::Ptr, util::Compare<query::ColumnRef>> requiredSet(
             required.begin(), required.end());
+
+    // create a list of missing columns, where for a column in `required` there is not an exact match in
+    // `available`.
     std::set_difference(requiredSet.begin(), requiredSet.end(), availableSet.begin(), availableSet.end(),
-            std::inserter(missing, missing.end()), util::Compare<query::ColumnRef>());
+            std::inserter(missing, missing.end()), Match<query::ColumnRef>());
+
+
+
     auto mItr = missing.rbegin();
     // TODO write/fix the algorithm for allowing a less-qualified ORDER BY column to be used with a more-qualified
     // SELECT column. Maybe get the algorithm from MariaDb if possible?
