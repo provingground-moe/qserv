@@ -61,11 +61,7 @@ public:
     typedef std::shared_ptr<TableRef> Ptr;
     typedef std::shared_ptr<TableRef const> CPtr;
 
-    TableRef(std::string const& db_, std::string const& table_,
-               std::string const& alias_)
-        : _alias(alias_), _db(db_), _table(table_)  {
-        if(table_.empty()) { throw std::logic_error("TableRef without table"); }
-    }
+    TableRef(std::string const& db_, std::string const& table_, std::string const& alias_);
     virtual ~TableRef() {}
 
     std::ostream& putStream(std::ostream& os) const;
@@ -73,14 +69,14 @@ public:
 
     bool isSimple() const { return _joinRefs.empty(); }
     std::string const& getDb() const { return _db; }
-    std::string const& getTable() const { return _table; }
+    std::string const& getTable() const { return _unquotedTable; }
     std::string const& getAlias() const { return _alias; }
     JoinRefPtrVector const& getJoins() const { return _joinRefs; }
 
     // Modifiers
     void setAlias(std::string const& a) { _alias=a; }
     void setDb(std::string const& db_) { _db = db_; }
-    void setTable(std::string const& table_) { _table = table_; }
+    void setTable(std::string const& table_);
     JoinRefPtrVector& getJoins() { return _joinRefs; }
     void addJoin(std::shared_ptr<JoinRef> r);
     void addJoins(const JoinRefPtrVector& r);
@@ -110,6 +106,7 @@ private:
     std::string _alias;
     std::string _db;
     std::string _table;
+    std::string _unquotedTable;
     JoinRefPtrVector _joinRefs;
 };
 

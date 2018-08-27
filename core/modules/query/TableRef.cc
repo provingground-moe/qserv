@@ -48,6 +48,14 @@ lsst::qserv::query::JoinRef::Ptr
 joinRefClone(lsst::qserv::query::JoinRef::Ptr const& r) {
     return r->clone();
 }
+
+void unquote(std::string& str) {
+    if (str.length() >= 3 && str.find('`') == 0 && str.rfind('`') == str.length()-1) {
+        str.erase(str.begin());
+        str.erase(--(str.end()));
+    }
+}
+
 } // anonymous namespace
 
 namespace lsst {
@@ -57,6 +65,14 @@ namespace query {
 ////////////////////////////////////////////////////////////////////////
 // TableRef
 ////////////////////////////////////////////////////////////////////////
+TableRef::TableRef(std::string const& db_, std::string const& table_, std::string const& alias_)
+        : _alias(alias_), _db(db_), _table(table_), _unquotedTable(table_)  {
+    if(table_.empty()) {
+        throw std::logic_error("TableRef without table");
+    }
+    unquote(_unquotedTable);
+}
+
 std::ostream& operator<<(std::ostream& os, TableRef const& ref) {
     os << "TableRef(";
     os << "alias:" << ref._alias;
@@ -108,6 +124,13 @@ void TableRef::putTemplate(QueryTemplate& qt) const {
         j.putTemplate(qt);
     }
 }
+
+void TableRef::setTable(std::string const& table_) {
+    _table = table_;
+    _unquotedTable = _table;
+    unquote(_unquotedTable);
+}
+
 
 void TableRef::addJoin(std::shared_ptr<JoinRef> r) {
     _joinRefs.push_back(r);
