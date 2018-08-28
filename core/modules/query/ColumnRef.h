@@ -37,6 +37,10 @@
 
 // Third-party headers
 
+// Local headers
+#include "query/TableRef.h"
+
+
 namespace lsst {
 namespace qserv {
 namespace query {
@@ -49,17 +53,27 @@ public:
     typedef std::shared_ptr<ColumnRef>  Ptr;
     typedef std::vector<Ptr> Vector;
 
-    ColumnRef(std::string db_, std::string table_, std::string column_)
-        : db(db_), table(table_), column(column_) {}
+    // todo why can't these be const &?
+    ColumnRef(std::string db_, std::string table_, std::string column_);
+
     static Ptr newShared(std::string const& db_,
                          std::string const& table_,
                          std::string const& column_) {
         return std::make_shared<ColumnRef>(db_, table_, column_);
     }
 
-    std::string db;
-    std::string table;
-    std::string column;
+    std::string getDb() const { return _tableRef->getDb(); }
+    std::string getTable() const { return _tableRef->getTable(); }
+    std::string getColumn() const { return _unquotedColumn; }
+
+    std::string renderDb() const { return _tableRef->renderDb(); }
+    std::string renderTable() const { return _tableRef->renderTable(); }
+    std::string renderColumn() const { return _column; }
+
+    void setDb(std::string const & db) { _tableRef->setDb(db); }
+    void setTable(std::string const & table) { _tableRef->setTable(table); }
+    void setColumn(std::string const & column);
+
     friend std::ostream& operator<<(std::ostream& os, ColumnRef const& cr);
     friend std::ostream& operator<<(std::ostream& os, ColumnRef const* cr);
     void renderTo(QueryTemplate& qt) const;
@@ -78,6 +92,11 @@ public:
     bool operator==(const ColumnRef& rhs) const;
     bool operator!=(const ColumnRef& rhs) const { return false == (*this == rhs); }
     bool operator<(const ColumnRef& rhs) const;
+
+private:
+    TableRef::Ptr _tableRef;
+    std::string _column;
+    std::string _unquotedColumn;
 };
 
 }}} // namespace lsst::qserv::query

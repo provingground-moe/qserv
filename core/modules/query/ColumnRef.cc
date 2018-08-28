@@ -38,16 +38,41 @@
 // Qserv headers
 #include "query/QueryTemplate.h"
 
+namespace {
+
+// TODO this is duplicated from TableRef.h; find a good common location & move it there.
+std::string unquote(std::string str) {
+    if (str.length() >= 3 && str.find('`') == 0 && str.rfind('`') == str.length()-1) {
+        str.erase(str.begin());
+        str.erase(--(str.end()));
+    }
+    return str;
+}
+
+} // end anonymous namespace
+
 namespace lsst {
 namespace qserv {
 namespace query {
 
 
+ColumnRef::ColumnRef(std::string db_, std::string table_, std::string column_)
+: _tableRef(std::make_shared<TableRef>(db_, table_, ""))
+, _column(column_)
+, _unquotedColumn(unquote(column_))
+{}
+
+
+void ColumnRef::setColumn(std::string const & column) {
+    _column = column;
+    _unquotedColumn = unquote(column);
+}
+
+
 std::ostream& operator<<(std::ostream& os, ColumnRef const& cr) {
     os << "ColumnRef(";
-    os << "db:" << cr.db;
-    os << ", table:" << cr.table;
-    os << ", column:" << cr.column;
+    os << "tableRef:" << *(cr._tableRef);
+    os << ", column:" << cr.getColumn();
     os << ")";
     return os;
 }
@@ -67,28 +92,28 @@ void ColumnRef::renderTo(QueryTemplate& qt) const {
 
 bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
     // the columns can not be empty
-    if (column.empty() || rhs->column.empty()) {
+    if (getColumn().empty() || rhs->getColumn().empty()) {
         return false;
     }
     // if the table is empty, the db must be empty
-    if (table.empty() && !db.empty()) {
+    if (getTable().empty() && !getDb().empty()) {
         return false;
     }
-    if (rhs->table.empty() && !rhs->db.empty()) {
+    if (rhs->getTable().empty() && !rhs->getDb().empty()) {
         return false;
     }
 
-    if (!db.empty()) {
-        if (db != rhs->db) {
+    if (!getDb().empty()) {
+        if (getDb() != rhs->getDb()) {
             return false;
         }
     }
-    if (!table.empty()) {
-        if (table != rhs->table) {
+    if (!getTable().empty()) {
+        if (getTable() != rhs->getTable()) {
             return false;
         }
     }
-    if (column != rhs->column) {
+    if (getColumn() != rhs->getColumn()) {
         return false;
     }
     return true;
@@ -96,12 +121,12 @@ bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
 
 
 bool ColumnRef::operator==(const ColumnRef& rhs) const {
-    return std::tie(db, table, column) == std::tie(rhs.db, rhs.table, rhs.column);
+    return std::tie(*_tableRef, _unquotedColumn) == std::tie(*rhs._tableRef, rhs._column);
 }
 
 
 bool ColumnRef::operator<(const ColumnRef& rhs) const {
-    return std::tie(db, table, column) < std::tie(rhs.db, rhs.table, rhs.column);
+    return std::tie(*_tableRef, _unquotedColumn) < std::tie(*rhs._tableRef, rhs._column);
 }
 
 

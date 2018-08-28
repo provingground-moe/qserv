@@ -72,7 +72,7 @@ std::string QueryTemplate::TableEntry::getValue() const {
 class ColumnEntry : public QueryTemplate::Entry {
 public:
     ColumnEntry(ColumnRef const& cr)
-        : db(cr.db), table(cr.table), column(cr.column) {
+        : db(cr.renderDb()), table(cr.renderTable()), column(cr.renderColumn()) {
     }
     virtual std::string getValue() const {
         std::stringstream ss;

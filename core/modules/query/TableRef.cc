@@ -49,11 +49,12 @@ joinRefClone(lsst::qserv::query::JoinRef::Ptr const& r) {
     return r->clone();
 }
 
-void unquote(std::string& str) {
+std::string unquote(std::string str) {
     if (str.length() >= 3 && str.find('`') == 0 && str.rfind('`') == str.length()-1) {
         str.erase(str.begin());
         str.erase(--(str.end()));
     }
+    return str;
 }
 
 } // anonymous namespace
@@ -66,11 +67,7 @@ namespace query {
 // TableRef
 ////////////////////////////////////////////////////////////////////////
 TableRef::TableRef(std::string const& db_, std::string const& table_, std::string const& alias_)
-        : _alias(alias_), _db(db_), _table(table_), _unquotedTable(table_)  {
-    if(table_.empty()) {
-        throw std::logic_error("TableRef without table");
-    }
-    unquote(_unquotedTable);
+        : _alias(alias_), _db(db_), _table(table_), _unquotedTable(unquote(table_))  {
 }
 
 std::ostream& operator<<(std::ostream& os, TableRef const& ref) {
@@ -166,11 +163,16 @@ TableRef::Ptr TableRef::clone() const {
 }
 
 bool TableRef::operator==(const TableRef& rhs) const {
-    return _alias == rhs._alias &&
-           _db == rhs._db &&
-           _table == rhs._table &&
-           util::vectorPtrCompare<JoinRef>(_joinRefs, rhs._joinRefs);
+    // TODO joinrefs *should* be considered in operator==, right? (or no?)
+    return std::tie(_alias, _db, _table) == std::tie(rhs._alias, rhs._db, rhs._table) &&
+            std::equal(_joinRefs.begin(), _joinRefs.end(), rhs._joinRefs.begin(), rhs._joinRefs.end(),
+                    [](std::shared_ptr<JoinRef> const & lhs, std::shared_ptr<JoinRef> const & rhs) {
+                        return *lhs == *rhs;});
 }
 
+bool TableRef::operator<(const TableRef& rhs) const {
+    // TODO what does it mean for joinrefs to be <?
+    return std::tie(_alias, _db, _table) < std::tie(rhs._alias, rhs._db, rhs._table);
+}
 
 }}} // Namespace lsst::qserv::query

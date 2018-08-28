@@ -73,6 +73,9 @@ public:
     std::string const& getAlias() const { return _alias; }
     JoinRefPtrVector const& getJoins() const { return _joinRefs; }
 
+    std::string const& renderDb() const { return _db; }
+    std::string const& renderTable() const { return _table; }
+
     // Modifiers
     void setAlias(std::string const& a) { _alias=a; }
     void setDb(std::string const& db_) { _db = db_; }
@@ -97,6 +100,7 @@ public:
     TableRef::Ptr clone() const;
 
     bool operator==(const TableRef& rhs) const;
+    bool operator<(const TableRef& rhs) const;
 
     class render;
 private:
