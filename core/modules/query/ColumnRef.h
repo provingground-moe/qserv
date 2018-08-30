@@ -38,6 +38,7 @@
 // Third-party headers
 
 // Local headers
+#include "query/Identifier.h"
 #include "query/TableRef.h"
 
 
@@ -64,11 +65,11 @@ public:
 
     std::string getDb() const { return _tableRef->getDb(); }
     std::string getTable() const { return _tableRef->getTable(); }
-    std::string getColumn() const { return _unquotedColumn; }
+    std::string getColumn() const { return _column->get(); }
 
     std::string renderDb() const { return _tableRef->renderDb(); }
     std::string renderTable() const { return _tableRef->renderTable(); }
-    std::string renderColumn() const { return _column; }
+    std::string renderColumn() const { return _column->get(Identifier::UNMODIFIED); }
 
     void setDb(std::string const & db) { _tableRef->setDb(db); }
     void setTable(std::string const & table) { _tableRef->setTable(table); }
@@ -95,8 +96,7 @@ public:
 
 private:
     TableRef::Ptr _tableRef;
-    std::string _column;
-    std::string _unquotedColumn;
+    Identifier::Ptr _column;
 };
 
 }}} // namespace lsst::qserv::query

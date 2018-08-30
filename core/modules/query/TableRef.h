@@ -40,6 +40,7 @@
 
 // Local headers
 #include "query/DbTablePair.h"
+#include "query/Identifier.h"
 #include "query/QueryTemplate.h"
 
 namespace lsst {
@@ -61,25 +62,25 @@ public:
     typedef std::shared_ptr<TableRef> Ptr;
     typedef std::shared_ptr<TableRef const> CPtr;
 
-    TableRef(std::string const& db_, std::string const& table_, std::string const& alias_);
+    TableRef(std::string const& db, std::string const& table, std::string const& alias);
     virtual ~TableRef() {}
 
     std::ostream& putStream(std::ostream& os) const;
     void putTemplate(QueryTemplate& qt) const;
 
     bool isSimple() const { return _joinRefs.empty(); }
-    std::string const& getDb() const { return _db; }
-    std::string const& getTable() const { return _unquotedTable; }
-    std::string const& getAlias() const { return _alias; }
+    std::string getDb() const { return _db->get(); }
+    std::string getTable() const { return _table->get(); }
+    std::string getAlias() const { return _alias; }
     JoinRefPtrVector const& getJoins() const { return _joinRefs; }
 
-    std::string const& renderDb() const { return _db; }
-    std::string const& renderTable() const { return _table; }
+    std::string renderDb() const { return _db->get(Identifier::UNMODIFIED); }
+    std::string renderTable() const { return _table->get(Identifier::UNMODIFIED); }
 
     // Modifiers
-    void setAlias(std::string const& a) { _alias=a; }
-    void setDb(std::string const& db_) { _db = db_; }
-    void setTable(std::string const& table_);
+    void setAlias(std::string const& a) { _alias = a; }
+    void setDb(std::string const& db) { *_db = db; }
+    void setTable(std::string const& table) { *_table = table; }
     JoinRefPtrVector& getJoins() { return _joinRefs; }
     void addJoin(std::shared_ptr<JoinRef> r);
     void addJoins(const JoinRefPtrVector& r);
@@ -108,9 +109,8 @@ private:
     friend std::ostream& operator<<(std::ostream& os, TableRef const* refN);
 
     std::string _alias;
-    std::string _db;
-    std::string _table;
-    std::string _unquotedTable;
+    Identifier::Ptr _db;
+    Identifier::Ptr _table;
     JoinRefPtrVector _joinRefs;
 };
 

@@ -38,18 +38,6 @@
 // Qserv headers
 #include "query/QueryTemplate.h"
 
-namespace {
-
-// TODO this is duplicated from TableRef.h; find a good common location & move it there.
-std::string unquote(std::string str) {
-    if (str.length() >= 3 && str.find('`') == 0 && str.rfind('`') == str.length()-1) {
-        str.erase(str.begin());
-        str.erase(--(str.end()));
-    }
-    return str;
-}
-
-} // end anonymous namespace
 
 namespace lsst {
 namespace qserv {
@@ -58,14 +46,12 @@ namespace query {
 
 ColumnRef::ColumnRef(std::string db_, std::string table_, std::string column_)
 : _tableRef(std::make_shared<TableRef>(db_, table_, ""))
-, _column(column_)
-, _unquotedColumn(unquote(column_))
+, _column(std::make_shared<Identifier>(column_))
 {}
 
 
 void ColumnRef::setColumn(std::string const & column) {
-    _column = column;
-    _unquotedColumn = unquote(column);
+    _column->set(column);
 }
 
 
@@ -121,12 +107,12 @@ bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
 
 
 bool ColumnRef::operator==(const ColumnRef& rhs) const {
-    return std::tie(*_tableRef, _unquotedColumn) == std::tie(*rhs._tableRef, rhs._column);
+    return std::tie(*_tableRef, *_column) == std::tie(*rhs._tableRef, *rhs._column);
 }
 
 
 bool ColumnRef::operator<(const ColumnRef& rhs) const {
-    return std::tie(*_tableRef, _unquotedColumn) < std::tie(*rhs._tableRef, rhs._column);
+    return std::tie(*_tableRef, *_column) < std::tie(*rhs._tableRef, *rhs._column);
 }
 
 
