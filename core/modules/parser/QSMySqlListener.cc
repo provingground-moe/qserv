@@ -1523,25 +1523,32 @@ public:
 
 
 class DottedIdAdapter :
-        public AdapterT<DottedIdCBH, QSMySqlParser::DottedIdContext> {
+        public AdapterT<DottedIdCBH, QSMySqlParser::DottedIdContext>,
+        public UidCBH {
 public:
     using AdapterT::AdapterT;
 
+    void handleUid(string const & string) override {
+        ASSERT_EXECUTION_CONDITION(_val.empty(), "handleUid should be called once.", _ctx);
+        _val = string;
+    }
+
     void onExit() override {
-        // currently the on kind of callback we receive here seems to be the `: DOT_ID` form, which is defined
-        // as `'.' ID_LITERAL;`. This means that we have to extract the value from the DOT_ID; we will not be
-        //called by a child with the string portion, the ID_LITERAL.
-        // I suppose at some point the antlr4 evaulation will try to use the `'.' uid` form, at which point
-        // this will have to become a UidCBH. At that point some checking shoudl be applied; we would not
-        // expect both forms to be used in one instantiation of this adapter. In the meantime, we only attempt
-        // to extract the ID_LITERAL and call our parent with that.
-        string txt = _ctx->getText();
-        ASSERT_EXECUTION_CONDITION(txt.find('.') == 0, "DottedId text is expected to start with a dot", _ctx);
-        txt.erase(0, 1);
-        lockedParent()->handleDottedId(txt);
+        if (_val.empty() == false) {
+            lockedParent()->handleDottedId(_val);
+        } else {
+            ASSERT_EXECUTION_CONDITION(_ctx->DOT_ID() != nullptr, "expected a DOT_ID terminal node.", _ctx);
+            string txt = _ctx->getText();
+            ASSERT_EXECUTION_CONDITION(txt.find('.') == 0, "DottedId text is expected to start with a dot", _ctx);
+            txt.erase(0, 1);
+            lockedParent()->handleDottedId(txt);
+        }
     }
 
     string name() const override { return getTypeName(this); }
+
+private:
+    string _val;
 };
 
 
