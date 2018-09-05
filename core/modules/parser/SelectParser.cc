@@ -179,37 +179,61 @@ private:
 };
 
 
-class Antlr4Parser : public AntlrParser {
+class Antlr4Parser : public AntlrParser, public ListenerDebugHelper, public std::enable_shared_from_this<Antlr4Parser> {
 public:
     Antlr4Parser(std::string const& q)
-    : statement(q)
+    : _statement(q)
     {}
 
     void setup() override {
-        // no op
+        _listener = std::make_shared<parser::QSMySqlListener>(
+                std::static_pointer_cast<ListenerDebugHelper>(shared_from_this()));
     }
 
     void run() override {
         using namespace antlr4;
-        ANTLRInputStream input(statement);
+        ANTLRInputStream input(_statement);
         QSMySqlLexer lexer(&input);
         CommonTokenStream tokens(&lexer);
         tokens.fill();
-        LOGS(_log, LOG_LVL_TRACE, "New user query, antlr4 tokens: " <<  util::printable(getTokenPairs(tokens, lexer)));
         QSMySqlParser parser(&tokens);
         tree::ParseTree *tree = parser.root();
-        LOGS(_log, LOG_LVL_TRACE, "New user query, antlr4 string tree: " << tree->toStringTree(&parser));
         tree::ParseTreeWalker walker;
-        walker.walk(&listener, tree);
+        walker.walk(_listener.get(), tree);
     }
 
     query::SelectStmt::Ptr getStatement() override {
-        return listener.getSelectStatement();
+        return _listener->getSelectStatement();
     }
 
+    // TODO these funcs can probably be written with less code duplication
+    // and also without stringstream
+    std::string getStringTree() const override {
+        using namespace antlr4;
+        ANTLRInputStream input(_statement);
+        QSMySqlLexer lexer(&input);
+        CommonTokenStream tokens(&lexer);
+        tokens.fill();
+        QSMySqlParser parser(&tokens);
+        tree::ParseTree *tree = parser.root();
+        return tree->toStringTree(&parser);
+    }
+
+    std::string getTokens() const override {
+        using namespace antlr4;
+        ANTLRInputStream input(_statement);
+        QSMySqlLexer lexer(&input);
+        CommonTokenStream tokens(&lexer);
+        tokens.fill();
+        std::stringstream t;
+        t << util::printable(getTokenPairs(tokens, lexer));
+        return t.str();
+    }
+
+
 private:
-    std::string statement;
-    parser::QSMySqlListener listener;
+    std::string _statement;
+    std::shared_ptr<parser::QSMySqlListener> _listener;
 };
 
 
