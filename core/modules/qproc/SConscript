@@ -15,7 +15,8 @@ def charArrayGenerator(filename):
         while True:
             block = f.read(10)
             if not block: return
-            yield ",".join(map(lambda s: hex(ord(s)), block))
+#            yield ",".join(map(lambda s: hex(ord(str(s))), block))
+            yield ",".join([hex(ord(chr(s))) for s in block])
 
 ## Scons wants args=(target, source, env)
 ## target: headerFile

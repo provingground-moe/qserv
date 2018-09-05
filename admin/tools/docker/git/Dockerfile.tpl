@@ -18,7 +18,7 @@ WORKDIR /home/qserv
 #   - builds Qserv
 #   - installs Qserv inside LSST stack (i.e. /qserv/stack/Linux64/qserv/branch-version)
 #   - declares it using 'qserv-dev' tag
-RUN bash -c ". /qserv/stack/loadLSST.bash && \
+RUN bash -l -c ". /qserv/stack/loadLSST.bash && \
     cp -r /home/qserv/src/qserv /tmp && \
     cd /tmp/qserv && \
     setup -r . -t qserv-dev && \

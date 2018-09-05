@@ -25,9 +25,14 @@ from itertools import chain
 from optparse import OptionParser
 import hashlib
 import os
-import string
 import subprocess
 import sys
+
+from string import digits
+try:
+    from string import ascii_letters
+except ImportError:
+    from string import letters as ascii_letters
 
 sample = """// $ANTLR 2.7.2
 SqlSQL2Imp    // input token vocab name
@@ -111,6 +116,7 @@ class NoValueError(ValueError):
         super(NoValueError, self).__init__(descr)
         pass
 
+
 # Mimic ANTLR 2.7 generated header format.
 # {0} sanitized filename
 # {1} source filename
@@ -149,8 +155,8 @@ See: http://www.antlr2.org/doc/vocab.html
 
     def __init__(self):
         self.tokens = []
-        self.legalIdent = set(chain(string.letters, string.digits, ["_"]))
-        self.legalFirst = set(chain(string.letters, ["_"]))
+        self.legalIdent = set(chain(ascii_letters, digits, ["_"]))
+        self.legalFirst = set(chain(ascii_letters, ["_"]))
         self.sourceFile = "undefined"
 
     def importBuffer(self, text):
@@ -200,7 +206,7 @@ and prefixing with 'x' if the first character is still not legal."""
                 return "_"
             else:
                 return ch
-        sanitized = map(makeLegal, raw)
+        sanitized = [makeLegal(l) for l in raw]
         if sanitized[0] not in self.legalFirst:
             sanitized = ["x"] + sanitized
         return "".join(sanitized)
@@ -346,6 +352,7 @@ class Main:
                 self.oParser.print_help()
                 return
             self.convertFile(args[0], args[1])
+
 
 if __name__ == "__main__":
     # debugTest()
