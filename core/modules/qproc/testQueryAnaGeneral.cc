@@ -433,16 +433,6 @@ BOOST_AUTO_TEST_CASE(SpatialRestr2) { // Redundant?
     BOOST_CHECK_EQUAL(actual, expected);
 }
 
-BOOST_AUTO_TEST_CASE(ChunkDensityFail) {
-    // Should fail since leading _ is disallowed.
-    std::string stmt = " SELECT count(*) AS n, AVG(ra_PS), AVG(decl_PS), _chunkId FROM Object GROUP BY _chunkId;";
-    char const expectedErr[] = "ParseException:Parse token mismatch error:expecting a character string, found 'FROM':";
-
-    std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt);
-    BOOST_CHECK_EQUAL(qs->getError(), expectedErr);
-    // Remaining session state is undefined after unknown antlr error.
-}
-
 BOOST_AUTO_TEST_CASE(ChunkDensity) {
     std::string stmt = " SELECT count(*) AS n, AVG(ra_PS), AVG(decl_PS), x_chunkId FROM Object GROUP BY x_chunkId;";
     std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt, true);
