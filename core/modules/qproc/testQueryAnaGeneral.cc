@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(Triple) {
         "Source.objectIdSourceTest=o2.objectIdObjTest;";
     std::string expected =
         "SELECT * FROM Subchunks_LSST_100.Object_100_%S\007S% AS o1,Subchunks_LSST_100.Object_100_%S\007S% AS o2,LSST.Source_100 AS QST_1_ "
-        "WHERE o1.id!=o2.id AND "
+        "WHERE o1.id<>o2.id AND "
         "0.024>scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test) AND "
         "QST_1_.objectIdSourceTest=o2.objectIdObjTest";
     std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt, true);
