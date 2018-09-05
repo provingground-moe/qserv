@@ -1432,9 +1432,8 @@ public:
     using AdapterT::AdapterT;
 
     void handleUid(string const & string) override {
-        // Uid is expected to be the aliasName in `functionCall AS aliasName`
+        // Uid is expected to be the aliasName in `functionCall AS aliasName` or `functionCall aliasName`
         ASSERT_EXECUTION_CONDITION(_asName.empty(), "Second call to handleUid.", _ctx);
-        ASSERT_EXECUTION_CONDITION(_ctx->AS() != nullptr, "Call to handleUid but AS is null.", _ctx);
         _asName = string;
     }
 
@@ -1812,6 +1811,11 @@ public:
             ASSERT_EXECUTION_CONDITION(nullptr != _valueFactor, "ValueFactor must be populated.", _ctx);
             ValueExprFactory::addValueFactor(param, _valueFactor);
             funcExpr = query::FuncExpr::newArg1(_ctx->AVG()->getText(), param);
+        } else if (_ctx->SUM()) {
+            auto param = std::make_shared<query::ValueExpr>();
+            ASSERT_EXECUTION_CONDITION(nullptr != _valueFactor, "ValueFactor must be populated.", _ctx);
+            ValueExprFactory::addValueFactor(param, _valueFactor);
+            funcExpr = query::FuncExpr::newArg1(_ctx->SUM()->getText(), param);
         } else {
             ASSERT_EXECUTION_CONDITION(false, "Unhandled exit", _ctx);
         }
