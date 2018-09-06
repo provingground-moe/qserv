@@ -105,6 +105,19 @@ void QSMySqlListener::enter##NAME(QSMySqlParser::NAME##Context* ctx) { \
 void QSMySqlListener::exit##NAME(QSMySqlParser::NAME##Context* ctx) {}\
 
 
+// This macro creates the enterXXX and exitXXX function definitions similar to ENTER_EXIT_PARENT to satisfy
+// the QSMySqlParserListener class API but expects that the grammar element will not be used. The enter
+// function throws an adapter_order_error so that if the grammar element is unexpectedly entered the query
+// parsing will abort.
+#define UNSUPPORTED(NAME, MSG) \
+void QSMySqlListener::enter##NAME(QSMySqlParser::NAME##Context* ctx) { \
+    LOGS(_log, LOG_LVL_TRACE, __FUNCTION__ << " is UNSUPPORTED '" << getQueryString(ctx) << "'"); \
+    throw ParseException(MSG); \
+} \
+\
+void QSMySqlListener::exit##NAME(QSMySqlParser::NAME##Context* ctx) {}\
+
+
 // This macro creates the enterXXX and exitXXX function definitions similar to ENTER_EXIT_PARENT but does not
 // push (or pop) an adapter on the stack. Other adapters are expected to handle the grammar element as may be
 // appropraite.
@@ -1340,7 +1353,6 @@ private:
     query::OrderByTerm::Order orderBy {query::OrderByTerm::DEFAULT};
     shared_ptr<query::ValueExpr> _valueExpr;
 };
-
 
 class InnerJoinAdapter :
         public AdapterT<InnerJoinCBH, QSMySqlParser::InnerJoinContext>,
@@ -2719,7 +2731,7 @@ UNHANDLED(MultipleUpdateStatement)
 ENTER_EXIT_PARENT(OrderByClause)
 ENTER_EXIT_PARENT(OrderByExpression)
 UNHANDLED(TableSourceNested)
-UNHANDLED(SubqueryTableItem)
+UNSUPPORTED(SubqueryTableItem, "qserv does not support subqueries")
 UNHANDLED(TableSourcesItem)
 UNHANDLED(IndexHint)
 UNHANDLED(IndexHintType)
