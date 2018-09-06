@@ -151,6 +151,7 @@ if (false == (CONDITION)) { \
         ostringstream msg; \
         msg << getTypeName(this) << "::" << __FUNCTION__; \
         msg << " messsage:\"" << MESSAGE << "\""; \
+        msg << ", in query:" << getStatementStr(); \
         msg << ", in or around query segment: '" << getQueryString(CTX) << "'"; \
         msg << ", with adapter stack:" << adapterStackToString(); \
         msg << ", string tree:" << getStringTree(); \
@@ -550,6 +551,7 @@ protected:
     std::string adapterStackToString() const { return qsMySqlListener->adapterStackToString(); }
     std::string getStringTree() const { return qsMySqlListener->getStringTree(); }
     std::string getTokens() const { return qsMySqlListener->getTokens(); }
+    std::string getStatementStr() const { return qsMySqlListener->getStatementStr(); }
 
 
     // TODO write an accessor?
@@ -591,6 +593,7 @@ public:
     std::string adapterStackToString() const { return qsMySqlListener->adapterStackToString(); }
     std::string getStringTree() const { return qsMySqlListener->getStringTree(); }
     std::string getTokens() const { return qsMySqlListener->getTokens(); }
+    std::string getStatementStr() const { return qsMySqlListener->getStatementStr(); }
 
 private:
     shared_ptr<query::SelectStmt> _selectStatement;
@@ -2497,6 +2500,14 @@ std::string QSMySqlListener::getTokens() const {
     auto ldh = _listenerDebugHelper.lock();
     if (ldh != nullptr) {
         return ldh->getTokens();
+    }
+    return "unexpected null listener debug helper.";
+}
+
+std::string QSMySqlListener::getStatementStr() const {
+    auto ldh = _listenerDebugHelper.lock();
+    if (ldh != nullptr) {
+        return ldh->getStatementStr();
     }
     return "unexpected null listener debug helper.";
 }
