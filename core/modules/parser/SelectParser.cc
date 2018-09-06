@@ -254,6 +254,7 @@ SelectParser::SelectParser(std::string const& statement, AntlrVersion v)
     :_statement(statement) {
     if (ANTLR2 == v) {
         _aParser = std::make_shared<Antlr2Parser>(_statement);
+        return;
     }
 
     _aParser = std::make_shared<Antlr4Parser>(_statement);
