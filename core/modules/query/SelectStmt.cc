@@ -186,6 +186,11 @@ bool SelectStmt::operator==(const SelectStmt& rhs) const {
             OutputMods == rhs.OutputMods);
 }
 
+bool SelectStmt::operator!=(const SelectStmt& rhs) const {
+    return false == (*this == rhs);
+}
+
+
 std::ostream& operator<<(std::ostream& os, SelectStmt const& selectStmt) {
     os << "SelectStmt(";
     os << "fromList:" << selectStmt._fromList;

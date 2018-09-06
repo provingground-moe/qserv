@@ -282,10 +282,16 @@ static const std::vector< std::string > QUERIES = {
     // case05/queries/1051_nn.sql.FIXME
     "SELECT o1.objectId AS objId1, o2.objectId AS objId2, scisql_angSep(o1.ra_PS, o1.decl_PS, o2.ra_PS, o2.decl_PS) AS distance FROM Object o1, Object o2 WHERE qserv_areaspec_box(0, 0, 0.2, 1) AND scisql_angSep(o1.ra_PS, o1.decl_PS, o2.ra_PS, o2.decl_PS) < 1 AND o1.objectId <> o2.objectId",
 
-    // case01/queries/0013_groupedLogicalTerm.sql
-    "select objectId, ra_PS from Object where ra_PS > 359.5 and (objectId = 417853073271391 or  objectId = 399294519599888)",
+    "select sum(pm_declErr),chunkId, avg(bMagF2) bmf2 from LSST.Object where bMagF > 20.0 GROUP BY chunkId;",
 
-    "select sum(pm_declErr),chunkId, avg(bMagF2) bmf2 from LSST.Object where bMagF > 20.0 GROUP BY chunkId;"
+    "select count(*) from Object group by flags having count(*) > 3"
+};
+
+// These queries have different IR between antlr 2 and antlr4, and this is expected. However the re-constructed SQL is still expected to match.
+static const std::vector< std::string > DIFFERENT_IR_QUERIES = {
+    // case01/queries/0013_groupedLogicalTerm.sql
+    // the antlr 2 parser inserted an extra and-or pair, which is not reproduced in the antlr4 parser.
+    "select objectId, ra_PS from Object where ra_PS > 359.5 and (objectId = 417853073271391 or  objectId = 399294519599888)",
 };
 
 // These queries are all marked "FIXME" in the integration tests, and we don't test them (yet).
@@ -381,6 +387,7 @@ static const std::vector< std::string > FAIL_QUERIES = {
     "SELECT count(*) FROM Object WHERE qserv_areaSpec_box(35, 6, 35. 1, 6.0001);", // case05/queries/8002_badLiteral.sql.FIXME
 };
 
+
 BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
 
     std::shared_ptr<query::SelectStmt> a2SelectStatement;
@@ -411,13 +418,33 @@ BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
     }
 #endif
 
-    // the antlr4 query IR sometimes does not match the old antlr IR, because the old antlr added extra terms
-    // in some cases (for example extra BoolTerms in the where statement portion of the IR, which are removed
-    // by BoolTerm::getReduced, which is called by WherePlugin::applyLogical.
-    // So, we compare the query strings that are rendered from the IR, and warn in the case where the IR is
-    // different.
-    BOOST_WARN_MESSAGE(*a2SelectStatement == *a4SelectStatement, "Query IR is different for " << query <<
+    BOOST_REQUIRE_MESSAGE(*a2SelectStatement == *a4SelectStatement, "Query IR is different for " << query <<
             ", old antlr:" << *a2SelectStatement << ", antlr4:" << *a4SelectStatement);
+    BOOST_REQUIRE(a2QueryStr.str() == a4QueryStr.str());
+}
+
+
+BOOST_DATA_TEST_CASE(antlr_compare_different_ir, DIFFERENT_IR_QUERIES, query) {
+    // todo de-duplicate this code
+    std::shared_ptr<query::SelectStmt> a2SelectStatement;
+    std::ostringstream a2QueryStr;
+    auto querySession = std::make_shared<qproc::QuerySession>();
+    a2SelectStatement = querySession->parseQuery(query, true);
+    if (nullptr == a2SelectStatement) {
+        BOOST_TEST_MESSAGE("antlr2 parse error:" << querySession->getError());
+    }
+    BOOST_REQUIRE(a2SelectStatement != nullptr);
+    a2QueryStr << a2SelectStatement->getQueryTemplate();
+
+    std::ostringstream a4QueryStr;
+    std::shared_ptr<query::SelectStmt> a4SelectStatement;
+    a4SelectStatement = qproc::QuerySession().parseQuery(query);
+    BOOST_REQUIRE(a4SelectStatement != nullptr);
+    a4QueryStr << a4SelectStatement->getQueryTemplate();
+
+    BOOST_REQUIRE_MESSAGE(*a2SelectStatement != *a4SelectStatement,
+            "Query IR is expected to be different for " << query << ", old antlr:" << *a2SelectStatement <<
+            ", antlr4:" << *a4SelectStatement);
     BOOST_REQUIRE(a2QueryStr.str() == a4QueryStr.str());
 }
 

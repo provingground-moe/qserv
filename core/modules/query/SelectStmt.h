@@ -165,6 +165,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, SelectStmt const& selectStmt);
 
     bool operator==(const SelectStmt& rhs) const;
+    bool operator!=(const SelectStmt& rhs) const;
 
 private:
     // Declarations
