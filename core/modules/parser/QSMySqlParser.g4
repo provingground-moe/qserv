@@ -4,6 +4,19 @@ import MySqlParser;
 
 options { tokenVocab=QSMySqlLexer; }
 
+// makes the alias of a subqueryTableItem optional
+tableSourceItem
+    : tableName
+      (PARTITION '(' uidList ')' )? (AS? alias=uid)?
+      (indexHint (',' indexHint)* )?                                #atomTableItem
+    | (
+      selectStatement 
+      | '(' parenthesisSubquery=selectStatement ')'
+      ) 
+      AS? alias=uid?                                                #subqueryTableItem
+    | '(' tableSources ')'                                          #tableSourcesItem
+    ;
+
 // adds `MINUS?` before REAL_LITERAL
 constant
     : stringLiteral | decimalLiteral
