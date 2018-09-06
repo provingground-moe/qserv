@@ -1818,6 +1818,10 @@ public:
             auto starParExpr = std::make_shared<query::ValueExpr>();
             ValueExprFactory::addValueFactor(starParExpr, starFactor);
             funcExpr = query::FuncExpr::newArg1(_ctx->COUNT()->getText(), starParExpr);
+        } else if (_ctx->COUNT() && (_valueFactor != nullptr)) {
+            auto param = std::make_shared<query::ValueExpr>();
+            ValueExprFactory::addValueFactor(param, _valueFactor);
+            funcExpr = query::FuncExpr::newArg1(_ctx->COUNT()->getText(), param);
         } else if (_ctx->AVG()) {
             auto param = std::make_shared<query::ValueExpr>();
             ASSERT_EXECUTION_CONDITION(nullptr != _valueFactor, "ValueFactor must be populated.", _ctx);
