@@ -400,6 +400,11 @@ BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
     BOOST_REQUIRE(a2SelectStatement != nullptr);
     a2QueryStr << a2SelectStatement->getQueryTemplate();
 
+    if (a2SelectStatement != nullptr) {
+        BOOST_TEST_MESSAGE("antlr2 query string:" << a2QueryStr.str());
+        BOOST_TEST_MESSAGE("antlr2 selectStmt structure:" << *a2SelectStatement);
+    }
+
     std::ostringstream a4QueryStr;
     std::shared_ptr<query::SelectStmt> a4SelectStatement;
     a4SelectStatement = qproc::QuerySession().parseQuery(query);
@@ -408,10 +413,6 @@ BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
 
 #if 0 // enable this block to log details about the generated select statements.
       // (you also have to set the flag ` --log_level=message` when running the test)
-    if (a2SelectStatement != nullptr) {
-        BOOST_TEST_MESSAGE("antlr2 query string:" << a2QueryStr.str());
-        BOOST_TEST_MESSAGE("antlr2 selectStmt structure:" << *a2SelectStatement);
-    }
     if (a4SelectStatement != nullptr) {
         BOOST_TEST_MESSAGE("antlr4 query string:" << a4QueryStr.str());
         BOOST_TEST_MESSAGE("antlr4 selectStmt structure:" << *a4SelectStatement);
