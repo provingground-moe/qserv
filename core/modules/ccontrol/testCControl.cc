@@ -407,7 +407,7 @@ BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
 
     std::ostringstream a4QueryStr;
     std::shared_ptr<query::SelectStmt> a4SelectStatement;
-    a4SelectStatement = qproc::QuerySession().parseQuery(query);
+    a4SelectStatement = qproc::QuerySession().parseQuery(query, false);
     BOOST_REQUIRE(a4SelectStatement != nullptr);
     a4QueryStr << a4SelectStatement->getQueryTemplate();
 
@@ -439,7 +439,7 @@ BOOST_DATA_TEST_CASE(antlr_compare_different_ir, DIFFERENT_IR_QUERIES, query) {
 
     std::ostringstream a4QueryStr;
     std::shared_ptr<query::SelectStmt> a4SelectStatement;
-    a4SelectStatement = qproc::QuerySession().parseQuery(query);
+    a4SelectStatement = qproc::QuerySession().parseQuery(query, false);
     BOOST_REQUIRE(a4SelectStatement != nullptr);
     a4QueryStr << a4SelectStatement->getQueryTemplate();
 

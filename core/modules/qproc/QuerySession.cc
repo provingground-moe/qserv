@@ -89,8 +89,8 @@ namespace qproc {
 ////////////////////////////////////////////////////////////////////////
 
 // Analyze SQL query issued by user
-void QuerySession::analyzeQuery(std::string const& sql) {
-    std::shared_ptr<query::SelectStmt> stmt = parseQuery(sql);
+void QuerySession::analyzeQuery(std::string const& sql, bool antlr2) {
+    std::shared_ptr<query::SelectStmt> stmt = parseQuery(sql, antlr2);
 
     // TODO does analyzeQuery ever throw a ParseException? (seems like a parse thing, not an analyze thing?)
     try {

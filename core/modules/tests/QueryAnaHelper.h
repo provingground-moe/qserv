@@ -49,7 +49,7 @@ namespace tests {
 */
 struct QueryAnaHelper {
 
-    static parser::SelectParser::Ptr getParser(const std::string& stmt);
+    static parser::SelectParser::Ptr getParser(const std::string& stmt, bool antlr2);
 
     /**
     *  @brief Prepare the query session used to process SQL queries
@@ -60,7 +60,7 @@ struct QueryAnaHelper {
     *  @param expectedErr:   expected error message
     */
     std::shared_ptr<qproc::QuerySession> buildQuerySession(qproc::QuerySession::Test qsTest,
-                                                    std::string const & stmt);
+                                                    std::string const & stmt, bool antlr2);
 
     /**
     *  @brief Compute the first parallel query which will be send on
@@ -82,7 +82,7 @@ struct QueryAnaHelper {
      *
      */
     std::vector<std::string> getInternalQueries(qproc::QuerySession::Test& t,
-                                                std::string const & stmt);
+                                                std::string const & stmt, bool antlr2);
 
     std::shared_ptr<qproc::QuerySession> querySession;
 };

@@ -93,7 +93,7 @@ public:
      * @param sql: the sql query
      * @param antlr2: true to parse the query using the antlr2 parser, else the antlr4 parser will be used.
      */
-    std::shared_ptr<query::SelectStmt> parseQuery(std::string const& sql, bool antlr2=false);
+    std::shared_ptr<query::SelectStmt> parseQuery(std::string const& sql, bool antlr2);
 
     /**
      * @brief Analyze SQL query issued by user
@@ -104,7 +104,7 @@ public:
      *
      * @param sql: the sql query
      */
-    void analyzeQuery(std::string const& sql);
+    void analyzeQuery(std::string const& sql, bool antlr2);
     /**
      * @brief Analyze SQL query using parsed query
      *

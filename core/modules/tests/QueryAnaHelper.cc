@@ -62,17 +62,18 @@ namespace lsst {
 namespace qserv {
 namespace tests {
 
-SelectParser::Ptr QueryAnaHelper::getParser(const std::string& stmt) {
+SelectParser::Ptr QueryAnaHelper::getParser(const std::string& stmt, bool antlr2) {
     // todo this needs to get changed to antlr4, or deleted entirely (the latter, please?)
-    SelectParser::Ptr p = SelectParser::newInstance(stmt, SelectParser::ANTLR2);
+    SelectParser::Ptr p = SelectParser::newInstance(stmt, antlr2 ? SelectParser::ANTLR2 : SelectParser::ANTLR4);
     p->setup();
     return p;
 }
 
 std::shared_ptr<QuerySession> QueryAnaHelper::buildQuerySession(QuerySession::Test qsTest,
-                                                                const std::string& stmt) {
+                                                                const std::string& stmt,
+                                                                bool antlr2) {
     querySession = std::make_shared<QuerySession>(qsTest);
-    querySession->analyzeQuery(stmt);
+    querySession->analyzeQuery(stmt, antlr2);
 
     if (LOG_CHECK_LVL(_log, LOG_LVL_DEBUG)) {
         std::shared_ptr<ConstraintVector> cvRaw(querySession->getConstraints());
@@ -100,9 +101,9 @@ std::string QueryAnaHelper::buildFirstParallelQuery(bool withSubChunks) {
 }
 
 std::vector<std::string> QueryAnaHelper::getInternalQueries(
-        QuerySession::Test& t, const std::string& stmt) {
+        QuerySession::Test& t, const std::string& stmt, bool antlr2) {
     std::vector<std::string> queries;
-    buildQuerySession(t, stmt);
+    buildQuerySession(t, stmt, antlr2);
 
     std::string sql = buildFirstParallelQuery();
 
