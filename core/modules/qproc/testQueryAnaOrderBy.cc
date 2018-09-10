@@ -63,7 +63,7 @@ inline void check(QuerySession::Test qsTest, QueryAnaHelper queryAnaHelper,
                   std::string stmt, std::string expectedParallel,
                   std::string expectedMerge, std::string expectedProxyOrderBy) {
     std::vector<std::string> expectedQueries = { expectedParallel, expectedMerge, expectedProxyOrderBy };
-    auto queries = queryAnaHelper.getInternalQueries(qsTest, stmt);
+    auto queries = queryAnaHelper.getInternalQueries(qsTest, stmt, true);
     BOOST_CHECK_EQUAL_COLLECTIONS(queries.begin(), queries.end(),
                                   expectedQueries.begin(), expectedQueries.end());
 }
