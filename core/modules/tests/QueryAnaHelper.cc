@@ -63,6 +63,7 @@ namespace qserv {
 namespace tests {
 
 SelectParser::Ptr QueryAnaHelper::getParser(const std::string& stmt) {
+    // todo this needs to get changed to antlr4, or deleted entirely (the latter, please?)
     SelectParser::Ptr p = SelectParser::newInstance(stmt, SelectParser::ANTLR2);
     p->setup();
     return p;
