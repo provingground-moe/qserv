@@ -576,7 +576,6 @@ BOOST_AUTO_TEST_CASE(NewParser) {
         std::string stmt = stmts[i];
         BOOST_TEST_MESSAGE("----" << stmt << "----");
         SelectParser::Ptr p = queryAnaHelper.getParser(stmt, true);
-        p->setup();
     }
  }
 BOOST_AUTO_TEST_CASE(Mods) {
