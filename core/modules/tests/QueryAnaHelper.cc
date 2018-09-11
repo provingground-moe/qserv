@@ -73,7 +73,11 @@ std::shared_ptr<QuerySession> QueryAnaHelper::buildQuerySession(QuerySession::Te
                                                                 const std::string& stmt,
                                                                 bool antlr2) {
     querySession = std::make_shared<QuerySession>(qsTest);
-    querySession->analyzeQuery(stmt, antlr2);
+    auto stmtIR = querySession->parseQuery(stmt, antlr2);
+    if (nullptr == stmtIR) {
+        return querySession;
+    }
+    querySession->analyzeQuery(stmt, stmtIR);
 
     if (LOG_CHECK_LVL(_log, LOG_LVL_DEBUG)) {
         std::shared_ptr<ConstraintVector> cvRaw(querySession->getConstraints());
