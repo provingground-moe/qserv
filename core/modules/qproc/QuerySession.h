@@ -96,16 +96,6 @@ public:
     std::shared_ptr<query::SelectStmt> parseQuery(std::string const& sql, bool antlr2);
 
     /**
-     * @brief Analyze SQL query issued by user
-     *
-     * This query comes from user through mysql-client and mysql-proxy
-     * This function will parse it, apply query plugins (i.e. build parallel and
-     * merge queries) and check for errors
-     *
-     * @param sql: the sql query
-     */
-    void analyzeQuery(std::string const& sql, bool antlr2);
-    /**
      * @brief Analyze SQL query using parsed query
      *
      * @param sql: the sql query text
