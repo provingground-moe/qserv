@@ -1891,6 +1891,11 @@ public:
             ASSERT_EXECUTION_CONDITION(nullptr != _valueFactor, "ValueFactor must be populated.", _ctx);
             ValueExprFactory::addValueFactor(param, _valueFactor);
             funcExpr = query::FuncExpr::newArg1(_ctx->SUM()->getText(), param);
+        } else if (_ctx->MAX()) {
+            auto param = std::make_shared<query::ValueExpr>();
+            ASSERT_EXECUTION_CONDITION(nullptr != _valueFactor, "ValueFactor must be populated.", _ctx);
+            ValueExprFactory::addValueFactor(param, _valueFactor);
+            funcExpr = query::FuncExpr::newArg1(_ctx->MAX()->getText(), param);
         } else {
             ASSERT_EXECUTION_CONDITION(false, "Unhandled exit", _ctx);
         }
