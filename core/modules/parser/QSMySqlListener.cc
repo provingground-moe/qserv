@@ -1313,6 +1313,10 @@ public:
             compPredicate->op = SqlSQL2Tokens::NOT_EQUALS_OP;
         } else if ("!=" == _comparison) {
             compPredicate->op = SqlSQL2Tokens::NOT_EQUALS_OP;
+        } else if ("<=" == _comparison) {
+            compPredicate->op = SqlSQL2Tokens::LESS_THAN_OR_EQUALS_OP;
+        } else if (">=" == _comparison) {
+            compPredicate->op = SqlSQL2Tokens::GREATER_THAN_OR_EQUALS_OP;
         } else {
             ASSERT_EXECUTION_CONDITION(false, "unhandled comparison operator type " << _comparison, _ctx);
         }
@@ -1994,11 +1998,11 @@ class FunctionArgsAdapter :
         public AdapterT<FunctionArgsCBH, QSMySqlParser::FunctionArgsContext>,
         public ConstantCBH,
         public FullColumnNameCBH,
-        public ScalarFunctionCallCBH{
+        public ScalarFunctionCallCBH,
+        public PredicateExpressionCBH {
 public:
     using AdapterT::AdapterT;
 
-    // ConstantCBH
     void handleConstant(string const & val) override {
         auto valueExpr = make_shared<query::ValueExpr>();
         ValueExprFactory::addValueFactor(valueExpr, query::ValueFactor::newConstFactor(val));
@@ -2014,6 +2018,15 @@ public:
     void handleScalarFunctionCall(shared_ptr<query::ValueFactor> const & valueFactor) {
         auto valueExpr = make_shared<query::ValueExpr>();
         ValueExprFactory::addValueFactor(valueExpr, valueFactor);
+        _args.push_back(valueExpr);
+    }
+
+    void handlePredicateExpression(shared_ptr<query::BoolFactor> const & boolFactor,
+            antlr4::ParserRuleContext* childCtx) override {
+        ASSERT_EXECUTION_CONDITION(false, "Unhandled PredicateExpression with BoolFactor.", _ctx);
+    }
+
+    void handlePredicateExpression(shared_ptr<query::ValueExpr> const & valueExpr) override {
         _args.push_back(valueExpr);
     }
 
