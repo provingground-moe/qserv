@@ -106,13 +106,18 @@ void QSMySqlListener::enter##NAME(QSMySqlParser::NAME##Context* ctx) { \
 void QSMySqlListener::exit##NAME(QSMySqlParser::NAME##Context* ctx) {}\
 
 
-// This macro creates the enterXXX and exitXXX function definitions similar to ENTER_EXIT_PARENT to satisfy
-// the QSMySqlParserListener class API but expects that the grammar element will not be used. The enter
-// function throws an adapter_order_error so that if the grammar element is unexpectedly entered the query
-// parsing will abort.
+// This is the same as UHANDLED but includes more messaging. (Maybe all UNHANDLED should be changed to this?)
 #define UNSUPPORTED(NAME, MSG) \
 void QSMySqlListener::enter##NAME(QSMySqlParser::NAME##Context* ctx) { \
     LOGS(_log, LOG_LVL_TRACE, __FUNCTION__ << " is UNSUPPORTED '" << getQueryString(ctx) << "'"); \
+    ostringstream msg; \
+    msg << getTypeName(this) << "::" << __FUNCTION__; \
+    msg << " messsage:\"" << MSG << "\""; \
+    msg << ", in query:" << getStatementStr(); \
+    msg << ", in or around query segment: '" << getQueryString(ctx) << "'"; \
+    msg << ", with adapter stack:" << adapterStackToString(); \
+    msg << ", string tree:" << getStringTree(); \
+    msg << ", tokens:" << getTokens(); \
     throw ParseException(MSG); \
 } \
 \
@@ -298,6 +303,11 @@ public:
 class InnerJoinCBH : public BaseCBH {
 public:
     virtual void handleInnerJoin(shared_ptr<query::JoinRef> const & joinRef) = 0;
+};
+
+class NaturalJoinCBH : public BaseCBH {
+public:
+    virtual void handleNaturalJoin(shared_ptr<query::JoinRef> const & joinRef) = 0;
 };
 
 class SelectSpecCBH : public BaseCBH {
@@ -901,7 +911,8 @@ private:
 class TableSourceBaseAdapter :
         public AdapterT<TableSourceBaseCBH, QSMySqlParser::TableSourceBaseContext>,
         public AtomTableItemCBH,
-        public InnerJoinCBH {
+        public InnerJoinCBH,
+        public NaturalJoinCBH {
 public:
     using AdapterT::AdapterT;
 
@@ -911,6 +922,10 @@ public:
     }
 
     void handleInnerJoin(shared_ptr<query::JoinRef> const & joinRef) override {
+        _joinRefs.push_back(joinRef);
+    }
+
+    void handleNaturalJoin(shared_ptr<query::JoinRef> const & joinRef) override {
         _joinRefs.push_back(joinRef);
     }
 
@@ -978,7 +993,6 @@ public:
 
     string name() const override { return getTypeName(this); }
 };
-
 
 
 class FullIdAdapter :
@@ -1409,6 +1423,7 @@ private:
     shared_ptr<query::ValueExpr> _valueExpr;
 };
 
+
 class InnerJoinAdapter :
         public AdapterT<InnerJoinCBH, QSMySqlParser::InnerJoinContext>,
         public AtomTableItemCBH,
@@ -1416,11 +1431,6 @@ class InnerJoinAdapter :
         public PredicateExpressionCBH {
 public:
     using AdapterT::AdapterT;
-
-    void onEnter() override {
-        ASSERT_EXECUTION_CONDITION(nullptr == _ctx->INNER() && nullptr == _ctx->CROSS(),
-                "INNER and CROSS join are not currently supported by the parser.", _ctx);
-    }
 
     void handleAtomTableItem(shared_ptr<query::TableRef> const & tableRef) override {
         ASSERT_EXECUTION_CONDITION(nullptr == _tableRef, "expected only one atomTableItem callback.", _ctx);
@@ -1446,9 +1456,15 @@ public:
 
     void onExit() override {
         ASSERT_EXECUTION_CONDITION(_tableRef != nullptr, "TableRef was not set.", _ctx);
+        ASSERT_EXECUTION_CONDITION(_using != nullptr || _on != nullptr, "USING or ON must be set.", _ctx);
+        query::JoinRef::Type joinType(query::JoinRef::DEFAULT);
+        if (_ctx->INNER() != nullptr) {
+            joinType = query::JoinRef::INNER;
+        } else if (_ctx->CROSS() != nullptr) {
+            joinType = query::JoinRef::CROSS;
+        }
         auto joinSpec = make_shared<query::JoinSpec>(_using, _on);
-        // todo where does type get defined?
-        auto joinRef = make_shared<query::JoinRef>(_tableRef, query::JoinRef::DEFAULT, false, joinSpec);
+        auto joinRef = make_shared<query::JoinRef>(_tableRef, joinType, false, joinSpec);
         lockedParent()->handleInnerJoin(joinRef);
     }
 
@@ -1458,6 +1474,36 @@ private:
     shared_ptr<query::ColumnRef> _using;
     shared_ptr<query::TableRef> _tableRef;
     shared_ptr<query::BoolFactor> _on;
+};
+
+
+class NaturalJoinAdapter :
+        public AdapterT<NaturalJoinCBH, QSMySqlParser::NaturalJoinContext>,
+        public AtomTableItemCBH {
+public:
+    using AdapterT::AdapterT;
+
+    void handleAtomTableItem(shared_ptr<query::TableRef> const & tableRef) override {
+        ASSERT_EXECUTION_CONDITION(nullptr == _tableRef, "expected only one atomTableItem callback.", _ctx);
+        _tableRef = tableRef;
+    }
+
+    void onExit() override {
+        ASSERT_EXECUTION_CONDITION(_tableRef != nullptr, "TableRef was not set.", _ctx);
+        query::JoinRef::Type joinType(query::JoinRef::DEFAULT);
+        if (_ctx->LEFT() != nullptr) {
+            joinType = query::JoinRef::LEFT;
+        } else if (_ctx->RIGHT() != nullptr) {
+            joinType = query::JoinRef::RIGHT;
+        }
+        auto joinRef = make_shared<query::JoinRef>(_tableRef, joinType, true, nullptr);
+        lockedParent()->handleNaturalJoin(joinRef);
+    }
+
+    string name() const override { return getTypeName(this); }
+
+private:
+    shared_ptr<query::TableRef> _tableRef;
 };
 
 
@@ -2924,7 +2970,8 @@ UNHANDLED(IndexHintType)
 ENTER_EXIT_PARENT(InnerJoin)
 UNHANDLED(StraightJoin)
 UNHANDLED(OuterJoin)
-UNHANDLED(NaturalJoin)
+ENTER_EXIT_PARENT(NaturalJoin)
+UNSUPPORTED(UnionJoin, "qserv does not support UNION JOIN queries")    // <- won't implement
 UNHANDLED(QueryExpression)
 UNHANDLED(QueryExpressionNointo)
 UNHANDLED(QuerySpecificationNointo)
