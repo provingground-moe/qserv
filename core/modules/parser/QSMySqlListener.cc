@@ -1412,7 +1412,8 @@ private:
 class InnerJoinAdapter :
         public AdapterT<InnerJoinCBH, QSMySqlParser::InnerJoinContext>,
         public AtomTableItemCBH,
-        public UidListCBH {
+        public UidListCBH,
+        public PredicateExpressionCBH {
 public:
     using AdapterT::AdapterT;
 
@@ -1433,10 +1434,19 @@ public:
         _using = make_shared<query::ColumnRef>("", "", strings[0]);
     }
 
+    void handlePredicateExpression(shared_ptr<query::BoolFactor> const & boolFactor,
+            antlr4::ParserRuleContext* childCtx) override {
+        ASSERT_EXECUTION_CONDITION(nullptr == _on, "Unexpected second BoolFactor callback: " << boolFactor, _ctx);
+        _on = boolFactor;
+    }
+
+    void handlePredicateExpression(shared_ptr<query::ValueExpr> const & valueExpr) override {
+        ASSERT_EXECUTION_CONDITION(false, "Unexpected PredicateExpression ValueExpr callback: " << valueExpr, _ctx);
+    }
+
     void onExit() override {
         ASSERT_EXECUTION_CONDITION(_tableRef != nullptr, "TableRef was not set.", _ctx);
-        ASSERT_EXECUTION_CONDITION(_using != nullptr, "`using` was not set.", _ctx);
-        auto joinSpec = make_shared<query::JoinSpec>(_using);
+        auto joinSpec = make_shared<query::JoinSpec>(_using, _on);
         // todo where does type get defined?
         auto joinRef = make_shared<query::JoinRef>(_tableRef, query::JoinRef::DEFAULT, false, joinSpec);
         lockedParent()->handleInnerJoin(joinRef);
@@ -1447,6 +1457,7 @@ public:
 private:
     shared_ptr<query::ColumnRef> _using;
     shared_ptr<query::TableRef> _tableRef;
+    shared_ptr<query::BoolFactor> _on;
 };
 
 
@@ -1572,7 +1583,6 @@ public:
 
     void handlePredicateExpression(shared_ptr<query::ValueExpr> const & valueExpr) override {
         ASSERT_EXECUTION_CONDITION(nullptr == _valueExpr, "valueExpr must be set only once in SelectExpressionElementAdapter.", _ctx);
-//        LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << valueExpr);
         _valueExpr = valueExpr;
     }
 
@@ -1596,7 +1606,7 @@ public:
 
     void handlePredicateExpression(shared_ptr<query::BoolFactor> const & boolFactor,
             antlr4::ParserRuleContext* childCtx) override {
-        ASSERT_EXECUTION_CONDITION(false, "Unexpected GroupByItemAdapter boolFactor callback.", _ctx);
+        ASSERT_EXECUTION_CONDITION(false, "Unexpected PredicateExpression boolFactor callback.", _ctx);
     }
 
     void handlePredicateExpression(shared_ptr<query::ValueExpr> const & valueExpr) override {
