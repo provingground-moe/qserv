@@ -1408,6 +1408,9 @@ public:
 
     void handlePredicateExpression(shared_ptr<query::ValueExpr> const & valueExpr) override {
         ASSERT_EXECUTION_CONDITION(nullptr == _valueExpr, "expected exactly one ValueExpr callback", _ctx);
+        if (valueExpr->isFunction()) {
+            throw ParseException("qserv does not support functions in ORDER BY");
+        }
         _valueExpr = valueExpr;
     }
 
