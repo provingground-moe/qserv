@@ -4,6 +4,24 @@ import MySqlParser;
 
 options { tokenVocab=QSMySqlLexer; }
 
+
+// adds unionJoin to joinPart
+joinPart
+    : (INNER | CROSS)? JOIN tableSourceItem
+      (
+        ON expression
+        | USING '(' uidList ')'
+      )?                                                            #innerJoin
+    | STRAIGHT_JOIN tableSourceItem (ON expression)?                #straightJoin
+    | (LEFT | RIGHT) OUTER? JOIN tableSourceItem
+        (
+          ON expression 
+          | USING '(' uidList ')'
+        )                                                           #outerJoin
+    | NATURAL ((LEFT | RIGHT) OUTER?)? JOIN tableSourceItem         #naturalJoin
+    | UNION joinPart                                                #unionJoin
+    ;
+
 // adds `MINUS?` before REAL_LITERAL
 constant
     : stringLiteral | decimalLiteral

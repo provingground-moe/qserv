@@ -736,6 +736,9 @@ protected:
     virtual void enterNaturalJoin(QSMySqlParser::NaturalJoinContext * /*ctx*/) override;
     virtual void exitNaturalJoin(QSMySqlParser::NaturalJoinContext * /*ctx*/) override;
 
+    virtual void enterUnionJoin(QSMySqlParser::UnionJoinContext *ctx) override;
+    virtual void exitUnionJoin(QSMySqlParser::UnionJoinContext *ctx) override;
+
     virtual void enterQueryExpression(QSMySqlParser::QueryExpressionContext * /*ctx*/) override;
     virtual void exitQueryExpression(QSMySqlParser::QueryExpressionContext * /*ctx*/) override;
 
