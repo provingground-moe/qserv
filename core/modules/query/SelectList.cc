@@ -77,6 +77,10 @@ struct renderWithSep {
     int count;
 };
 
+SelectList::SelectList(ValueExprPtrVector const & valueExprList)
+: _valueExprList(newVectorOf<ValueExprPtr>(valueExprList))
+{}
+
 void
 SelectList::addStar(std::string const& table) {
     if (!_valueExprList) {

@@ -212,12 +212,12 @@ BOOST_AUTO_TEST_CASE(RestrictorNeighborCount) {
 BOOST_AUTO_TEST_CASE(Triple) {
     std::string stmt =
         "select * from LSST.Object as o1, LSST.Object as o2, LSST.Source "
-        "where o1.id != o2.id and "
+        "where o1.id <> o2.id and "
         "0.024 > scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test) and "
         "Source.objectIdSourceTest=o2.objectIdObjTest;";
     std::string expected =
         "SELECT * FROM Subchunks_LSST_100.Object_100_%S\007S% AS o1,Subchunks_LSST_100.Object_100_%S\007S% AS o2,LSST.Source_100 AS QST_1_ "
-        "WHERE o1.id!=o2.id AND "
+        "WHERE o1.id<>o2.id AND "
         "0.024>scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test) AND "
         "QST_1_.objectIdSourceTest=o2.objectIdObjTest";
     std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
@@ -668,12 +668,10 @@ BOOST_AUTO_TEST_CASE(dm681) {
 
     stmt = "SELECT foo from Filter f limit 5 garbage query !#$%!#$";
     stmt2 = "SELECT foo from Filter f limit 5; garbage query !#$%!#$";
-    char const expectedErr[] = "ParseException:Parse token mismatch error:expecting EOF, found 'garbage':";
+    char const expectedErr[] = "ParseException:Parse error(adapter_execution)";
     std::shared_ptr<QuerySession> qs;
     qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
-    BOOST_CHECK_EQUAL(qs->getError(), expectedErr);
-    qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
-    BOOST_CHECK_EQUAL(qs->getError(), expectedErr);
+    BOOST_REQUIRE_EQUAL(qs->getError().find(expectedErr), 0u);
 }
 
 BOOST_AUTO_TEST_CASE(FuncExprPred) {
@@ -723,10 +721,10 @@ BOOST_AUTO_TEST_CASE(MatchTableWithoutWhere) {
 
 BOOST_AUTO_TEST_CASE(MatchTableWithWhere) {
     std::string stmt = "SELECT * FROM RefObjMatch WHERE "
-                       "foo!=bar AND baz<3.14159;";
+                       "foo<>bar AND baz<3.14159;";
     std::string expected = "SELECT * FROM LSST.RefObjMatch_100 AS QST_1_ WHERE "
                            "(refObjectId IS NULL OR flags<>2) "
-                           "AND foo!=bar AND baz<3.14159";
+                           "AND foo<>bar AND baz<3.14159";
     std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
     std::string actual = queryAnaHelper.buildFirstParallelQuery(false);
     BOOST_CHECK_EQUAL(actual, expected);
@@ -740,8 +738,8 @@ BOOST_AUTO_TEST_CASE(Garbled) {
         "FROM LSST.Science_Ccd_Exposure AS sce "
         "WHERE sce.field=535 AND sce.camcol LIKE '%' ";
     std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
-    BOOST_CHECK_EQUAL(qs->getError(), "ParseException:Parse error(ANTLR):unexpected token: LECT:");
-
+    std::string expectedErr = "ParseException:Parse error(adapter_execution)";
+    BOOST_REQUIRE_EQUAL(qs->getError().find(expectedErr), 0u);
 }
 BOOST_AUTO_TEST_SUITE_END()
 ////////////////////////////////////////////////////////////////////////
@@ -820,7 +818,7 @@ BOOST_AUTO_TEST_CASE(Union) {
         "FROM Source s1 UNION JOIN Source s2 "
         "WHERE s1.bar = s2.bar;";
     auto qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
-    BOOST_CHECK_EQUAL(qs->getError(), "AnalysisError:UNION JOIN queries are not currently supported.");
+    BOOST_CHECK_EQUAL(qs->getError().find("ParseException:qserv does not support UNION JOIN queries"), 0u);
 }
 BOOST_AUTO_TEST_CASE(Cross) {
     std::string stmt = "SELECT * "
@@ -899,7 +897,7 @@ BOOST_AUTO_TEST_CASE(Case01_1012) {
     // patching the grammar to support this.
     std::string stmt = "SELECT objectId, iE1_SG, ABS(iE1_SG) FROM Object WHERE iE1_SG between -0.1 and 0.1 ORDER BY ABS(iE1_SG);";
     auto qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
-    BOOST_CHECK_EQUAL(qs->getError(), "ParseException:Parse error(ANTLR):unexpected token: (:");
+    BOOST_CHECK_EQUAL(qs->getError(), "ParseException:qserv does not support functions in ORDER BY");
 }
 
 BOOST_AUTO_TEST_CASE(Case01_1013) {
@@ -908,7 +906,7 @@ BOOST_AUTO_TEST_CASE(Case01_1013) {
     // patching the grammar to support this.
     std::string stmt = "SELECT objectId, ROUND(iE1_SG, 3), ROUND(ABS(iE1_SG), 3) FROM Object WHERE iE1_SG between -0.1 and 0.1 ORDER BY ROUND(ABS(iE1_SG), 3);";
     auto qs = queryAnaHelper.buildQuerySession(qsTest, stmt, false);
-    BOOST_CHECK_EQUAL(qs->getError(), "ParseException:Parse error(ANTLR):unexpected token: (:");
+    BOOST_CHECK_EQUAL(qs->getError(), "ParseException:qserv does not support functions in ORDER BY");
 }
 
 

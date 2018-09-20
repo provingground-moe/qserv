@@ -243,16 +243,22 @@ public:
     }
 
     void run() override {
-        changeState(RUN_DONE);
-        using namespace antlr4;
-        ANTLRInputStream input(_statement);
-        QSMySqlLexer lexer(&input);
-        CommonTokenStream tokens(&lexer);
-        tokens.fill();
-        QSMySqlParser parser(&tokens);
-        tree::ParseTree *tree = parser.root();
-        tree::ParseTreeWalker walker;
-        walker.walk(_listener.get(), tree);
+        try {
+            changeState(RUN_DONE);
+            using namespace antlr4;
+            ANTLRInputStream input(_statement);
+            QSMySqlLexer lexer(&input);
+            CommonTokenStream tokens(&lexer);
+            tokens.fill();
+            QSMySqlParser parser(&tokens);
+            tree::ParseTree *tree = parser.root();
+            tree::ParseTreeWalker walker;
+            walker.walk(_listener.get(), tree);
+        } catch (adapter_order_error & e) {
+            throw ParseException("Parse error(adapter_order):" + std::string(e.what()));
+        } catch (adapter_execution_error & e) {
+            throw ParseException("Parse error(adapter_execution):" + std::string(e.what()));
+        }
     }
 
     query::SelectStmt::Ptr getStatement() override {

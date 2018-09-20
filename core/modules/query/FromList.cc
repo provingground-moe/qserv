@@ -35,14 +35,19 @@
 #include <algorithm>
 #include <iterator>
 
+#include "query/typedefs.h"
 #include "util/IterableFormatter.h"
-
-
 #include "util/PointerCompare.h"
 
 namespace lsst {
 namespace qserv {
 namespace query {
+
+
+FromList::FromList(TableRefList const & tableRefList)
+: _tableRefs(newVectorOf<TableRef::Ptr>(tableRefList))
+{}
+
 
 bool
 FromList::isJoin() const {

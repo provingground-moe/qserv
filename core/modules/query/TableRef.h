@@ -63,6 +63,8 @@ public:
     typedef std::shared_ptr<TableRef const> CPtr;
 
     TableRef(std::string const& db, std::string const& table, std::string const& alias);
+    TableRef(std::string const& db, std::string const& table, std::string const& alias,
+            JoinRefPtrVector const & joinRefs);
     virtual ~TableRef() {}
 
     std::ostream& putStream(std::ostream& os) const;

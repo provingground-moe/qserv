@@ -697,6 +697,7 @@ public:
     }
 
     void onExit() override {
+        ASSERT_EXECUTION_CONDITION(_selectList != nullptr, "Failed to create a select list.", _ctx);
         auto selectStatement = make_shared<query::SelectStmt>(_fromList, _selectList, _whereClause,
                 _orderByClause, _groupByClause, _havingClause, _distinct, _limit);
         lockedParent()->handleSelectStatement(selectStatement);
@@ -834,7 +835,12 @@ public:
             shared_ptr<query::BoolTerm> boolTerm = boolFactor;
             andTerm->addBoolTerm(boolTerm);
             shared_ptr<query::BoolTerm> andBoolTerm = andTerm;
-            _getRootTerm()->addBoolTerm(andBoolTerm);
+            auto rootTerm = dynamic_pointer_cast<query::LogicalTerm>(_getWhereClause()->getRootTerm());
+            if (nullptr == rootTerm) {
+                rootTerm = make_shared<query::OrTerm>();
+                _getWhereClause()->setRootTerm(rootTerm);
+            }
+            rootTerm->addBoolTerm(andBoolTerm);
         } else if (_ctx->havingExpr == childCtx) {
             ASSERT_EXECUTION_CONDITION(nullptr == _havingClause, "The having clause should only be set once.", _ctx);
             auto andTerm = make_shared<query::AndTerm>();
@@ -853,10 +859,11 @@ public:
 
     void handleLogicalExpression(shared_ptr<query::LogicalTerm> const & logicalTerm,
             antlr4::ParserRuleContext* childCtx) override {
-        //ASSERT_EXECUTION_CONDITION(false, "handleLogicalExpression(LogicalTerm):" << logicalTerm, _ctx);
         if (_ctx->whereExpr == childCtx) {
-            ASSERT_EXECUTION_CONDITION(nullptr == _rootTerm, "expected handleLogicalExpression to be called only once.", _ctx);
-            _rootTerm = logicalTerm;
+            auto whereClause = _getWhereClause();
+            ASSERT_EXECUTION_CONDITION(nullptr == whereClause->getRootTerm(),
+                    "expected handleLogicalExpression to be called only once.", _ctx);
+            whereClause->setRootTerm(logicalTerm);
         } else if (_ctx->havingExpr == childCtx) {
             ASSERT_EXECUTION_CONDITION(false, "The HAVING expression is not yet supported.", _ctx);
         } else {
@@ -866,8 +873,7 @@ public:
 
     void handleQservFunctionSpec(string const & functionName,
             vector<shared_ptr<query::ValueFactor>> const & args) {
-        _initWhereClause();
-        WhereFactory::addQservRestrictor(_whereClause, functionName, args);
+        WhereFactory::addQservRestrictor(_getWhereClause(), functionName, args);
     }
 
     void handleGroupByItem(shared_ptr<query::ValueExpr> const & valueExpr) {
@@ -879,35 +885,22 @@ public:
 
     void onExit() override {
         shared_ptr<query::FromList> fromList = make_shared<query::FromList>(_tableRefList);
-        if (_rootTerm != nullptr) {
-            _initWhereClause();
-            _whereClause->setRootTerm(_rootTerm);
-        }
-
         lockedParent()->handleFromClause(fromList, _whereClause, _groupByClause, _havingClause);
     }
 
     string name() const override { return getTypeName(this); }
 
 private:
-    void _initWhereClause() {
+    shared_ptr<query::WhereClause> & _getWhereClause() {
         if (nullptr == _whereClause) {
             _whereClause = make_shared<query::WhereClause>();
         }
-    }
-
-    shared_ptr<query::OrTerm> const & _getRootTerm() {
-//        if (nullptr == _rootTerm) {
-//            _rootTerm = make_shared<query::OrTerm>();
-//        }
-//        return _rootTerm;
-        return nullptr;
+        return _whereClause;
     }
 
     // I think the first term of a where clause is always an OrTerm, and it needs to be added by default.
     shared_ptr<query::WhereClause> _whereClause;
     query::TableRefListPtr _tableRefList;
-    shared_ptr<query::LogicalTerm> _rootTerm;
     shared_ptr<query::GroupByClause> _groupByClause;
     shared_ptr<query::HavingClause> _havingClause;
 };
@@ -1491,14 +1484,16 @@ public:
 
     void onExit() override {
         ASSERT_EXECUTION_CONDITION(_tableRef != nullptr, "TableRef was not set.", _ctx);
-        ASSERT_EXECUTION_CONDITION(_using != nullptr || _on != nullptr, "USING or ON must be set.", _ctx);
         query::JoinRef::Type joinType(query::JoinRef::DEFAULT);
         if (_ctx->INNER() != nullptr) {
             joinType = query::JoinRef::INNER;
         } else if (_ctx->CROSS() != nullptr) {
             joinType = query::JoinRef::CROSS;
         }
-        auto joinSpec = make_shared<query::JoinSpec>(_using, _on);
+        shared_ptr<query::JoinSpec> joinSpec;
+        if (_using != nullptr || _on != nullptr) {
+            joinSpec = make_shared<query::JoinSpec>(_using, _on);
+        }
         auto joinRef = make_shared<query::JoinRef>(_tableRef, joinType, false, joinSpec);
         lockedParent()->handleInnerJoin(joinRef);
     }

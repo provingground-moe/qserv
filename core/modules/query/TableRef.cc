@@ -64,6 +64,15 @@ TableRef::TableRef(std::string const& db, std::string const& table, std::string 
 , _table(std::make_shared<Identifier>(table)) {
 }
 
+TableRef::TableRef(std::string const& db, std::string const& table, std::string const& alias,
+        JoinRefPtrVector const & joinRefs)
+    : _alias(alias)
+    , _db(std::make_shared<Identifier>(db))
+    , _table(std::make_shared<Identifier>(table))
+    , _joinRefs(joinRefs)
+{}
+
+
 std::ostream& operator<<(std::ostream& os, TableRef const& ref) {
     os << "TableRef(";
     os << "alias:" << ref._alias;

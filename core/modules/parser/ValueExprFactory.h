@@ -61,6 +61,10 @@ namespace parser {
 /// ValueExprFactory is a factory for making ValueExpr objects
 class ValueExprFactory {
 public:
+
+    // make a new value factor with a passed-in value factor
+    static std::shared_ptr<query::ValueExpr> newValueExpr(std::shared_ptr<query::ValueFactor> valueFactor);
+
     static void addValueFactor(std::shared_ptr<query::ValueExpr> valueExpr,
                                std::shared_ptr<query::ValueFactor> valueFactor);
 

@@ -97,6 +97,13 @@ public:
 /// (literals can be row values)
 class CompPredicate : public Predicate {
 public:
+    CompPredicate() {}
+
+    // Parser token type of operator
+    CompPredicate(ValueExprPtr const & left_, int op_, ValueExprPtr const & right_)
+    : left(left_), op(op_), right(right_)
+    {}
+
     typedef std::shared_ptr<CompPredicate> Ptr;
 
     virtual ~CompPredicate() {}
