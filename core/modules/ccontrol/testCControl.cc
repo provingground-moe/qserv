@@ -591,10 +591,10 @@ BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
 
     std::shared_ptr<query::SelectStmt> a2SelectStatement;
     std::ostringstream a2QueryStr;
-    auto querySession = std::make_shared<qproc::QuerySession>();
-    a2SelectStatement = querySession->parseQuery(query, true);
+    auto a2querySession = std::make_shared<qproc::QuerySession>();
+    a2SelectStatement = a2querySession->parseQuery(query, true);
     if (nullptr == a2SelectStatement) {
-        BOOST_TEST_MESSAGE("antlr2 parse error:" << querySession->getError());
+        BOOST_TEST_MESSAGE("antlr2 parse error:" << a2querySession->getError());
     }
     BOOST_REQUIRE(a2SelectStatement != nullptr);
     a2QueryStr << a2SelectStatement->getQueryTemplate();
@@ -606,11 +606,9 @@ BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
 
     std::ostringstream a4QueryStr;
     std::shared_ptr<query::SelectStmt> a4SelectStatement;
-    try {
-        a4SelectStatement = qproc::QuerySession().parseQuery(query, false);
-    } catch (const std::exception & e) {
-        BOOST_REQUIRE_MESSAGE(false, "antlr4 parseQuery threw:" << e.what());
-    }
+    auto a4querySession = std::make_shared<qproc::QuerySession>();
+    a4SelectStatement = a4querySession->parseQuery(query, false);
+    BOOST_REQUIRE_MESSAGE(a4querySession->getError() == "", "Parse error:" << a4querySession->getError());
     BOOST_REQUIRE(a4SelectStatement != nullptr);
     a4QueryStr << a4SelectStatement->getQueryTemplate();
 
