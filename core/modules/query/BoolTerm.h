@@ -145,6 +145,8 @@ class BoolFactor;
 class LogicalTerm : public BoolTerm {
 public:
     LogicalTerm() {}
+    LogicalTerm(BoolTerm::PtrVector const & terms) : _terms(terms) {}
+    LogicalTerm(BoolTerm::Ptr const & term) : _terms(BoolTerm::PtrVector{term}) {}
 
     void addBoolTerm(BoolTerm::Ptr boolTerm) {
         _terms.push_back(boolTerm);
@@ -159,18 +161,13 @@ public:
     }
 
     BoolTerm::PtrVector _terms;
-
-protected:
-    LogicalTerm(BoolTerm::PtrVector const & terms) : _terms(terms) {}
 };
 
 
 /// OrTerm is a set of OR-connected BoolTerms
 class OrTerm : public LogicalTerm {
 public:
-    OrTerm() {}
-
-    OrTerm(BoolTerm::PtrVector const & terms) : LogicalTerm(terms) {}
+    using LogicalTerm::LogicalTerm;
 
     typedef std::shared_ptr<OrTerm> Ptr;
 
@@ -212,9 +209,7 @@ protected:
 /// AndTerm is a set of AND-connected BoolTerms
 class AndTerm : public LogicalTerm {
 public:
-    AndTerm() {}
-
-    AndTerm(BoolTerm::PtrVector const & terms) : LogicalTerm(terms) {}
+    using LogicalTerm::LogicalTerm;
 
     typedef std::shared_ptr<AndTerm> Ptr;
 
@@ -254,6 +249,29 @@ protected:
 };
 
 
+/// PassTerm is a catch-all boolean factor term that can be safely passed
+/// without further analysis or manipulation.
+class PassTerm : public BoolFactorTerm {
+public: // text
+    typedef std::shared_ptr<PassTerm> Ptr;
+
+    PassTerm() {}
+    PassTerm(const std::string& text) : _text(text) {}
+
+    virtual BoolFactorTerm::Ptr clone() const { return copySyntax(); }
+    virtual BoolFactorTerm::Ptr copySyntax() const;
+    virtual std::ostream& putStream(std::ostream& os) const;
+    virtual void renderTo(QueryTemplate& qt) const;
+
+    std::string _text;
+
+    bool operator==(const BoolFactorTerm& rhs) const override;
+
+protected:
+    void dbgPrint(std::ostream& os) const override;
+};
+
+
 /// BoolFactor is a plain factor in a BoolTerm
 class BoolFactor : public BoolTerm {
 public:
@@ -261,6 +279,10 @@ public:
 
     BoolFactor(BoolFactorTerm::PtrVector const & terms)
     : _terms(terms)
+    {}
+
+    BoolFactor(BoolFactorTerm::Ptr const & term)
+    : _terms({term})
     {}
 
     typedef std::shared_ptr<BoolFactor> Ptr;
@@ -299,6 +321,14 @@ public:
         return util::vectorPtrCompare<BoolFactorTerm>(_terms, rhsBoolFactor->_terms);
     }
 
+    // prepend _terms with an open parenthesis PassTerm and append it with a close parenthesis PassTerm.
+    void addParenthesis() {
+        auto leftParen = std::make_shared<PassTerm>("(");
+        auto rightParen = std::make_shared<PassTerm>(")");
+        _terms.insert(_terms.begin(), leftParen);
+        _terms.push_back(rightParen);
+    }
+
     BoolFactorTerm::PtrVector _terms;
 
 protected:
@@ -319,29 +349,6 @@ public:
     virtual void renderTo(QueryTemplate& qt) const;
     virtual std::shared_ptr<BoolTerm> clone() const;
     bool operator==(const BoolTerm& rhs) const override;
-
-protected:
-    void dbgPrint(std::ostream& os) const override;
-};
-
-
-/// PassTerm is a catch-all boolean factor term that can be safely passed
-/// without further analysis or manipulation.
-class PassTerm : public BoolFactorTerm {
-public: // text
-    typedef std::shared_ptr<PassTerm> Ptr;
-
-    PassTerm() {}
-    PassTerm(const std::string& text) : _text(text) {}
-
-    virtual BoolFactorTerm::Ptr clone() const { return copySyntax(); }
-    virtual BoolFactorTerm::Ptr copySyntax() const;
-    virtual std::ostream& putStream(std::ostream& os) const;
-    virtual void renderTo(QueryTemplate& qt) const;
-
-    std::string _text;
-
-    bool operator==(const BoolFactorTerm& rhs) const override;
 
 protected:
     void dbgPrint(std::ostream& os) const override;

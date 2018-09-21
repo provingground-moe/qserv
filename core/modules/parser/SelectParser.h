@@ -77,6 +77,9 @@ public:
 
     std::shared_ptr<query::SelectStmt> getSelectStmt() { return _selectStmt; }
 
+    // For debugging purposes. ANTLR4 Only.
+    std::string getStringTree() const;
+
 private:
     SelectParser(std::string const& statement, AntlrVersion v);
 

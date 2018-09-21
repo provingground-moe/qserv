@@ -38,6 +38,7 @@
 #include "ccontrol/UserQueryType.h"
 #include "ccontrol/UserQueryFactory.h"
 #include "parser/ParseException.h"
+#include "parser/SelectParser.h"
 #include "parser/ValueExprFactory.h"
 #include "parser/ValueFactorFactory.h"
 #include "qproc/QuerySession.h"
@@ -297,6 +298,11 @@ static const std::vector< std::string > QUERIES = {
     "select sum(pm_declErr),chunkId, avg(bMagF2) bmf2 from LSST.Object where bMagF > 20.0 GROUP BY chunkId;",
 
     "select count(*) from Object group by flags having count(*) > 3",
+
+    "SELECT count(*) FROM   Object o "
+            "INNER JOIN RefObjMatch o2t ON (o.objectIdObjTest = o2t.objectId) "
+            "INNER JOIN SimRefObject t ON (o2t.refObjectId = t.refObjectId) "
+            "WHERE  closestToObj = 1 OR closestToObj is NULL;",
 
     // from unit tests
     "select sum(pm_declErr),chunkId, avg(bMagF2) bmf2 from LSST.Object where bMagF > 20.0 GROUP BY chunkId;",
@@ -823,10 +829,28 @@ static const std::vector< IRInfo > IR_INFO = {
 } // end namespace IR_INFO
 
 BOOST_DATA_TEST_CASE(expected_IR, IR_INFO::IR_INFO, info) {
+    std::shared_ptr<query::SelectStmt> a2SelectStatement;
+    std::ostringstream a2QueryStr;
+    auto a2querySession = std::make_shared<qproc::QuerySession>();
+    BOOST_TEST_MESSAGE("query:" << info.query);
+    a2SelectStatement = a2querySession->parseQuery(info.query, true);
+    if (nullptr == a2SelectStatement) {
+        BOOST_TEST_MESSAGE("antlr2 parse error:" << a2querySession->getError());
+    } else {
+        a2QueryStr << a2SelectStatement->getQueryTemplate();
+        BOOST_TEST_MESSAGE("antlr2 selectStmt structure:" << *a2SelectStatement);
+    }
+
     auto querySession = qproc::QuerySession();
     auto selectStmt = querySession.parseQuery(info.query, false);
+    BOOST_REQUIRE_MESSAGE(querySession.getError() == "", "Parse error:" << querySession.getError());
+    BOOST_REQUIRE(selectStmt != nullptr);
+    BOOST_TEST_MESSAGE("antlr4 selectStmt structure:" << *selectStmt);
+    BOOST_TEST_MESSAGE("antlr4 parser stringtree:" <<
+            parser::SelectParser::newInstance(info.query, parser::SelectParser::ANTLR4)->getStringTree());
     BOOST_REQUIRE_EQUAL(*selectStmt, *info.selectStmt);
 }
+
 
 BOOST_AUTO_TEST_CASE(testUserQueryType) {
     using lsst::qserv::ccontrol::UserQueryType;
