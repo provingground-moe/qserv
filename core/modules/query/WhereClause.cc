@@ -67,6 +67,18 @@ namespace query {
 ////////////////////////////////////////////////////////////////////////
 // WhereClause
 ////////////////////////////////////////////////////////////////////////
+
+
+WhereClause::WhereClause(std::shared_ptr<BoolTerm> const & tree,
+        std::shared_ptr<QsRestrictor::PtrVector> const & qsRestrictors)
+: _tree(tree), _restrs(qsRestrictors)
+{
+    if (nullptr == _restrs) {
+        _restrs = std::make_shared<query::QsRestrictor::PtrVector>();
+    }
+}
+
+
 std::ostream&
 operator<<(std::ostream& os, WhereClause const& wc) {
     os << "WhereClause(tree:" << wc._tree;
@@ -74,16 +86,22 @@ operator<<(std::ostream& os, WhereClause const& wc) {
     os << ")";
     return os;
 }
+
+
 std::ostream&
 operator<<(std::ostream& os, WhereClause const* wc) {
     (nullptr == wc) ? os << "nullptr" : os << *wc;
     return os;
 }
+
+
 void findColumnRefs(std::shared_ptr<BoolFactor> f, ColumnRef::Vector& vector) {
     if (f) {
         f->findColumnRefs(vector);
     }
 }
+
+
 void findColumnRefs(std::shared_ptr<BoolTerm> t, ColumnRef::Vector& vector) {
     if (!t) { return; }
     BoolTerm::PtrVector::iterator i = t->iterBegin();
@@ -107,8 +125,8 @@ void findColumnRefs(std::shared_ptr<BoolTerm> t, ColumnRef::Vector& vector) {
     }
 }
 
-std::shared_ptr<ColumnRef::Vector const>
-WhereClause::getColumnRefs() const {
+
+std::shared_ptr<ColumnRef::Vector const> WhereClause::getColumnRefs() const {
     std::shared_ptr<ColumnRef::Vector> vector = std::make_shared<ColumnRef::Vector>();
 
     // Idea: Walk the expression tree and add all column refs to the
@@ -120,8 +138,7 @@ WhereClause::getColumnRefs() const {
 }
 
 
-std::shared_ptr<AndTerm>
-WhereClause::getRootAndTerm() {
+std::shared_ptr<AndTerm> WhereClause::getRootAndTerm() {
     // Walk the list to find the global AND. If an OR term is root,
     // and has multiple terms, there is no global AND which means we
     // should return NULL.
@@ -129,16 +146,19 @@ WhereClause::getRootAndTerm() {
     return std::dynamic_pointer_cast<AndTerm>(t);
 }
 
+
 void WhereClause::findValueExprs(ValueExprPtrVector& vector) {
     if (_tree) { _tree->findValueExprs(vector); }
 }
 
-std::string
-WhereClause::getGenerated() const {
+
+std::string WhereClause::getGenerated() const {
     QueryTemplate qt;
     renderTo(qt);
     return qt.sqlFragment();
 }
+
+
 void WhereClause::renderTo(QueryTemplate& qt) const {
     if (_restrs != nullptr) {
         QsRestrictor::render rend(qt);
@@ -150,6 +170,7 @@ void WhereClause::renderTo(QueryTemplate& qt) const {
         _tree->renderTo(qt);
     }
 }
+
 
 std::shared_ptr<WhereClause> WhereClause::clone() const {
     // FIXME
@@ -166,6 +187,7 @@ std::shared_ptr<WhereClause> WhereClause::clone() const {
 
 }
 
+
 std::shared_ptr<WhereClause> WhereClause::copySyntax() {
     std::shared_ptr<WhereClause> newC = std::make_shared<WhereClause>(*this);
     // Shallow copy of expr list is okay.
@@ -176,8 +198,8 @@ std::shared_ptr<WhereClause> WhereClause::copySyntax() {
     return newC;
 }
 
-void
-WhereClause::prependAndTerm(std::shared_ptr<BoolTerm> t) {
+
+void WhereClause::prependAndTerm(std::shared_ptr<BoolTerm> t) {
     // Walk to AndTerm and prepend new BoolTerm in front of the
     // list. If the new BoolTerm is an instance of AndTerm, prepend
     // its terms rather than the AndTerm itself.
@@ -223,8 +245,9 @@ bool WhereClause::operator==(WhereClause& rhs) const {
 ////////////////////////////////////////////////////////////////////////
 // WhereClause (private)
 ////////////////////////////////////////////////////////////////////////
-void
-WhereClause::resetRestrs() {
+
+
+void WhereClause::resetRestrs() {
     _restrs = std::make_shared<QsRestrictor::PtrVector>();
 }
 

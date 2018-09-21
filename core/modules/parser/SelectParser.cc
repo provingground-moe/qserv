@@ -326,4 +326,17 @@ void SelectParser::setup() {
     _selectStmt = _aParser->getStatement();
 }
 
+
+std::string SelectParser::getStringTree() const {
+    if (nullptr == _aParser) {
+        return "getStringTree will not work before _aParser has been initialized.";
+    }
+    auto parser = std::dynamic_pointer_cast<Antlr4Parser>(_aParser);
+    if (nullptr == parser) {
+        return "getStringTree does not work with the antlr 2 parser.";
+    }
+    return parser->getStringTree();
+}
+
+
 }}} // namespace lsst::qserv::parser
