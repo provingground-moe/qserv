@@ -853,14 +853,15 @@ public:
 
     void handleLogicalExpression(shared_ptr<query::LogicalTerm> const & logicalTerm,
             antlr4::ParserRuleContext* childCtx) override {
+        //ASSERT_EXECUTION_CONDITION(false, "handleLogicalExpression(LogicalTerm):" << logicalTerm, _ctx);
         if (_ctx->whereExpr == childCtx) {
-            auto boolTerm = shared_ptr<query::BoolTerm>(logicalTerm);
-            _getRootTerm()->addBoolTerm(boolTerm);
-            return;
+            ASSERT_EXECUTION_CONDITION(nullptr == _rootTerm, "expected handleLogicalExpression to be called only once.", _ctx);
+            _rootTerm = logicalTerm;
         } else if (_ctx->havingExpr == childCtx) {
             ASSERT_EXECUTION_CONDITION(false, "The HAVING expression is not yet supported.", _ctx);
+        } else {
+            ASSERT_EXECUTION_CONDITION(false, "This logical expression is not yet supported.", _ctx);
         }
-        ASSERT_EXECUTION_CONDITION(false, "This logical expression is not yet supported.", _ctx);
     }
 
     void handleQservFunctionSpec(string const & functionName,
@@ -896,16 +897,17 @@ private:
     }
 
     shared_ptr<query::OrTerm> const & _getRootTerm() {
-        if (nullptr == _rootTerm) {
-            _rootTerm = make_shared<query::OrTerm>();
-        }
-        return _rootTerm;
+//        if (nullptr == _rootTerm) {
+//            _rootTerm = make_shared<query::OrTerm>();
+//        }
+//        return _rootTerm;
+        return nullptr;
     }
 
     // I think the first term of a where clause is always an OrTerm, and it needs to be added by default.
     shared_ptr<query::WhereClause> _whereClause;
     query::TableRefListPtr _tableRefList;
-    shared_ptr<query::OrTerm> _rootTerm;
+    shared_ptr<query::LogicalTerm> _rootTerm;
     shared_ptr<query::GroupByClause> _groupByClause;
     shared_ptr<query::HavingClause> _havingClause;
 };
@@ -2209,8 +2211,8 @@ public:
         }
     }
 
-    virtual void handleLogicalExpression(shared_ptr<query::LogicalTerm> const & logicalTerm,
-            antlr4::ParserRuleContext* childCtx) {
+    void handleLogicalExpression(shared_ptr<query::LogicalTerm> const & logicalTerm,
+            antlr4::ParserRuleContext* childCtx) override {
         if (_logicalOperator != nullptr && _logicalOperator->merge(*logicalTerm)) {
             return;
         }
