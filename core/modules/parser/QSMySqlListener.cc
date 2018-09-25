@@ -236,6 +236,7 @@ public:
     virtual void handleTableSources(query::TableRefListPtr const & tableRefList) = 0;
 };
 
+
 class TableSourceBaseCBH : public BaseCBH {
 public:
     virtual void handleTableSource(shared_ptr<query::TableRef> const & tableRef) = 0;
@@ -300,35 +301,42 @@ public:
     virtual void handleOrderByExpression(query::OrderByTerm const & orderByTerm) = 0;
 };
 
+
 class InnerJoinCBH : public BaseCBH {
 public:
     virtual void handleInnerJoin(shared_ptr<query::JoinRef> const & joinRef) = 0;
 };
+
 
 class NaturalJoinCBH : public BaseCBH {
 public:
     virtual void handleNaturalJoin(shared_ptr<query::JoinRef> const & joinRef) = 0;
 };
 
+
 class SelectSpecCBH : public BaseCBH {
 public:
     virtual void handleSelectSpec(bool distinct) = 0;
 };
+
 
 class SelectStarElementCBH : public BaseCBH {
 public:
     virtual void handleSelectStarElement(shared_ptr<query::ValueExpr> const & valueExpr) = 0;
 };
 
+
 class SelectFunctionElementCBH: public BaseCBH {
 public:
     virtual void handleSelectFunctionElement(shared_ptr<query::ValueExpr> const & selectFunction) = 0;
 };
 
+
 class SelectExpressionElementCBH: public BaseCBH {
 public:
     virtual void handleSelectExpressionElement(shared_ptr<query::ValueExpr> const & valueExpr) = 0;
 };
+
 
 class GroupByItemCBH : public BaseCBH {
 public:
@@ -390,6 +398,7 @@ class UidListCBH : public BaseCBH {
 public:
     virtual void handleUidList(vector<string> const & strings) = 0;
 };
+
 
 class ExpressionsCBH : public BaseCBH {
 public:
