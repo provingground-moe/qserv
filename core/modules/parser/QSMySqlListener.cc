@@ -349,16 +349,25 @@ public:
     virtual void handleLimitClause(int limit) = 0;
 };
 
+
 class SimpleIdCBH: public BaseCBH {
 public:
     virtual void handleSimpleId(string const & val) = 0;
 };
+
 
 class DottedIdCBH: public BaseCBH {
 public:
     virtual void handleDottedId(string const & dot_id) = 0;
 };
 
+class NullNotnullCBH: public BaseCBH {
+public:
+    // isNotNull will be:
+    // true: if the expression is like "NOT NULL",
+    // false: if the expression is like "NULL".
+    virtual void handleNullNotnull(bool isNotNull) = 0;
+};
 
 class SelectColumnElementCBH : public BaseCBH {
 public:
@@ -474,6 +483,12 @@ public :
 class BetweenPredicateCBH : public BaseCBH {
 public:
     virtual void handleBetweenPredicate(shared_ptr<query::BetweenPredicate> const & betweenPredicate) = 0;
+};
+
+
+class IsNullPredicateCBH : public BaseCBH {
+public:
+    virtual void handleIsNullPredicate(shared_ptr<query::NullPredicate> const & nullPredicate) = 0;
 };
 
 
@@ -1215,7 +1230,8 @@ class PredicateExpressionAdapter :
         public BetweenPredicateCBH,
         public InPredicateCBH,
         public ExpressionAtomPredicateCBH,
-        public LikePredicateCBH {
+        public LikePredicateCBH,
+        public IsNullPredicateCBH {
 public:
     using AdapterT::AdapterT;
 
@@ -1251,6 +1267,11 @@ public:
     void handleLikePredicate(shared_ptr<query::LikePredicate> const & likePredicate) override {
         _prepBoolFactor();
         _boolFactor->addBoolFactorTerm(likePredicate);
+    }
+
+    void handleIsNullPredicate(shared_ptr<query::NullPredicate> const & nullPredicate) override {
+        _prepBoolFactor();
+        _boolFactor->addBoolFactorTerm(nullPredicate);
     }
 
     void onExit() {
@@ -1735,6 +1756,19 @@ public:
         ASSERT_EXECUTION_CONDITION(txt.find('.') == 0, "DottedId text is expected to start with a dot", _ctx);
         txt.erase(0, 1);
         lockedParent()->handleDottedId(txt);
+    }
+
+    string name() const override { return getTypeName(this); }
+};
+
+
+class NullNotnullAdapter :
+        public AdapterT<NullNotnullCBH, QSMySqlParser::NullNotnullContext> {
+public:
+    using AdapterT::AdapterT;
+
+    void onExit() override {
+        lockedParent()->handleNullNotnull(_ctx->NOT() != nullptr);
     }
 
     string name() const override { return getTypeName(this); }
@@ -2315,6 +2349,44 @@ private:
     shared_ptr<query::ValueExpr> _val;
     shared_ptr<query::ValueExpr> _min;
     shared_ptr<query::ValueExpr> _max;
+};
+
+
+class IsNullPredicateAdapter :
+        public AdapterT<IsNullPredicateCBH, QSMySqlParser::IsNullPredicateContext>,
+        public ExpressionAtomPredicateCBH,
+        public NullNotnullCBH {
+public:
+    using AdapterT::AdapterT;
+
+    void handleExpressionAtomPredicate(shared_ptr<query::ValueExpr> const & valueExpr,
+            antlr4::ParserRuleContext* childCtx) override {
+        ASSERT_EXECUTION_CONDITION(nullptr == _valueExpr,
+                "Expected the ValueExpr to be set once. " << valueExpr, _ctx);
+        _valueExpr = valueExpr;
+    }
+
+    void handleExpressionAtomPredicate(shared_ptr<query::BoolFactorTerm> const & boolFactorTerm,
+            antlr4::ParserRuleContext* childCtx) override {
+        ASSERT_EXECUTION_CONDITION(false,
+                "unexpected call to handleExpressionAtomPredicate:" << boolFactorTerm, _ctx);
+    }
+
+    void handleNullNotnull(bool isNotNull) override {
+        _isNotNull = isNotNull;
+    }
+
+    void onExit() {
+        ASSERT_EXECUTION_CONDITION(_valueExpr != nullptr, "IsNullPredicateAdapter was not populated.", _ctx);
+        auto np = make_shared<query::NullPredicate>(_valueExpr, _isNotNull);
+        lockedParent()->handleIsNullPredicate(np);
+    }
+
+    string name() const override { return getTypeName(this); }
+
+private:
+    shared_ptr<query::ValueExpr> _valueExpr;
+    bool _isNotNull {false};
 };
 
 
@@ -3182,7 +3254,7 @@ ENTER_EXIT_PARENT(DottedId)
 UNHANDLED(FileSizeLiteral)
 UNHANDLED(BooleanLiteral)
 UNHANDLED(HexadecimalLiteral)
-UNHANDLED(NullNotnull)
+ENTER_EXIT_PARENT(NullNotnull)
 ENTER_EXIT_PARENT(Constant)
 UNHANDLED(StringDataType)
 UNHANDLED(DimensionDataType)
@@ -3238,7 +3310,7 @@ UNHANDLED(SoundsLikePredicate)
 ENTER_EXIT_PARENT(InPredicate)
 UNHANDLED(SubqueryComparasionPredicate)
 ENTER_EXIT_PARENT(BetweenPredicate)
-UNHANDLED(IsNullPredicate)
+ENTER_EXIT_PARENT(IsNullPredicate)
 ENTER_EXIT_PARENT(LikePredicate)
 UNHANDLED(RegexpPredicate)
 ENTER_EXIT_PARENT(UnaryExpressionAtom)
