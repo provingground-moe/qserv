@@ -402,7 +402,7 @@ static const std::vector< std::string > QUERIES = {
         "ABS( (scisql_fluxToAbMag(o1.gFlux_PS)-scisql_fluxToAbMag(o1.rFlux_PS)) - (scisql_fluxToAbMag(o2.gFlux_PS)-scisql_fluxToAbMag(o2.rFlux_PS)) ) < 1;",
     "SELECT * FROM RefObjMatch;",
     "SELECT * FROM RefObjMatch WHERE "
-                       "foo!=bar AND baz<3.14159;",
+                       "foo<>bar AND baz<3.14159;",
     "LECT sce.filterName,sce.field "
         "FROM LSST.Science_Ccd_Exposure AS sce "
         "WHERE sce.field=535 AND sce.camcol LIKE '%' ",
