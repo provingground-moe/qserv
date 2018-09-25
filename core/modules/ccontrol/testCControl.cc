@@ -37,6 +37,7 @@
 // Qserv headers
 #include "ccontrol/UserQueryType.h"
 #include "ccontrol/UserQueryFactory.h"
+#include "parser/ParseException.h"
 #include "qproc/QuerySession.h"
 #include "query/SelectStmt.h"
 
@@ -632,6 +633,42 @@ BOOST_DATA_TEST_CASE(antlr_compare_different_ir, DIFFERENT_IR_QUERIES, query) {
             "Query IR is expected to be different for " << query << ", old antlr:" << *a2SelectStatement <<
             ", antlr4:" << *a4SelectStatement);
     BOOST_REQUIRE(a2QueryStr.str() == a4QueryStr.str());
+}
+
+
+struct ParseErrorQueryInfo {
+    ParseErrorQueryInfo(std::string const & q, std::string const & m)
+    : query(q), errorMessage(m)
+    {}
+
+    std::string query;
+    std::string errorMessage;
+};
+
+std::ostream& operator<<(std::ostream& os, ParseErrorQueryInfo const& i) {
+    os << "ParseErrorQueryInfo(" << i.query << ", " << i.errorMessage << ")";
+    return os;
+}
+
+
+static const std::vector< ParseErrorQueryInfo > PARSE_ERROR_QUERIES = {
+    ParseErrorQueryInfo(
+        "SELECT s1.foo, s2.foo AS s2_foo FROM Source s1 UNION JOIN Source s2 WHERE s1.bar = s2.bar;",
+        "ParseException:qserv does not support UNION JOIN queries"),
+
+    // This is unsupported by the SQL92 grammar, which rejects
+    // expressions in ORDER BY because it follows SQL92. Consider
+    // patching the grammar to support this.
+    ParseErrorQueryInfo(
+        "SELECT objectId, iE1_SG, ABS(iE1_SG) FROM Object WHERE iE1_SG between -0.1 and 0.1 ORDER BY ABS(iE1_SG)",
+        "ParseException:qserv does not support functions in ORDER BY"),
+};
+
+BOOST_DATA_TEST_CASE(expected_parse_error, PARSE_ERROR_QUERIES, queryInfo) {
+    auto querySession = qproc::QuerySession();
+    auto selectStmt = querySession.parseQuery(queryInfo.query, false);
+    BOOST_REQUIRE_EQUAL(selectStmt, nullptr);
+    BOOST_REQUIRE_EQUAL(querySession.getError(), queryInfo.errorMessage);
 }
 
 
