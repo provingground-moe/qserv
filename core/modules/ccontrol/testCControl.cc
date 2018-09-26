@@ -74,7 +74,6 @@ static const std::vector< std::string > QUERIES = {
     "select COUNT(*) AS N FROM Source WHERE objectId IN (386950783579546, 386942193651348)", // case01/queries/0008.3_fetchSourceByObjIdIN.sql
     "select COUNT(*) AS N FROM Source WHERE objectId BETWEEN 386942193651348 AND 386950783579546", // case01/queries/0008.4_fetchSourceByObjIdBETWEEN.sql
     "SELECT sourceId, objectId FROM Source WHERE objectId IN (386942193651348) ORDER BY sourceId;", // case01/queries/0008_fetchSourceByObjIdIN_withRes.sql
-
     "SELECT sce.filterId, sce.filterName FROM   Science_Ccd_Exposure AS sce WHERE  (sce.visit = 887404831) AND (sce.raftName = '3,3') AND (sce.ccdName LIKE '%') ORDER BY filterId", // case01/queries/0012.1_raftAndCcd.sql
     "SELECT sce.filterId, sce.filterName FROM   Science_Ccd_Exposure AS sce WHERE  (sce.visit = 887404831) AND (sce.raftName = '3,3') AND (sce.ccdName LIKE '%') ORDER BY filterId LIMIT 5", // case01/queries/0012.2_raftAndCcd.sql
     "SELECT sce.filterId, sce.filterName FROM   Science_Ccd_Exposure AS sce WHERE  (sce.visit = 887404831) AND (sce.raftName = '3,3') AND (sce.ccdName LIKE '%')", // case01/queries/0012_raftAndCcd.sql
@@ -85,6 +84,10 @@ static const std::vector< std::string > QUERIES = {
     "SELECT objectId, AVG(ra_PS) as ra FROM   Object WHERE qserv_areaspec_box(0, 0, 3, 10) GROUP BY objectId ORDER BY ra", // case01/queries/1004.1_varObjects.sql
     "SELECT objectId FROM   Object WHERE qserv_areaspec_box(0, 0, 3, 10) ORDER BY objectId", // case01/queries/1004_varObjects.sql
     "SELECT objectId FROM   Source s JOIN   Science_Ccd_Exposure sce USING (scienceCcdExposureId) WHERE  sce.visit IN (885449631,886257441,886472151) ORDER BY objectId LIMIT 10", // case01/queries/1011_objectsForExposure.sql
+
+    // This query fails in this test because antlr v2 can't parse it. Need to write an expected_IR test for it.
+    // "SELECT objectId, iE1_SG, ABS(iE1_SG) FROM Object WHERE iE1_SG between -0.1 and 0.1 ORDER BY ABS(iE1_SG);", // case01/queries/1012_orderByClause.sql
+
     "SELECT objectId, taiMidPoint, scisql_fluxToAbMag(psfFlux) FROM   Source JOIN   Object USING(objectId) JOIN   Filter USING(filterId) WHERE qserv_areaspec_box(355, 0, 360, 20) AND filterName = 'g' ORDER BY objectId, taiMidPoint ASC", // case01/queries/1030_timeSeries.sql
     "SELECT o1.objectId AS objId1, o2.objectId AS objId2, scisql_angSep(o1.ra_PS, o1.decl_PS, o2.ra_PS, o2.decl_PS) AS distance FROM Object o1, Object o2 WHERE qserv_areaspec_box(0, 0, 0.2, 1) AND scisql_angSep(o1.ra_PS, o1.decl_PS, o2.ra_PS, o2.decl_PS) < 0.016 AND o1.objectId <> o2.objectId", // case01/queries/1051_nn.sql
     "SELECT scienceCcdExposureId, hex(poly) as hexPoly FROM Science_Ccd_Exposure;", // case01/queries/1060_selectPoly.sql
@@ -513,7 +516,6 @@ static const std::vector< std::string > FAIL_QUERIES = {
     "SELECT offset, mjdRef, drift FROM LeapSeconds WHERE whenUtc = ( SELECT MAX(whenUtc) FROM LeapSeconds WHERE whenUtc <=  NAME_CONST('nsecs_',39900600000000000000000000) )", // case01/queries/0010_leapSec.sql.FIXME
     "SELECT sdqa_metricId FROM   sdqa_Metric WHERE  metricName = NAME_CONST('metricName_',_latin1'ip.isr.numSaturatedPixels' COLLATE 'latin1_swedish_ci')", // case01/queries/0011_sdqaMetric.sql.FIXME
     "SELECT objectId FROM   Object WHERE qserv_areaspec_box(:raMin, :declMin, :raMax, :declMax) AND    extendedParameter > 0.8", // case01/queries/1005_allGalaxiesInArea.sql.FIXME
-    "SELECT objectId, iE1_SG, ABS(iE1_SG) FROM Object WHERE iE1_SG between -0.1 and 0.1 ORDER BY ABS(iE1_SG);", // case01/queries/1012_orderByClause.sql.FIXME
     "SELECT objectId, ROUND(iE1_SG, 3), ROUND(ABS(iE1_SG), 3) FROM Object WHERE iE1_SG between -0.1 and 0.1 ORDER BY ROUND(ABS(iE1_SG), 3);", // case01/queries/1013_orderByClauseRounded.sql.FIXME
     "SELECT objectId FROM   Alert JOIN   _Alert2Type USING (alertId) JOIN   AlertType USING (alertTypeId) WHERE  alertTypeDescr = 'newTransients' AND  Alert.timeGenerated BETWEEN :timeMin AND :timeMax", // case01/queries/1031_newTransientsForEpoch.sql.FIXME
     "SELECT DISTINCT o1.objectId, o2.objectId FROM   Object o1, Object o2 WHERE  scisql_angSep(o1.ra_PS, o1.decl_PS, o2.ra_PS, o2.decl_PS) < 1 AND  o1.objectId <> o2.objectId AND  ABS( (scisql_fluxToAbMag(o1.gFlux_PS)-scisql_fluxToAbMag(o1.rFlux_PS)) - (scisql_fluxToAbMag(o2.gFlux_PS)-scisql_fluxToAbMag(o2.rFlux_PS)) ) < 1 AND  ABS( (scisql_fluxToAbMag(o1.rFlux_PS)-scisql_fluxToAbMag(o1.iFlux_PS)) - (scisql_fluxToAbMag(o2.rFlux_PS)-scisql_fluxToAbMag(o2.iFlux_PS)) ) < 1 AND  ABS( (scisql_fluxToAbMag(o1.iFlux_PS)-scisql_fluxToAbMag(o1.zFlux_PS)) - (scisql_fluxToAbMag(o2.iFlux_PS)-scisql_fluxToAbMag(o2.zFlux_PS)) ) < 1", // case01/queries/1052_nnSimilarColors.sql.FIXME
