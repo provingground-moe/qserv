@@ -171,7 +171,7 @@ if (false == (CONDITION)) { \
 // whatever object or stream of objects (e.g. `valueExpr`, or `valueExpr << " " << functionName` are passed
 // in to CALLBACK_INFO
 #define TRACE_CALLBACK_INFO(CALLBACK_INFO) \
-LOGS(_log, LOG_LVL_TRACE, name() << __FUNCTION__ << " " << CALLBACK_INFO);
+LOGS(_log, LOG_LVL_TRACE, name() << __FUNCTION__ << " (" << this << ") " << CALLBACK_INFO);
 
 
 namespace lsst {
@@ -2573,8 +2573,9 @@ public:
         TRACE_CALLBACK_INFO(*logicalTerm);
         ASSERT_EXECUTION_CONDITION(nullptr == _valueExpr && nullptr == _boolTerm,
                 "unexpected " << *logicalTerm, _ctx)
-        ASSERT_EXECUTION_CONDITION(false, "this wants parenthsis?", _ctx);
-        _boolTerm = make_shared<query::OrTerm>(make_shared<query::AndTerm>(logicalTerm));
+        auto boolFactor = make_shared<query::BoolFactor>(make_shared<query::BoolTermFactor>(logicalTerm));
+        boolFactor->addParenthesis();
+        _boolTerm = boolFactor;
     }
 
     void handleQservFunctionSpec(string const & functionName,
