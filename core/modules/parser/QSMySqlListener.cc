@@ -2571,7 +2571,6 @@ public:
         TRACE_CALLBACK_INFO(*valueExpr);
         ASSERT_EXECUTION_CONDITION(nullptr == _valueExpr && nullptr == _boolTerm,
                 "unexpected " << *valueExpr, _ctx)
-        ASSERT_EXECUTION_CONDITION(false, "this wants parenthsis?", _ctx);
         _valueExpr = valueExpr;
     }
 
