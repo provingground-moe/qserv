@@ -60,15 +60,15 @@ namespace query {
 
 TableRef::TableRef(std::string const& db, std::string const& table, std::string const& alias)
 : _alias(alias)
-, _db(std::make_shared<Identifier>(db))
-, _table(std::make_shared<Identifier>(table)) {
+, _db(db)
+, _table(table) {
 }
 
 TableRef::TableRef(std::string const& db, std::string const& table, std::string const& alias,
         JoinRefPtrVector const & joinRefs)
     : _alias(alias)
-    , _db(std::make_shared<Identifier>(db))
-    , _table(std::make_shared<Identifier>(table))
+    , _db(db)
+    , _table(table)
     , _joinRefs(joinRefs)
 {}
 
