@@ -64,6 +64,11 @@ public:
     WhereClause() {}
     ~WhereClause() {}
 
+    WhereClause(std::shared_ptr<BoolTerm> const & tree,
+            std::shared_ptr<QsRestrictor::PtrVector> const & qsRestrictors)
+    : _tree(tree), _restrs(qsRestrictors)
+    {}
+
     std::shared_ptr<QsRestrictor::PtrVector const> getRestrs() const {
         return _restrs;
     }

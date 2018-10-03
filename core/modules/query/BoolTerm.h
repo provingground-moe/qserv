@@ -144,6 +144,8 @@ class BoolFactor;
 
 class LogicalTerm : public BoolTerm {
 public:
+    LogicalTerm() {}
+
     void addBoolTerm(BoolTerm::Ptr boolTerm) {
         _terms.push_back(boolTerm);
     }
@@ -157,12 +159,19 @@ public:
     }
 
     BoolTerm::PtrVector _terms;
+
+protected:
+    LogicalTerm(BoolTerm::PtrVector const & terms) : _terms(terms) {}
 };
 
 
 /// OrTerm is a set of OR-connected BoolTerms
 class OrTerm : public LogicalTerm {
 public:
+    OrTerm() {}
+
+    OrTerm(BoolTerm::PtrVector const & terms) : LogicalTerm(terms) {}
+
     typedef std::shared_ptr<OrTerm> Ptr;
 
     virtual char const* getName() const { return "OrTerm"; }
@@ -203,6 +212,10 @@ protected:
 /// AndTerm is a set of AND-connected BoolTerms
 class AndTerm : public LogicalTerm {
 public:
+    AndTerm() {}
+
+    AndTerm(BoolTerm::PtrVector const & terms) : LogicalTerm(terms) {}
+
     typedef std::shared_ptr<AndTerm> Ptr;
 
     virtual char const* getName() const { return "AndTerm"; }
@@ -244,6 +257,12 @@ protected:
 /// BoolFactor is a plain factor in a BoolTerm
 class BoolFactor : public BoolTerm {
 public:
+    BoolFactor() {}
+
+    BoolFactor(BoolFactorTerm::PtrVector const & terms)
+    : _terms(terms)
+    {}
+
     typedef std::shared_ptr<BoolFactor> Ptr;
     virtual char const* getName() const { return "BoolFactor"; }
     virtual OpPrecedence getOpPrecedence() const { return OTHER_PRECEDENCE; }

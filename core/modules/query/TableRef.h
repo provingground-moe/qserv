@@ -61,11 +61,10 @@ public:
     typedef std::shared_ptr<TableRef> Ptr;
     typedef std::shared_ptr<TableRef const> CPtr;
 
-    TableRef(std::string const& db_, std::string const& table_,
-               std::string const& alias_)
-        : _alias(alias_), _db(db_), _table(table_)  {
-        if(table_.empty()) { throw std::logic_error("TableRef without table"); }
-    }
+    TableRef(std::string const& db, std::string const& table, std::string const& alias);
+    TableRef(std::string const& db, std::string const& table, std::string const& alias,
+            JoinRefPtrVector const & joinRefs);
+
     virtual ~TableRef() {}
 
     std::ostream& putStream(std::ostream& os) const;

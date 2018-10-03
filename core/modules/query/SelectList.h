@@ -65,6 +65,8 @@ public:
     typedef std::shared_ptr<SelectList> Ptr;
 
     SelectList() : _valueExprList(std::make_shared<ValueExprPtrVector>()) {}
+    SelectList(ValueExprPtrVector const & valueExprList);
+
     ~SelectList() {}
     void addStar(std::string const& table);
 

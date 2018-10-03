@@ -55,6 +55,12 @@ namespace lsst {
 namespace qserv {
 namespace parser {
 
+std::shared_ptr<query::ValueExpr> ValueExprFactory::newValueExpr(
+        std::shared_ptr<query::ValueFactor> valueFactor) {
+    auto valueExpr = std::make_shared<query::ValueExpr>();
+    ValueExprFactory::addValueFactor(valueExpr, valueFactor);
+    return valueExpr;
+}
 
 void ValueExprFactory::addValueFactor(std::shared_ptr<query::ValueExpr> valueExpr,
                                       std::shared_ptr<query::ValueFactor> valueFactor) {

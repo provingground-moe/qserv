@@ -53,6 +53,15 @@ class SelectStmt;
 typedef std::shared_ptr<SelectStmt> SelectStmtPtr;
 typedef std::vector<std::shared_ptr<SelectStmt> > SelectStmtPtrVector;
 
+template <typename OF>
+std::shared_ptr<std::vector<OF>> newVectorOf(std::vector<OF> const & vectorOf) {
+    auto vecPtr = std::make_shared<std::vector<OF>>();
+    for (auto&& item : vectorOf) {
+        vecPtr->push_back(item);
+    }
+    return vecPtr;
+}
+
 }}} // namespace lsst::qserv::query
 
 #endif /* LSST_QSERV_QUERY_TYPES_H_ */

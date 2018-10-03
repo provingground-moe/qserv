@@ -38,8 +38,19 @@
 #include "ccontrol/UserQueryType.h"
 #include "ccontrol/UserQueryFactory.h"
 #include "parser/ParseException.h"
+#include "parser/ValueExprFactory.h"
+#include "parser/ValueFactorFactory.h"
 #include "qproc/QuerySession.h"
+#include "query/FromList.h"
+#include "query/JoinRef.h"
+#include "query/Predicate.h"
 #include "query/SelectStmt.h"
+#include "query/TableRef.h"
+#include "query/typedefs.h"
+#include "query/FuncExpr.h"
+#include "query/SelectList.h"
+#include "query/ValueFactor.h"
+#include "query/WhereClause.h"
 
 namespace test = boost::test_tools;
 using namespace lsst::qserv;
@@ -465,6 +476,9 @@ static const std::vector< std::string > QUERIES = {
         "INNER JOIN RefObjMatch o2t ON (o.objectIdObjTest = o2t.objectId) "
         "INNER JOIN SimRefObject t ON (o2t.refObjectId = t.refObjectId) "
         "WHERE  closestToObj = 1 OR closestToObj is NULL;",
+    "SELECT * "
+        "FROM Source s1 CROSS JOIN Source s2 "
+        "WHERE s1.bar = s2.bar;",
     "select objectId, sro.*, (sro.refObjectId-1)/2%pow(2,10), typeId "
         "from Source s join RefObjMatch rom using (objectId) "
         "join SimRefObject sro using (refObjectId) where isStar =1 limit 10;",
@@ -686,6 +700,133 @@ BOOST_DATA_TEST_CASE(expected_parse_error, PARSE_ERROR_QUERIES, queryInfo) {
     BOOST_REQUIRE_EQUAL(querySession.getError(), queryInfo.errorMessage);
 }
 
+
+struct IRInfo {
+    IRInfo(std::string q, std::shared_ptr<query::SelectStmt> s)
+    : selectStmt(s), query(q) {}
+
+    std::shared_ptr<query::SelectStmt> selectStmt;
+    std::string query;
+};
+
+std::ostream& operator<<(std::ostream& os, IRInfo const& i) {
+    os << "IRInfo(" << i.query << ", " << *i.selectStmt << ")";
+    return os;
+}
+
+namespace IR_INFO {
+    using namespace std;
+static const std::vector< IRInfo > IR_INFO = {
+    IRInfo("SELECT count(*) FROM   Object o "
+        "INNER JOIN RefObjMatch o2t ON (o.objectIdObjTest = o2t.objectId) "
+        "INNER JOIN SimRefObject t ON (o2t.refObjectId = t.refObjectId) "
+        "WHERE  closestToObj = 1 OR closestToObj is NULL;",
+        make_shared<query::SelectStmt>(
+            make_shared<query::FromList>( // fromList
+                vector<query::TableRef::Ptr>{
+                    make_shared<query::TableRef>(
+                        "", "Object", "o", // db, table, alias..
+                        query::JoinRefPtrVector({ // joinRefs
+                            make_shared<query::JoinRef>(
+                                make_shared<query::TableRef>("", "RefObjMatch", "o2t"), // right
+                                query::JoinRef::INNER, // type
+                                false, // isNatural
+                                make_shared<query::JoinSpec>( // joinSpec
+                                    nullptr, // usingColumn
+                                    make_shared<query::BoolFactor>( // onTerm
+                                        vector<query::BoolFactorTerm::Ptr>{
+                                            make_shared<query::CompPredicate>(
+                                                parser::ValueExprFactory::newValueExpr(
+                                                    parser::ValueFactorFactory::newColumnColumnFactor("", "o", "objectIdObjTest")
+                                                ),
+                                                312,
+                                                parser::ValueExprFactory::newValueExpr(
+                                                    parser::ValueFactorFactory::newColumnColumnFactor("", "o2t", "objectId")
+                                                )
+                                            )
+                                        }
+                                    )
+                                )
+                            ),
+                            make_shared<query::JoinRef>(
+                                make_shared<query::TableRef>("", "SimRefObject", "t"), // right
+                                query::JoinRef::INNER, // type
+                                false, // isNatural
+                                make_shared<query::JoinSpec>( // joinSpec
+                                    nullptr, // usingColumn
+                                    make_shared<query::BoolFactor>( // onTerm
+                                        vector<query::BoolFactorTerm::Ptr>{
+                                            make_shared<query::CompPredicate>(
+                                                parser::ValueExprFactory::newValueExpr(
+                                                    parser::ValueFactorFactory::newColumnColumnFactor("", "o2t", "refObjectId")
+                                                ),
+                                                312,
+                                                parser::ValueExprFactory::newValueExpr(
+                                                    parser::ValueFactorFactory::newColumnColumnFactor("", "t", "refObjectId")
+                                                )
+                                            )
+                                        }
+                                    )
+                                )
+                            )
+                        })
+                    )
+                }
+            ),
+            make_shared<query::SelectList>( // selectList
+                std::vector<query::ValueExprPtr>{
+                    parser::ValueExprFactory::newValueExpr(
+                        query::ValueFactor::newAggFactor(
+                            query::FuncExpr::newWithArgs(
+                                 "count", { parser::ValueExprFactory::newValueExpr(query::ValueFactor::newStarFactor("")) }
+                            )
+                        )
+                    )
+                }
+            ),
+            make_shared<query::WhereClause>( // whereClause
+                make_shared<query::OrTerm>(query::BoolTerm::PtrVector{ // tree
+                    make_shared<query::AndTerm>(query::BoolTerm::PtrVector{
+                        make_shared<query::BoolFactor>(vector<query::BoolFactorTerm::Ptr>{ // do I need to declare or can I just use the braces?
+                            make_shared<query::CompPredicate>(
+                                parser::ValueExprFactory::newValueExpr(
+                                    parser::ValueFactorFactory::newColumnColumnFactor("", "", "closestToObj")
+                                ),
+                                312,
+                                parser::ValueExprFactory::newValueExpr(
+                                    query::ValueFactor::newConstFactor("1")
+                                )
+                            )}
+                        )
+                    }),
+                    make_shared<query::AndTerm>(query::BoolTerm::PtrVector{
+                        make_shared<query::BoolFactor>(vector<query::BoolFactorTerm::Ptr>{
+                            make_shared<query::NullPredicate>(
+                                parser::ValueExprFactory::newValueExpr(
+                                    parser::ValueFactorFactory::newColumnColumnFactor("", "", "closestToObj")
+                                ),
+                                false
+                            )
+                        })
+                    })
+                }),
+                nullptr
+            ),
+            nullptr, // orderBy
+            nullptr, // groupBy
+            nullptr, // having
+            false,   // hasDistinct
+            -1       // limit
+        )
+    )
+};
+} // end namespace IR_INFO
+
+BOOST_DATA_TEST_CASE(expected_IR, IR_INFO::IR_INFO, info) {
+    auto querySession = qproc::QuerySession();
+    auto selectStmt = querySession.parseQuery(info.query, false);
+    BOOST_REQUIRE_EQUAL(*selectStmt, *info.selectStmt);
+}
 
 BOOST_AUTO_TEST_CASE(testUserQueryType) {
     using lsst::qserv::ccontrol::UserQueryType;

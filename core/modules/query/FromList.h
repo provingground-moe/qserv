@@ -52,8 +52,13 @@ namespace query {
 class FromList {
 public:
     typedef std::shared_ptr<FromList> Ptr;
+
     explicit FromList(TableRefListPtr p) : _tableRefs(p) {}
+
+    explicit FromList(TableRefList const & tableRefList);
+
     ~FromList() {}
+
     /// @return a list of TableRef that occur
     TableRefList& getTableRefList() { return *_tableRefs; }
     /// @return a list of TableRef that occur
