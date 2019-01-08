@@ -114,6 +114,11 @@ namespace {
 void OrTerm::renderTo(QueryTemplate& qt) const {
     renderList(qt, _terms, getOpPrecedence(), "OR");
 }
+
+void XOrTerm::renderTo(QueryTemplate& qt) const {
+    renderList(qt, _terms, getOpPrecedence(), "XOR");
+}
+
 void AndTerm::renderTo(QueryTemplate& qt) const {
     renderList(qt, _terms, getOpPrecedence(), "AND");
 }
@@ -270,6 +275,11 @@ std::shared_ptr<BoolTerm> OrTerm::clone() const {
     copyTerms<BoolTerm::PtrVector, deepCopy>(ot->_terms, _terms);
     return ot;
 }
+std::shared_ptr<BoolTerm> XOrTerm::clone() const {
+    std::shared_ptr<XOrTerm> ot = std::make_shared<XOrTerm>();
+    copyTerms<BoolTerm::PtrVector, deepCopy>(ot->_terms, _terms);
+    return ot;
+}
 std::shared_ptr<BoolTerm> AndTerm::clone() const {
     std::shared_ptr<AndTerm> t = std::make_shared<AndTerm>();
     copyTerms<BoolTerm::PtrVector, deepCopy>(t->_terms, _terms);
@@ -318,6 +328,31 @@ bool OrTerm::operator==(const BoolTerm& rhs) const {
     }
     return util::vectorPtrCompare<BoolTerm>(_terms, rhsOrTerm->_terms);
 }
+
+std::shared_ptr<BoolTerm> XOrTerm::copySyntax() const {
+    std::shared_ptr<XOrTerm> ot = std::make_shared<XOrTerm>();
+    copyTerms<BoolTerm::PtrVector, syntaxCopy>(ot->_terms, _terms);
+    return ot;
+}
+bool XOrTerm::merge(const BoolTerm& other) {
+    auto otherOr = dynamic_cast<const XOrTerm*>(&other);
+    if (nullptr == otherOr) {
+        return false;
+    }
+    _terms.insert(_terms.end(), otherOr->_terms.begin(), otherOr->_terms.end());
+    return true;
+}
+void XOrTerm::dbgPrint(std::ostream& os) const {
+    os << "XOrTerm(" << util::printable(_terms) << ")";
+}
+bool XOrTerm::operator==(const BoolTerm& rhs) const {
+    auto rhsOrTerm = dynamic_cast<XOrTerm const *>(&rhs);
+    if (nullptr == rhsOrTerm) {
+        return false;
+    }
+    return util::vectorPtrCompare<BoolTerm>(_terms, rhsOrTerm->_terms);
+}
+
 std::shared_ptr<BoolTerm> AndTerm::copySyntax() const {
     std::shared_ptr<AndTerm> at = std::make_shared<AndTerm>();
     copyTerms<BoolTerm::PtrVector, syntaxCopy>(at->_terms, _terms);

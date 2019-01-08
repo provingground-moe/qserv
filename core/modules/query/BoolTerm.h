@@ -61,7 +61,7 @@ public:
     typedef std::shared_ptr<BoolFactorTerm> Ptr;
     typedef std::vector<Ptr> PtrVector;
     virtual ~BoolFactorTerm() {}
-    
+
     virtual Ptr clone() const = 0;
     virtual Ptr copySyntax() const = 0;
     virtual std::ostream& putStream(std::ostream& os) const = 0;
@@ -94,8 +94,9 @@ public:
     virtual char const* getName() const { return "BoolTerm"; }
 
     enum OpPrecedence {
-        OTHER_PRECEDENCE   = 3,  // terms joined stronger than AND -- no parens needed
-        AND_PRECEDENCE     = 2,  // terms joined by AND
+        OTHER_PRECEDENCE   = 4,  // terms joined stronger than AND -- no parens needed
+        AND_PRECEDENCE     = 3,  // terms joined by AND
+        XOR_PRECIDENCE     = 2,
         OR_PRECEDENCE      = 1,  // terms joined by OR
         UNKNOWN_PRECEDENCE = 0   // terms joined by ??? -- always add parens
     };
@@ -206,6 +207,29 @@ public:
     bool merge(const BoolTerm& other) override;
 
     bool operator==(const BoolTerm& rhs) const override;
+
+protected:
+    void dbgPrint(std::ostream& os) const override;
+};
+
+
+/// XOrTerm is a set of XOr-connected BoolTerms
+class XOrTerm : public LogicalTerm {
+public:
+    using LogicalTerm::LogicalTerm;
+
+    typedef std::shared_ptr<XOrTerm> Ptr;
+
+    virtual char const* getName() const { return "XOrTerm"; }
+    virtual OpPrecedence getOpPrecedence() const { return OR_PRECEDENCE; } // TODO need XOR_PRECIDENCE?
+
+    virtual void renderTo(QueryTemplate& qt) const;
+    virtual std::shared_ptr<BoolTerm> clone() const;
+    virtual std::shared_ptr<BoolTerm> copySyntax() const;
+
+    bool merge(const BoolTerm& other) override;
+
+    bool operator==(const BoolTerm& rhs) const;
 
 protected:
     void dbgPrint(std::ostream& os) const override;
