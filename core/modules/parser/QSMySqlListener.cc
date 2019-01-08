@@ -536,11 +536,17 @@ public:
     enum OperatorType {
         AND,
         OR,
+        XOR,
     };
     virtual void handleLogicalOperator(OperatorType operatorType) = 0;
 
     static string OperatorTypeToStr(OperatorType operatorType) {
-        return operatorType == AND ? "AND" : "OR";
+        switch (operatorType) {
+            case AND: return "AND"; break;
+            case OR: return "OR"; break;
+            case XOR: return "XOR"; break;
+        }
+        return "unrecognized operator type.";
     }
 };
 
@@ -2689,29 +2695,15 @@ public:
 
     void handleLogicalOperator(LogicalOperatorCBH::OperatorType operatorType) {
         TRACE_CALLBACK_INFO(LogicalOperatorCBH::OperatorTypeToStr(operatorType));
-        switch (operatorType) {
-        default:
-            ASSERT_EXECUTION_CONDITION(false, "unhandled operator type", _ctx);
-            break;
-
-        case LogicalOperatorCBH::AND:
-            // We capture the AndTerm into a base class so we can pass by reference into the setter.
-            _setLogicalOperator(make_shared<query::AndTerm>());
-            break;
-
-        case LogicalOperatorCBH::OR:
-            // We capture the OrTerm into a base class so we can pass by reference into the setter.
-            _setLogicalOperator(make_shared<query::OrTerm>());
-            break;
-        }
+        ASSERT_EXECUTION_CONDITION(false == _logicalOperatorIsSet,
+                "logical operator must be set only once.", _ctx);
+        _logicalOperatorIsSet = true;
+        _logicalOperatorType = operatorType;
     }
 
     void handleLogicalExpression(shared_ptr<query::LogicalTerm> const & logicalTerm,
             antlr4::ParserRuleContext* childCtx) override {
         TRACE_CALLBACK_INFO(logicalTerm);
-        if (_logicalOperator != nullptr && _logicalOperator->merge(*logicalTerm)) {
-            return;
-        }
         _terms.push_back(logicalTerm);
     }
 
@@ -3276,6 +3268,8 @@ public:
             lockedParent()->handleLogicalOperator(LogicalOperatorCBH::AND);
         } else if (_ctx->OR() != nullptr || _ctx->getText() == "||") {
             lockedParent()->handleLogicalOperator(LogicalOperatorCBH::OR);
+        } else if (_ctx->XOR() != nullptr) { // just a note; there is no alt operator like e.g. && for AND
+            lockedParent()->handleLogicalOperator(LogicalOperatorCBH::XOR);
         } else {
             ASSERT_EXECUTION_CONDITION(false, "unhandled logical operator", _ctx);
         }
