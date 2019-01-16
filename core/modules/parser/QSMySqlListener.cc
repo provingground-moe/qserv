@@ -2904,12 +2904,8 @@ public:
                 "unexpected boolTerm callback.", _ctx);
         auto boolFactor = dynamic_pointer_cast<query::BoolFactor>(boolTerm);
         ASSERT_EXECUTION_CONDITION(nullptr != boolFactor, "could not cast boolTerm to a BoolFactor.", _ctx);
-        auto orBoolFactor = make_shared<query::BoolFactor>(
-                make_shared<query::BoolTermFactor>(
-                    make_shared<query::OrTerm>(
-                        make_shared<query::AndTerm>(boolFactor))));
-        orBoolFactor->addParenthesis();
-        _boolTerm = orBoolFactor;
+        boolFactor->addParenthesis();
+        _boolTerm = boolFactor;
     }
 
     void handlePredicateExpression(shared_ptr<query::ValueExpr> const & valueExpr) override {
