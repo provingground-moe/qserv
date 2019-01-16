@@ -24,8 +24,9 @@
 
 #include "OrTerm.h"
 
-
+#include "query/AndTerm.h"
 #include "query/BoolFactorTerm.h"
+#include "query/BoolTerm.h"
 #include "query/CopyTerms.h"
 #include "util/IterableFormatter.h"
 
@@ -80,6 +81,17 @@ bool OrTerm::operator==(const BoolTerm& rhs) const {
         return false;
     }
     return util::vectorPtrCompare<BoolTerm>(_terms, rhsOrTerm->_terms);
+}
+
+
+void OrTerm::toDisjunctiveNormalForm() {
+    for (auto itr = _terms.begin(); itr != _terms.end(); ++itr) {
+        (*itr)->toDisjunctiveNormalForm();
+        auto andTerm = std::dynamic_pointer_cast<query::AndTerm>(*itr);
+        if (nullptr == andTerm) {
+            *itr = std::make_shared<query::AndTerm>(*itr);
+        }
+    }
 }
 
 

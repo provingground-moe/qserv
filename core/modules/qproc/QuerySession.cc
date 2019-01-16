@@ -58,6 +58,7 @@
 #include "parser/SelectParser.h"
 #include "qana/AggregatePlugin.h"
 #include "qana/AnalysisError.h"
+#include "qana/DisjunctiveNormalFormPlugin.h"
 #include "qana/DuplSelectExprPlugin.h"
 #include "qana/MatchTablePlugin.h"
 #include "qana/PostPlugin.h"
@@ -279,6 +280,7 @@ void QuerySession::_initContext() {
 void QuerySession::_preparePlugins() {
     _plugins = std::make_shared<QueryPluginPtrVector>();
 
+    _plugins->push_back(std::make_shared<qana::DisjunctiveNormalFormPlugin>());
     _plugins->push_back(std::make_shared<qana::DuplSelectExprPlugin>());
     _plugins->push_back(std::make_shared<qana::WherePlugin>());
     _plugins->push_back(std::make_shared<qana::AggregatePlugin>());

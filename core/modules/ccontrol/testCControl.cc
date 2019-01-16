@@ -39,6 +39,7 @@
 #include "ccontrol/UserQueryFactory.h"
 #include "parser/ParseException.h"
 #include "parser/SelectParser.h"
+#include "qana/DisjunctiveNormalFormPlugin.h"
 #include "qproc/QuerySession.h"
 #include "query/AndTerm.h"
 #include "query/BoolFactor.h"
@@ -632,6 +633,10 @@ BOOST_DATA_TEST_CASE(antlr_compare, QUERIES, query) {
     }
     auto a4SelectStatement = a4parser->getSelectStmt();
     BOOST_REQUIRE(a4SelectStatement != nullptr);
+
+    auto dnfPlugin = std::make_shared<qana::DisjunctiveNormalFormPlugin>();
+    dnfPlugin->applyLogical(*a4SelectStatement);
+
     std::ostringstream a4QueryStr;
     a4QueryStr << a4SelectStatement->getQueryTemplate();
 

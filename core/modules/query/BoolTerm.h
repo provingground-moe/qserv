@@ -120,6 +120,8 @@ public:
 
     virtual bool operator==(BoolTerm const& rhs) const = 0;
 
+    virtual void toDisjunctiveNormalForm() {};
+
     friend std::ostream& operator<<(std::ostream& os, BoolTerm const& bt);
     friend std::ostream& operator<<(std::ostream& os, BoolTerm const* bt);
 

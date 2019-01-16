@@ -78,6 +78,8 @@ public:
 
     bool operator==(BoolFactorTerm const& rhs) const;
 
+    void toDisjunctiveNormalForm() override;
+
     // FIXME this member should be private, or at least protected. Jira issue DM-17306
     std::shared_ptr<BoolTerm> _term;
 

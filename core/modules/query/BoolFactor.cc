@@ -204,4 +204,11 @@ void BoolFactor::addParenthesis() {
 }
 
 
+void BoolFactor::toDisjunctiveNormalForm() {
+    for (auto& term : _terms) {
+        term->toDisjunctiveNormalForm();
+    }
+}
+
+
 }}} // namespace lsst::qserv::query

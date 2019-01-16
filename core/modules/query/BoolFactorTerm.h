@@ -76,7 +76,9 @@ public:
     /// Get a vector of the ColumnRefs this contains.
     virtual void findColumnRefs(std::vector<std::shared_ptr<ColumnRef>>& vector) const = 0;
 
-    virtual bool operator==(BoolFactorTerm const& rhs) const = 0;
+    virtual void toDisjunctiveNormalForm() {};
+
+    virtual bool operator==(const BoolFactorTerm& rhs) const = 0;
 
 protected:
     friend std::ostream& operator<<(std::ostream& os, BoolFactorTerm const& bft) {

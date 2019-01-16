@@ -2710,30 +2710,24 @@ public:
         ASSERT_EXECUTION_CONDITION(_logicalOperatorIsSet, "logicalOperator is not set.", _ctx);
         shared_ptr<query::LogicalTerm> logicalTerm;
         switch (_logicalOperatorType) {
-            case LogicalOperatorCBH::AND: {
+            case LogicalOperatorCBH::AND:
                 logicalTerm = make_shared<query::AndTerm>();
-                for (auto term : _terms) {
-                    if (false == logicalTerm->merge(*term)) {
-                        logicalTerm->addBoolTerm(term);
-                    }
-                }
                 break;
-            }
 
-            case LogicalOperatorCBH::OR: {
-                auto orTerm = make_shared<query::OrTerm>();
-                logicalTerm = orTerm;
-                for (auto term : _terms) {
-                    if (false == logicalTerm->merge(*term)) {
-                        logicalTerm->addBoolTerm(make_shared<query::AndTerm>(term));
-                    }
-                }
+            case LogicalOperatorCBH::OR:
+                logicalTerm = make_shared<query::OrTerm>();
                 break;
-            }
 
             default:
                 ASSERT_EXECUTION_CONDITION(false, "unhandled logical operator.", _ctx);
         }
+
+        for (auto term : _terms) {
+            if (false == logicalTerm->merge(*term)) {
+                logicalTerm->addBoolTerm(term);
+            }
+        }
+
         lockedParent()->handleLogicalExpression(logicalTerm, _ctx);
     }
 

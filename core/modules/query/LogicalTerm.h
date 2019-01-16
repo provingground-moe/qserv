@@ -73,6 +73,8 @@ public:
     /// Write a human-readable version of this instance to the ostream for debug output.
     std::ostream& putStream(std::ostream& os) const override;
 
+    void toDisjunctiveNormalForm() override = 0;
+
     // FIXME this member should be private, or at least protected. Jira issue DM-17306
     std::vector<std::shared_ptr<BoolTerm>> _terms;
 };

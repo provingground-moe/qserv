@@ -83,4 +83,10 @@ void BoolTermFactor::findColumnRefs(ColumnRef::Vector& vector) const {
 }
 
 
+void BoolTermFactor::toDisjunctiveNormalForm() {
+    if (nullptr != _term) {
+        _term->toDisjunctiveNormalForm();
+    }
+}
+
 }}} // namespace lsst::qserv::query

@@ -85,4 +85,11 @@ std::shared_ptr<BoolTerm> AndTerm::clone() const {
 }
 
 
+void AndTerm::toDisjunctiveNormalForm() {
+    for (auto& term : _terms) {
+        term->toDisjunctiveNormalForm();
+    }
+}
+
+
 }}} // namespace lsst::qserv::query

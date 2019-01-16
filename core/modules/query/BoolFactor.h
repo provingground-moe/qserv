@@ -99,6 +99,8 @@ public:
     // prepend _terms with an open parenthesis PassTerm and append it with a close parenthesis PassTerm.
     void addParenthesis();
 
+    void toDisjunctiveNormalForm() override;
+
     // FIXME these members should be private, or at least protected. Jira issue DM-17306
     std::vector<std::shared_ptr<BoolFactorTerm>> _terms;
     bool _hasNot;

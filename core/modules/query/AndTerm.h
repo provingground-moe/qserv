@@ -79,6 +79,8 @@ public:
 
     bool operator==(BoolTerm const& rhs) const;
 
+    void toDisjunctiveNormalForm() override;
+
 protected:
     /// Serialize this instance to os for debug output.
     void dbgPrint(std::ostream& os) const override;
