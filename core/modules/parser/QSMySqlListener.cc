@@ -1003,13 +1003,12 @@ public:
 private:
     void _addBoolTerm(shared_ptr<query::BoolTerm> const & boolTerm, antlr4::ParserRuleContext* childCtx) {
         if (_ctx->whereExpr == childCtx) {
-            shared_ptr<query::AndTerm> andTerm = make_shared<query::AndTerm>(boolTerm);
             auto rootTerm = dynamic_pointer_cast<query::LogicalTerm>(_getWhereClause()->getRootTerm());
             if (nullptr == rootTerm) {
                 rootTerm = make_shared<query::OrTerm>();
                 _getWhereClause()->setRootTerm(rootTerm);
             }
-            rootTerm->addBoolTerm(andTerm);
+            rootTerm->addBoolTerm(boolTerm);
         } else if (_ctx->havingExpr == childCtx) {
             ASSERT_EXECUTION_CONDITION(nullptr == _havingClause, "The having clause should only be set once.", _ctx);
             auto andTerm = make_shared<query::AndTerm>(boolTerm);
@@ -1684,7 +1683,7 @@ public:
             antlr4::ParserRuleContext* childCtx) override {
         TRACE_CALLBACK_INFO(*boolTerm);
         ASSERT_EXECUTION_CONDITION(nullptr == _on, "Unexpected second BoolTerm callback.", _ctx);
-        _on = _getNestedBoolTerm(boolTerm);
+        _on = boolTerm;
     }
 
     void handlePredicateExpression(shared_ptr<query::ValueExpr> const & valueExpr) override {
@@ -1720,54 +1719,6 @@ public:
     string name() const override { return getTypeName(this); }
 
 private:
-
-    // in a query such as
-    // SELECT count(*) FROM   Object o
-    //        INNER JOIN RefObjMatch o2t ON (o.objectIdObjTest = o2t.objectId)
-    //        INNER JOIN SimRefObject t ON (o2t.refObjectId = t.refObjectId)
-    //        WHERE  closestToObj = 1 OR closestToObj is NULL;,
-    // When a BoolFactor is in parenthesis, the NestedExpressionAtomAdapter puts it in a new BoolFactor that
-    // has an PassTerm with an open parenthesis, then an Or+And that contains the BoolFactor, and then
-    // a PassTerm with close parenthesis. This is the correct IR for parenthesis (a "nestedExpression") in
-    // the WHERE clause. However, our IR does NOT expect the BoolFactor to be put in this sort of structure
-    // in the JOIN clause, so we must extract the contained BoolFactor in this case. This function does that.
-    shared_ptr<query::BoolTerm> _getNestedBoolTerm(shared_ptr<query::BoolTerm> const & boolTerm) {
-        auto boolFactor = dynamic_pointer_cast<query::BoolFactor>(boolTerm);
-        if (nullptr == boolFactor) {
-            return boolTerm;
-        }
-        if (boolFactor->_terms.size() != 3) {
-            return boolFactor;
-        }
-        auto lhsPassTerm = dynamic_pointer_cast<query::PassTerm>(boolFactor->_terms[0]);
-        if (nullptr == lhsPassTerm || lhsPassTerm->_text != "(") {
-            return boolFactor;
-        }
-        auto rhsPassTerm = dynamic_pointer_cast<query::PassTerm>(boolFactor->_terms[2]);
-        if (nullptr == rhsPassTerm || rhsPassTerm->_text != ")") {
-            return boolFactor;
-        }
-        auto boolTermFactor = dynamic_pointer_cast<query::BoolTermFactor>(boolFactor->_terms[1]);
-        if (nullptr == boolTermFactor) {
-            return boolFactor;
-        }
-        auto orTerm = dynamic_pointer_cast<query::OrTerm>(boolTermFactor->_term);
-        if (nullptr == orTerm) {
-            return boolFactor;
-        }
-        if (orTerm->_terms.size() != 1) {
-            return boolFactor;
-        }
-        auto andTerm = dynamic_pointer_cast<query::AndTerm>(orTerm->_terms[0]);
-        if (nullptr == andTerm) {
-            return boolFactor;
-        }
-        if (andTerm->_terms.size() != 1) {
-            return boolFactor;
-        }
-        return andTerm->_terms[0];
-    }
-
     shared_ptr<query::ColumnRef> _using;
     shared_ptr<query::TableRef> _tableRef;
     shared_ptr<query::BoolTerm> _on;
