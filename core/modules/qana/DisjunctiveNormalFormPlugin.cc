@@ -21,10 +21,23 @@
  * see <http://www.lsstcorp.org/LegalNotices/>.
  */
 
+
+// Class header
 #include "DisjunctiveNormalFormPlugin.h"
 
+// System headers
+#include <memory>
+
+// LSST headers
+#include "lsst/log/Log.h"
+
+// Qserv headers
 #include "query/AndTerm.h"
+#include "query/BoolFactor.h"
+#include "query/BoolFactorTerm.h"
+#include "query/BoolTermFactor.h"
 #include "query/OrTerm.h"
+#include "query/CompPredicate.h"
 #include "query/SelectStmt.h"
 #include "query/QueryContext.h"
 #include "query/WhereClause.h"
@@ -33,6 +46,92 @@
 namespace lsst {
 namespace qserv {
 namespace qana {
+
+
+namespace {
+
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.qana.DisjunctiveNormalFormPlugin");
+
+
+void walkAndApply(std::shared_ptr<query::OrTerm> const& orTerm);
+
+
+void walkAndApply(std::shared_ptr<query::BoolTermFactor> const& boolTermFactor) {
+    LOGS(_log, LOG_LVL_TRACE, *boolTermFactor);
+    auto orTerm = std::dynamic_pointer_cast<query::OrTerm>(boolTermFactor->_term);
+    if (nullptr == orTerm) {
+        orTerm = std::make_shared<query::OrTerm>(boolTermFactor->_term);
+        boolTermFactor->_term = orTerm;
+    }
+    walkAndApply(orTerm);
+}
+
+
+void walkAndApply(std::shared_ptr<query::BoolTerm> const& boolTerm) {
+    LOGS(_log, LOG_LVL_TRACE, *boolTerm);
+    auto boolFactor = std::dynamic_pointer_cast<query::BoolFactor>(boolTerm);
+    if (nullptr != boolFactor) {
+        // BoolFactor has _terms, a list of BoolFactorTerm
+        for (auto boolFactorTermItr = boolFactor->_terms.begin();
+                boolFactorTermItr != boolFactor->_terms.end();
+                ++boolFactorTermItr) {
+            auto boolTermFactor = std::dynamic_pointer_cast<query::BoolTermFactor>(*boolFactorTermItr);
+            if (nullptr != boolTermFactor) {
+                walkAndApply(boolTermFactor);
+            } else {
+                // std::vector<std::shared_ptr<query::ValueExpr>> valueExprs;
+                // (*boolFactorTermItr)->findValueExprs(valueExprs);
+                // if (valueExprs.size() != 0) {
+                //     auto boolFactor = std::make_shared<query::BoolFactor>(*boolFactorTermItr);
+                //     auto andTerm = std::make_shared<query::AndTerm>(boolFactor);
+                //     auto orTerm = std::make_shared<query::OrTerm>(andTerm);
+                //     auto boolTermFactor = std::make_shared<query::BoolTermFactor>(orTerm);
+                //     *boolFactorTermItr = boolTermFactor;
+                // }
+                // InPredicate has ValueExprs but does not get nested.
+                if (nullptr != std::dynamic_pointer_cast<query::CompPredicate>(*boolFactorTermItr)) {
+                    auto boolFactor = std::make_shared<query::BoolFactor>(*boolFactorTermItr);
+                    auto andTerm = std::make_shared<query::AndTerm>(boolFactor);
+                    auto orTerm = std::make_shared<query::OrTerm>(andTerm);
+                    auto boolTermFactor = std::make_shared<query::BoolTermFactor>(orTerm);
+                    *boolFactorTermItr = boolTermFactor;
+                }
+
+            }
+        }
+        return;
+    }
+
+    auto orTerm = std::dynamic_pointer_cast<query::OrTerm>(boolTerm);
+    if (nullptr != orTerm) {
+        walkAndApply(orTerm);
+    }
+
+    auto logicalTerm = std::dynamic_pointer_cast<query::LogicalTerm>(boolTerm);
+    if (nullptr != logicalTerm) {
+        for (auto& boolTerm : logicalTerm->_terms) {
+            walkAndApply(boolTerm);
+        }
+        return;
+    }
+
+    // PassListTerm has _terms, but all are supposed to be ignorable.
+}
+
+
+void walkAndApply(std::shared_ptr<query::OrTerm> const& orTerm) {
+    LOGS(_log, LOG_LVL_TRACE, *orTerm);
+    for (auto termItr = orTerm->_terms.begin(); termItr != orTerm->_terms.end(); ++termItr) {
+        walkAndApply(*termItr);
+        if (nullptr == std::dynamic_pointer_cast<query::AndTerm>(*termItr)) {
+            *termItr = std::make_shared<query::AndTerm>(*termItr);
+        }
+    }
+}
+
+
+} // end of namespace
 
 
 void DisjunctiveNormalFormPlugin::applyLogical(query::SelectStmt& stmt) {
@@ -46,16 +145,17 @@ void DisjunctiveNormalFormPlugin::applyLogical(query::SelectStmt& stmt) {
     }
     auto orTerm = std::dynamic_pointer_cast<query::OrTerm>(rootTerm);
     if (nullptr != orTerm) {
-        orTerm->toDisjunctiveNormalForm();
+        walkAndApply(orTerm);
         return;
     }
     auto andTerm = std::dynamic_pointer_cast<query::AndTerm>(rootTerm);
     if (nullptr != andTerm) {
-        andTerm->toDisjunctiveNormalForm();
-        whereClause.setRootTerm(std::make_shared<query::OrTerm>(andTerm));
+        walkAndApply(andTerm);
+        auto orTerm = std::make_shared<query::OrTerm>(andTerm);
+        whereClause.setRootTerm(orTerm);
         return;
     }
-    rootTerm->toDisjunctiveNormalForm();
+    walkAndApply(rootTerm);
     whereClause.setRootTerm(std::make_shared<query::OrTerm>(std::make_shared<query::AndTerm>(rootTerm)));
 }
 
