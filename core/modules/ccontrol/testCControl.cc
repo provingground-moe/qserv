@@ -50,7 +50,6 @@
 #include "query/OrTerm.h"
 #include "query/SelectList.h"
 #include "query/SelectStmt.h"
-#include "query/SqlSQL2Tokens.h"
 #include "query/ValueFactor.h"
 #include "query/WhereClause.h"
 
@@ -136,7 +135,7 @@ static const std::vector<Antlr4CompareQueries> ANTLR4_COMPARE_QUERIES = {
             auto andTerm = std::dynamic_pointer_cast<query::AndTerm>(orTerm->_terms[0]);
             auto boolFactor = std::dynamic_pointer_cast<query::BoolFactor>(andTerm->_terms[0]);
             auto compPredicate = std::dynamic_pointer_cast<query::CompPredicate>(boolFactor->_terms[0]);
-            compPredicate->op = SqlSQL2Tokens::NULL_SAFE_EQUALS_OP;
+            compPredicate->op = query::CompPredicate::NULL_SAFE_EQUALS_OP;
         }
     ),
 

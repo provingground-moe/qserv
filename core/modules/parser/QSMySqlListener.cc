@@ -55,7 +55,6 @@
 #include "query/PassTerm.h"
 #include "query/SelectList.h"
 #include "query/SelectStmt.h"
-#include "query/SqlSQL2Tokens.h"
 #include "query/TableRef.h"
 #include "query/ValueExpr.h"
 #include "query/ValueFactor.h"
@@ -1526,26 +1525,22 @@ public:
         auto compPredicate = make_shared<query::CompPredicate>();
         compPredicate->left = _left;
 
-        // We need to remove the coupling between the query classes and the parser classes, in this case where
-        // the query classes use the integer token types instead of some other system. For now this if/else
-        // block allows us to go from the token string to the SqlSQL2Tokens type defined by the antlr2/3
-        // grammar and used by the query objects.
         if ("=" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::EQUALS_OP;
+            compPredicate->op = query::CompPredicate::EQUALS_OP;
         } else if (">" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::GREATER_THAN_OP;
+            compPredicate->op = query::CompPredicate::GREATER_THAN_OP;
         } else if ("<" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::LESS_THAN_OP;
+            compPredicate->op = query::CompPredicate::LESS_THAN_OP;
         } else if ("<>" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::NOT_EQUALS_OP;
+            compPredicate->op = query::CompPredicate::NOT_EQUALS_OP;
         } else if ("!=" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::NOT_EQUALS_OP_ALT;
+            compPredicate->op = query::CompPredicate::NOT_EQUALS_OP_ALT;
         } else if ("<=>" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::NULL_SAFE_EQUALS_OP;
+            compPredicate->op = query::CompPredicate::NULL_SAFE_EQUALS_OP;
         } else if ("<=" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::LESS_THAN_OR_EQUALS_OP;
+            compPredicate->op = query::CompPredicate::LESS_THAN_OR_EQUALS_OP;
         } else if (">=" == _comparison) {
-            compPredicate->op = SqlSQL2Tokens::GREATER_THAN_OR_EQUALS_OP;
+            compPredicate->op = query::CompPredicate::GREATER_THAN_OR_EQUALS_OP;
         } else {
             ASSERT_EXECUTION_CONDITION(false, "unhandled comparison operator type:" + _comparison, _ctx);
         }

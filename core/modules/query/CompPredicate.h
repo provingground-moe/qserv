@@ -49,6 +49,17 @@ namespace query {
 /// (literals can be row values)
 class CompPredicate : public Predicate {
 public:
+    enum OpType {
+        EQUALS_OP,                  // =
+        NULL_SAFE_EQUALS_OP,        // <=>
+        NOT_EQUALS_OP,              // <>
+        LESS_THAN_OP,               // <
+        GREATER_THAN_OP,            // >
+        LESS_THAN_OR_EQUALS_OP,     // <=
+        GREATER_THAN_OR_EQUALS_OP,  // >=
+        NOT_EQUALS_OP_ALT,          // !=
+    };
+
     typedef std::shared_ptr<CompPredicate> Ptr;
 
     CompPredicate() = default;
@@ -69,7 +80,7 @@ public:
     BoolFactorTerm::Ptr copySyntax() const override { return clone(); }
     bool operator==(BoolFactorTerm const& rhs) const override;
 
-    static int lookupOp(char const* op);
+    static OpType lookupOp(char const* op);
 
     std::shared_ptr<ValueExpr> left;
     int op; // Parser token type of operator
