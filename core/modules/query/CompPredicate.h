@@ -65,7 +65,7 @@ public:
     CompPredicate() = default;
 
     /// Construct a CompPredicate that owns the given args and uses them for its expression.
-    CompPredicate(std::shared_ptr<ValueExpr> const& iLeft, int iOp,
+    CompPredicate(std::shared_ptr<ValueExpr> const& iLeft, OpType iOp,
             std::shared_ptr<ValueExpr> const& iRight)
         : left(iLeft), op(iOp), right(iRight) {}
 
@@ -83,7 +83,7 @@ public:
     static OpType lookupOp(char const* op);
 
     std::shared_ptr<ValueExpr> left;
-    int op; // Parser token type of operator
+    OpType op; // Parser token type of operator
     std::shared_ptr<ValueExpr> right;
 
 protected:

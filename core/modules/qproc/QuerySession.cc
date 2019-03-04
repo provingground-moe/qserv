@@ -89,9 +89,8 @@ namespace qproc {
 ////////////////////////////////////////////////////////////////////////
 
 
-std::shared_ptr<query::SelectStmt> QuerySession::parseQuery(std::string const & statement,
-        parser::SelectParser::AntlrVersion version) {
-    auto parser = parser::SelectParser::newInstance(statement, version);
+std::shared_ptr<query::SelectStmt> QuerySession::parseQuery(std::string const & statement) {
+    auto parser = parser::SelectParser::newInstance(statement);
     try {
         parser->setup();
     } catch(parser::ParseException const& e) {

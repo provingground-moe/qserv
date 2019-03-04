@@ -34,7 +34,6 @@
 
 // Qserv headers
 #include "ccontrol/UserQueryType.h"
-#include "ccontrol/UserQueryFactory.h"
 #include "parser/ParseException.h"
 #include "parser/SelectParser.h"
 #include "qproc/QuerySession.h"
@@ -4609,7 +4608,7 @@ static const vector<Antlr4TestQueries> ANTLR4_TEST_QUERIES = {
 
 BOOST_DATA_TEST_CASE(antlr4_test, ANTLR4_TEST_QUERIES, queryInfo) {
     query::SelectStmt::Ptr selectStatement;
-    BOOST_REQUIRE_NO_THROW(selectStatement = parser::SelectParser::makeSelectStmt(queryInfo.query, parser::SelectParser::ANTLR4));
+    BOOST_REQUIRE_NO_THROW(selectStatement = parser::SelectParser::makeSelectStmt(queryInfo.query));
     BOOST_REQUIRE(selectStatement != nullptr);
     BOOST_TEST_MESSAGE("antlr4 selectStmt structure:" << *selectStatement);
     // verify the selectStatements are the same:
