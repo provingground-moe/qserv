@@ -329,9 +329,6 @@ void QueryRunner::_sendBuf(xrdsvc::StreamBuffer::Ptr& streamBuf,
     if (!sent) {
         LOGS(_log, LOG_LVL_ERROR, _task->getIdStr() << " Failed to transmit " << note << "!");
         _cancelled = true;
-        // Normally, sendStream calls Recycle(), but if this path is taken, it may not have been called.
-        // Calling Recycle() twice should be harmless.
-        streamBuf->Recycle();
     } else {
         util::Timer t;
         t.start();
