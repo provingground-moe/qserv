@@ -59,6 +59,7 @@ namespace css {
     class StripingParams;
 }
 namespace query {
+    class SelectList;
     class SelectStmt;
     class QueryContext;
 }}} // End of forward declarations
@@ -229,6 +230,7 @@ private:
     *
     */
     query::SelectStmtPtr _stmtMerge;
+
     bool _hasMerge{false};
     bool _isDummy{false}; ///< Use dummy chunk, disabling subchunks or any real chunks
     std::string _tmpTable;
