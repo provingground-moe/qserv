@@ -71,7 +71,10 @@ public:
     void addBoolFactorTerm(std::shared_ptr<BoolFactorTerm> boolFactorTerm);
 
     /// Get a vector of the ValueExprs this contains.
-    virtual void findValueExprs(std::vector<std::shared_ptr<ValueExpr>>& vector) const;
+    void findValueExprs(std::vector<std::shared_ptr<ValueExpr>>& vector) const override;
+
+    /// Get a vector of references to pointers to the ValueExprs this contains.
+    void findValueExprRefs(ValueExprPtrRefVector& list) override;
 
     /// Get a vector of the ColumnRefs this contains.
     virtual void findColumnRefs(std::vector<std::shared_ptr<ColumnRef>>& vector) const;
