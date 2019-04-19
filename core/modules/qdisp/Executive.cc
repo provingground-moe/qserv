@@ -225,7 +225,9 @@ bool Executive::startQuery(std::shared_ptr<JobQuery> const& jobQuery) {
     // Construct a temporary resource object to pass to ProcessRequest().
     // For now, we don't set any other attributes except the resource name.
     //
-    XrdSsiResource jobResource(jobQuery->getDescription()->resource().path());
+    //XrdSsiResource jobResource(jobQuery->getDescription()->resource().path());
+    XrdSsiResource jobResource(jobQuery->getDescription()->resource().path(), "", jobQuery->getIdStr(),
+                                   "", 0, XrdSsiResource::Strong);
 
     // Now construct the actual query request and tie it to the jobQuery. The
     // shared pointer is used by QueryRequest to keep itself alive, sloppy design.
