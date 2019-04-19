@@ -94,6 +94,8 @@ public:
     std::string const& getAlias() const { return _alias; }
     bool hasAlias() const { return not _alias.empty(); }
     JoinRefPtrVector const& getJoins() const { return _joinRefs; }
+    /// Get all the db+table names used by this TableRef and all of its joins.
+    void getRelatedDbTableInfo(std::vector<DbTablePair>& dbTablePairs) const;
 
     bool hasDb() const;
     bool hasTable() const;
