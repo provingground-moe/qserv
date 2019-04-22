@@ -96,8 +96,7 @@ private:
                 boost::multi_index::tag<ByAlias>,
                 boost::multi_index::member<TableAlias, std::string, &TableAlias::alias>
             >,
-            // ordered_unique here assumes exactly 1 alias for any database + table pair.
-            boost::multi_index::ordered_unique<
+            boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<ByDbTablePair>,
                 boost::multi_index::member<TableAlias, DbTablePair, &TableAlias::dbTablePair>
             >

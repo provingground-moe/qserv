@@ -221,8 +221,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
             tableRef->setAlias("`" + tableRef->getDb() + "." + tableRef->getTable() + "`");
         }
         if (not context.tableAliases.set(tableRef)) {
-            // todo probably need to hande matching table refs in the FROM list?
-            throw std::logic_error("duplicate alias for " + tableRef->sqlFragment());
+            throw std::logic_error("could not set alias for " + tableRef->sqlFragment());
         }
         for (auto&& joinRef : tableRef->getJoins()){
             aliasSetter(joinRef->getRight());
