@@ -91,8 +91,9 @@ namespace qana {
 ////////////////////////////////////////////////////////////////////////
 class fixExprAlias {
 public:
-    fixExprAlias(std::string const& db, query::TableAliases const& tableAliases) :
-        _defaultDb(db), _tableAliases(tableAliases) {}
+    fixExprAlias(std::string const& db, query::TableAliases const& tableAliases,
+                 query::SelectListAliases const& selectListAliases) :
+        _defaultDb(db), _tableAliases(tableAliases), _selectListAliases(selectListAliases) {}
 
     void operator()(query::ValueExprPtr& valueExpr) {
         if (nullptr == valueExpr)
@@ -108,7 +109,7 @@ public:
             switch(valueFactor->getType()) {
             case query::ValueFactor::COLUMNREF:
                 // check columnref.
-                _patchColumnRef(*valueFactor->getColumnRef());
+                _patchColumnRef(*valueFactor);
                 break;
             case query::ValueFactor::FUNCTION:
             case query::ValueFactor::AGGFUNC:
@@ -129,19 +130,27 @@ public:
     }
 
 private:
-    void _patchColumnRef(query::ColumnRef& ref) {
-        std::string newAlias = _getAlias(ref.getDb(), ref.getTable());
-        if (newAlias.empty()) { return; } //  Ignore if no replacement
-                                         //  exists.
-
+    void _patchColumnRef(query::ValueFactor& valueFactor) {
+        auto&& ref = valueFactor.getColumnRef();
+        auto&& aliasPair = _selectListAliases.getAliasFor(*ref);
+        if (not aliasPair.first.empty()) {
+            LOGS(_log, LOG_LVL_TRACE, "changing ColumnRef from: " << ref);
+            valueFactor.set(aliasPair.second);
+            LOGS(_log, LOG_LVL_TRACE, "changed ColumnRef to:    " << ref);
+            return;
+        }
+        std::string newAlias = _getAlias(ref->getDb(), ref->getTable());
+        if (newAlias.empty()) {
+            return; // Ignore if no replacement exists.
+        }
         // Eliminate db. Replace table with aliased table.
-        ref.setDb("");
-        ref.setTable(newAlias);
+        ref->setDb("");
+        ref->setTable(newAlias);
     }
 
     void _patchFuncExpr(query::FuncExpr& fe) {
         std::for_each(fe.params.begin(), fe.params.end(),
-                      fixExprAlias(_defaultDb, _tableAliases));
+                fixExprAlias(_defaultDb, _tableAliases, _selectListAliases));
     }
 
     void _patchStar(query::ValueFactor& vt) {
@@ -160,6 +169,7 @@ private:
 
     std::string const& _defaultDb;
     query::TableAliases const& _tableAliases;
+    query::SelectListAliases const& _selectListAliases;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -176,8 +186,10 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     // matches the original user query.
     for (auto& valueExpr : *(stmt.getSelectList().getValueExprList())) {
         if (not valueExpr->hasAlias() && not valueExpr->isStar())
-            valueExpr->setAlias('`' + valueExpr->sqlFragment() + '`');
-        // nptodo - WTD about storing the alias for this ValueExpr in the context?
+            valueExpr->setAlias(valueExpr->sqlFragment(false));
+        if (not context.selectListAliases.set(valueExpr, valueExpr->getAlias())) {
+            throw std::logic_error("could not set alias for " + valueExpr->sqlFragment(false));
+        }
     }
     // nptodo make each of the value exprs in the later clauses (where, group by, etc) refer to the alias
     // of the ValueExpr (if we don't do this already?)
@@ -230,46 +242,52 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     std::for_each(fromListTableRefs.begin(), fromListTableRefs.end(), aliasSetter);
 
 
-    // Patch table references in the select list,
-    query::SelectList& selectlist = stmt.getSelectList();
-    query::ValueExprPtrVector& exprList = *selectlist.getValueExprList();
-    std::for_each(exprList.begin(), exprList.end(), fixExprAlias(
-        context.defaultDb, context.tableAliases));
+    // // Patch table references in the select list,
+    // LOGS(_log, LOG_LVL_TRACE, "SelectList:");
+    // query::SelectList& selectlist = stmt.getSelectList();
+    // query::ValueExprPtrVector& exprList = *selectlist.getValueExprList();
+    // std::for_each(exprList.begin(), exprList.end(), fixExprAlias(
+    //     context.defaultDb, context.tableAliases, context.selectListAliases));
 
     // where clause,
+    LOGS(_log, LOG_LVL_TRACE, "WhereClause:");
     if (stmt.hasWhereClause()) {
         query::ValueExprPtrVector e;
         stmt.getWhereClause().findValueExprs(e);
         std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases));
+            context.defaultDb, context.tableAliases, context.selectListAliases));
     }
     // group by clause,
+    LOGS(_log, LOG_LVL_TRACE, "GroupByClause:");
     if (stmt.hasGroupBy()) {
         query::ValueExprPtrVector e;
         stmt.getGroupBy().findValueExprs(e);
         std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases));
+            context.defaultDb, context.tableAliases, context.selectListAliases));
     }
     // having clause,
+    LOGS(_log, LOG_LVL_TRACE, "HavingClause:");
     if (stmt.hasHaving()) {
         query::ValueExprPtrVector e;
         stmt.getHaving().findValueExprs(e);
         std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases));
+            context.defaultDb, context.tableAliases, context.selectListAliases));
     }
+    LOGS(_log, LOG_LVL_TRACE, "OrderByClause:");
     // order by clause,
     if (stmt.hasOrderBy()) {
         query::ValueExprPtrVector e;
         stmt.getOrderBy().findValueExprs(e);
         std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases));
+            context.defaultDb, context.tableAliases, context.selectListAliases));
     }
+    LOGS(_log, LOG_LVL_TRACE, "OnClauses of Join:");
     // and in the on clauses of all join specifications.
     for (auto&& tableRef : fromListTableRefs) {
         for (auto&& joinRef : tableRef->getJoins()) {
             auto&& joinSpec = joinRef->getSpec();
             if (joinSpec) {
-                fixExprAlias fix(context.defaultDb, context.tableAliases);
+                fixExprAlias fix(context.defaultDb, context.tableAliases, context.selectListAliases);
                 // A column name in a using clause should be unqualified,
                 // so only patch on clauses.
                 auto&& onBoolTerm = joinSpec->getOn();

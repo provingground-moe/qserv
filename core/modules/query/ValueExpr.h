@@ -103,6 +103,9 @@ public:
 
     std::string copyAsLiteral() const;
 
+    /// @return true if this contains exactly one FactorOp and its `isConstVal` returns true.
+    bool isConstVal() const;
+
     template<typename T>
     T copyAsType(T const& defaultValue) const;
 
@@ -129,7 +132,13 @@ public:
     bool isColumnRef() const;
     bool isFunction() const;
 
-    std::string sqlFragment() const;
+    /**
+     * @brief Get the sql string that this ValueExpr represents
+     *
+     * @param aliasOnly if this ValueExpr has an alias and this is true then only the alias
+     * @return std::string
+     */
+    std::string sqlFragment(bool preferAlias) const;
 
     ValueExprPtr clone() const;
     friend std::ostream& operator<<(std::ostream& os, ValueExpr const& ve);
@@ -142,10 +151,16 @@ public:
 
     bool operator==(const ValueExpr& rhs) const;
 
+    // compare with another ValueExpr but ignore the alias.
+    bool compareValue(const ValueExpr& rhs) const;
+
+    // nptodo in some cases a ValueExpr can be a parent of ValueExprs, we need to be able to get *all* the
+    // ValueExprs rescursively for alias patching (and maybe to replace functional verification code in the
+    // plugins? TBD.)
+
 private:
     std::string _alias;
     FactorOpVector _factorOps;
-    std::string _internalAlias;
 };
 
 

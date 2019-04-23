@@ -142,6 +142,26 @@ public:
      */
     friend std::ostream& operator<<(std::ostream& os, QueryTemplate const& queryTemplate);
 
+    enum AliasMode { DEFINE, USE };
+
+    /**
+     * @brief Set a flag indicating if aliases should be defined or used.
+     *
+     * For example, should a ValueExpr be rendered as 'objectId as myObject' or as 'myObject'
+     *
+     * @param aliasMode
+     */
+    void setAliasMode(AliasMode aliasMode);
+
+    /**
+     * @brief Get the AliasMode
+     *
+     * See setAliasMode for details.
+     *
+     * @return AliasMode
+     */
+    AliasMode getAliasMode() const;
+
     std::string generate(EntryMapping const& em) const;
     void clear();
 
@@ -154,6 +174,7 @@ public:
 
 private:
     EntryPtrVector _entries;
+    AliasMode _aliasMode{DEFINE};
 };
 
 

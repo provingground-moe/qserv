@@ -28,6 +28,7 @@
 
 // System headers
 #include <map>
+#include <vector>
 #include <sstream>
 #include <stdexcept>
 
@@ -39,6 +40,8 @@
 
 // Local headers
 #include "query/DbTablePair.h"
+#include "query/ValueExpr.h"
+#include "query/ValueFactor.h"
 
 
 // forward declarations
@@ -54,6 +57,91 @@ namespace qserv {
 namespace query {
 
 
+template <typename T>
+class Aliases {
+public:
+    Aliases() = default;
+    virtual ~Aliases() = default;
+
+    bool set(T const& object, std::string const& alias) {
+        for (auto&& aliasInfo : _aliasInfo) {
+            if (alias == aliasInfo.alias) {
+                return false;
+            }
+        }
+        _aliasInfo.emplace_back(object, alias);
+        return true;
+    }
+
+    // get an alias for a given object
+    std::string get(T const& object) const {
+        for (auto&& aliasInfo : _aliasInfo) {
+            if (object.compareValue(aliasInfo.object)) { // nptodo probably want a compare functor or something
+                return aliasInfo.alias;
+            }
+        }
+        return std::string();
+    }
+
+    // get the first-registered object for a given alias
+    T& get(std::string const& alias) const {
+        for (auto&& aliasInfo : _aliasInfo) {
+            if (alias == aliasInfo.alias) {
+                return aliasInfo.object;
+            }
+        }
+        return T();
+    }
+
+protected:
+    struct AliasInfo {
+        T object;
+        std::string alias;
+        AliasInfo(T const& object_, std::string const& alias_) : object(object_), alias(alias_) {}
+    };
+    std::vector<AliasInfo> _aliasInfo;
+};
+
+
+class SelectListAliases : public Aliases<std::shared_ptr<query::ValueExpr>> {
+public:
+    SelectListAliases() = default;
+
+    /**
+     * @brief Get the alias for a ColumnRef
+     *
+     * Looks first for an exact match (all fields must match). Then looks for the first "subset" match
+     * (for example "objectId" would match "Object.objectId").
+     *
+     * @param columnRef
+     * @return std::string
+     */
+    std::pair<std::string, std::shared_ptr<query::ValueExpr>>
+    getAliasFor(query::ColumnRef const& columnRef) const {
+        AliasInfo const* subsetMatch = nullptr;
+        for (auto&& aliasInfo : _aliasInfo) {
+            auto&& factorOps = aliasInfo.object->getFactorOps();
+            if (factorOps.size() == 1) {
+                auto&& aliasColumnRef = factorOps[0].factor->getColumnRef();
+                if (nullptr != aliasColumnRef) {
+                    if (columnRef == *aliasColumnRef) {
+                        return std::make_pair(aliasInfo.alias, aliasInfo.object);
+                    }
+                    if (nullptr == subsetMatch && columnRef.isSubsetOf(aliasColumnRef)) {
+                        subsetMatch = &aliasInfo;
+                    }
+                }
+            }
+        }
+        if (nullptr != subsetMatch) {
+            return std::make_pair(subsetMatch->alias, subsetMatch->object);
+        }
+        return std::make_pair(std::string(), nullptr);
+    }
+};
+
+
+// nptodo this can probably get factored into Aliases. Maybe Aliases wants its own file?
 class TableAliases {
 public:
     TableAliases() = default;

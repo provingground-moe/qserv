@@ -218,4 +218,20 @@ bool ValueFactor::operator==(const ValueFactor& rhs) const {
 }
 
 
+void ValueFactor::set(std::shared_ptr<ValueExpr> const& valueExpr) {
+    _reset();
+    _valueExpr = valueExpr;
+    _type = EXPR;
+}
+
+
+void ValueFactor::_reset() {
+    _type = NONE;
+    _columnRef.reset();
+    _funcExpr.reset();
+    _valueExpr.reset();
+    _constVal.clear();
+}
+
+
 }}} // namespace lsst::qserv::query

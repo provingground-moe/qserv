@@ -206,6 +206,7 @@ std::string QuerySession::getProxyOrderBy() const {
     if (_stmt->hasOrderBy()) {
         orderBy = _stmt->getOrderBy().sqlFragment();
     }
+    LOGS(_log, LOG_LVL_TRACE, "getProxyOrderBy: " << orderBy);
     return orderBy;
 }
 

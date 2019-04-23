@@ -117,6 +117,13 @@ void ColumnRef::setColumn(std::string const& column) {
 }
 
 
+void ColumnRef::set(std::string const& db, std::string const& table, std::string const& column) {
+    setDb(db);
+    setTable(table);
+    setColumn(column);
+}
+
+
 void ColumnRef::renderTo(QueryTemplate& qt) const {
     qt.append(*this);
 }

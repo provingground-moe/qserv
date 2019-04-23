@@ -44,6 +44,7 @@
 #include "query/DbTablePair.h"
 #include "query/FromList.h"
 #include "query/TableAlias.h"
+#include "query/ValueExpr.h"
 #include "global/stringTypes.h"
 
 
@@ -94,6 +95,9 @@ public:
 
     // Table aliasing
     TableAliases tableAliases;
+
+    // Select List aliasing
+    SelectListAliases selectListAliases;
 
     // Owned QueryMapping and query restrictors
     std::shared_ptr<qana::QueryMapping> queryMapping;

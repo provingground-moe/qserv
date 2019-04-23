@@ -70,6 +70,7 @@ public:
     void setDb(std::string const& db);
     void setTable(std::string const& table);
     void setColumn(std::string const& column);
+    void set(std::string const& db, std::string const& table, std::string const& column);
 
     friend std::ostream& operator<<(std::ostream& os, ColumnRef const& cr);
     friend std::ostream& operator<<(std::ostream& os, ColumnRef const* cr);

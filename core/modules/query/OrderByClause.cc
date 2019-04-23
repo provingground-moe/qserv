@@ -104,7 +104,7 @@ OrderByTerm::renderTo(QueryTemplate& qt) const {
 
 std::string OrderByTerm::sqlFragment() const {
     std::string str;
-    str += _expr->sqlFragment();
+    str += _expr->sqlFragment(true); // true, to prefer alias over actual value.
     if (!_collate.empty()) {
         str += " COLLATE " + _collate;
     }

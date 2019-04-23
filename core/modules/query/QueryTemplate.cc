@@ -158,4 +158,15 @@ QueryTemplate::clear() {
 }
 
 
+void QueryTemplate::setAliasMode(AliasMode aliasMode) {
+    _aliasMode = aliasMode;
+}
+
+
+QueryTemplate::AliasMode QueryTemplate::getAliasMode() const {
+    return _aliasMode;
+}
+
+
+
 }}} // namespace lsst::qserv::query

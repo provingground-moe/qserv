@@ -314,9 +314,10 @@ ValueExprPtr ValueExpr::clone() const {
  *
  * @return a string representation of the object
  */
-std::string ValueExpr::sqlFragment() const {
+std::string ValueExpr::sqlFragment(bool preferAlias) const {
     // Reuse QueryTemplate-based rendering
     QueryTemplate qt;
+    qt.setAliasMode(preferAlias ? QueryTemplate::USE : QueryTemplate::DEFINE);
     ValueExpr::render render(qt, false);
     render.applyToQT(this);
     std::ostringstream os;
@@ -344,6 +345,12 @@ std::ostream& operator<<(std::ostream& os, ValueExpr const* ve) {
 // ValueExpr::render
 ////////////////////////////////////////////////////////////////////////
 void ValueExpr::render::applyToQT(ValueExpr const& ve) {
+
+    if (_qt.getAliasMode() == QueryTemplate::USE && ve.hasAlias()) {
+        _qt.append("`" + ve._alias + "`");
+        return;
+    }
+
     if (_needsComma && _count++ > 0) { _qt.append(","); }
     ValueFactor::render render(_qt);
     bool needsClose = false;
@@ -379,14 +386,27 @@ void ValueExpr::render::applyToQT(ValueExpr const& ve) {
     if (needsClose) { // Need closing parenthesis
         _qt.append(")");
     }
-    if (!ve._alias.empty()) { _qt.append("AS"); _qt.append(ve._alias); }
+    if (!ve._alias.empty()) { _qt.append("AS"); _qt.append("`" + ve._alias + "`"); }
 }
 
 
 bool ValueExpr::operator==(const ValueExpr& rhs) const {
-    return (_alias == rhs._alias &&
-            _factorOps == rhs._factorOps);
+    return (_alias == rhs._alias && compareValue(rhs));
 }
+
+
+bool ValueExpr::compareValue(const ValueExpr& rhs) const {
+    return _factorOps == rhs._factorOps;
+}
+
+
+bool ValueExpr::isConstVal() const {
+    if (_factorOps.size() == 1 && _factorOps[0].factor->isConstVal()) {
+        return true;
+    }
+    return false;
+}
+
 
 
 // Miscellaneous

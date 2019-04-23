@@ -64,9 +64,10 @@ typedef std::shared_ptr<ValueFactor> ValueFactorPtr;
 /// logical (i.e. a column name) or physical (a constant number or value).
 class ValueFactor {
 public:
-    enum Type { COLUMNREF, FUNCTION, AGGFUNC, STAR, CONST, EXPR };
+    enum Type { NONE, COLUMNREF, FUNCTION, AGGFUNC, STAR, CONST, EXPR };
     static std::string getTypeString(Type t) {
         switch(t) {
+        case NONE:      return "NONE";
         case COLUMNREF: return "COLUMNREF";
         case FUNCTION:  return "FUNCTION";
         case AGGFUNC:   return "AGGFUNC";
@@ -99,6 +100,7 @@ public:
 
     std::string const& getConstVal() const { return _constVal; }
     void setConstVal(std::string const& a) { _constVal = a; }
+    bool isConstVal() const { return not _constVal.empty(); }
 
     void findColumnRefs(ColumnRef::Vector& vector) const;
 
@@ -121,8 +123,15 @@ public:
 
     bool operator==(const ValueFactor& rhs) const;
 
+    /// Assign a new ValueExpr to this object, any previous parameters will be cleared.
+    void set(std::shared_ptr<ValueExpr> const& valueExpr);
+
 private:
-    Type _type;
+
+    /// Clear this object - drop all its parameters
+    void _reset();
+
+    Type _type{NONE};
     std::shared_ptr<ColumnRef> _columnRef;
     std::shared_ptr<FuncExpr> _funcExpr;
     std::shared_ptr<ValueExpr> _valueExpr;
