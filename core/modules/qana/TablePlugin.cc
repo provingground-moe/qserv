@@ -256,6 +256,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     std::for_each(fromListTableRefs.begin(), fromListTableRefs.end(), aliasSetter);
 
 
+    // nptodo implement this using using the TableAliases class.
     // // Patch table references in the select list,
     // LOGS(_log, LOG_LVL_TRACE, "SelectList:");
     // query::SelectList& selectlist = stmt.getSelectList();

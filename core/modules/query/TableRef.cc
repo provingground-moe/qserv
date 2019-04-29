@@ -35,6 +35,7 @@
 // System headers
 #include <algorithm>
 #include <sstream>
+#include <stdexcept>
 
 // LSST headers
 #include "lsst/log/Log.h"
@@ -95,7 +96,6 @@ TableRef::TableRef(std::string const& db_, std::string const& table_, std::strin
         throw std::logic_error("table must be populated when db is populated.");
     }
 }
-
 
 
 bool TableRef::hasDb() const {
@@ -265,6 +265,20 @@ bool TableRef::operator==(const TableRef& rhs) const {
            _db == rhs._db &&
            _table == rhs._table &&
            util::vectorPtrCompare<JoinRef>(_joinRefs, rhs._joinRefs);
+}
+
+
+bool TableRef::operator<(const TableRef& rhs) const {
+    if (not _joinRefs.empty() || not rhs._joinRefs.empty()) {
+        // I'm not really convinced that TableRefs should own JoinRefs. Shouldn't it be the other way around?
+        throw std::logic_error("unsupported less than operator for TableRef with JoinRefs.");
+    }
+    auto&& self = std::tie(_db, _table, _alias);
+    auto&& other = std::tie(rhs._db, rhs._table, rhs._alias);
+    if (self < other) {
+        return true;
+    }
+    return false;
 }
 
 

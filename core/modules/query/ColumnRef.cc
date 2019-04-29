@@ -42,10 +42,15 @@
 // Qserv headers
 #include "query/TableRef.h"
 #include "query/QueryTemplate.h"
+#include "query/TableRef.h"
 
 
 namespace {
-    LOG_LOGGER _log = LOG_GET("lsst.qserv.query.ColumnRef");
+
+LOG_LOGGER _log = LOG_GET("lsst.qserv.query.ColumnRef");
+
+typedef std::tuple<lsst::qserv::query::TableRefBase const&, std::string const&> TableRefStringTuple;
+
 }
 
 
@@ -73,14 +78,13 @@ std::ostream& operator<<(std::ostream& os, ColumnRef const* cr) {
 }
 
 
-ColumnRef::ColumnRef(std::string db, std::string table, std::string column)
-    : _tableRef(std::make_shared<TableRef>(db, table, "")), _column(column)
-{}
-
-
 ColumnRef::Ptr ColumnRef::newShared(std::string const& db, std::string const& table,
         std::string const& column) {
     return std::make_shared<ColumnRef>(db, table, column);
+}
+
+ColumnRef::ColumnRef(std::string db_, std::string table_, std::string column_)
+    : _tableRef(std::make_shared<TableRef>(db_, table_, "")), _column(column_) {
 }
 
 
@@ -132,7 +136,7 @@ void ColumnRef::renderTo(QueryTemplate& qt) const {
 bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
     // the columns can not be empty
     if (_column.empty() || rhs->_column.empty()) {
-        return false;
+        throw logic_error("Column ref should not have an empty column name.");
     }
     if (not _tableRef->isSubsetOf(rhs->_tableRef)) {
         return false;

@@ -43,6 +43,7 @@ namespace qserv {
 namespace query {
     class TableRef;
     class QueryTemplate;
+    class TableRef;
 }}} // End of forward declarations
 
 
