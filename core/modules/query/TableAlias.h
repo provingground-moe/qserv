@@ -40,16 +40,9 @@
 
 // Local headers
 #include "query/DbTablePair.h"
+#include "query/TableRef.h"
 #include "query/ValueExpr.h"
 #include "query/ValueFactor.h"
-
-
-// forward declarations
-namespace lsst {
-namespace qserv {
-namespace query {
-    class TableRef;
-}}}
 
 
 namespace lsst {
@@ -142,56 +135,13 @@ public:
 
 
 // nptodo this can probably get factored into Aliases. Maybe Aliases wants its own file?
-class TableAliases {
+class TableAliases : public Aliases<std::shared_ptr<TableRefBase>> {
 public:
     TableAliases() = default;
-
-    /// Add an alias for a given db + table
-    bool set(std::string const& db, std::string const& table, std::string const& alias);
-
-    /// Add an alias provided by a table ref
-    bool set(std::shared_ptr<TableRef> const& tableRef);
-
-    /// Get a db + table for an alias
-    DbTablePair get(std::string const& alias) const;
-
-    /// Get an alias for a db + table
-    std::string const get(std::string db, std::string table) const;
-
-    /// Get an alias for a DbTablePair (a.k.a. a db + table)
-    std::string const get(DbTablePair const& dbTablePair) const;
 
     // nptodo ? might need to add support for an "ambiguous" lookup (or set?), something to do with the
     // db not being set, or the alias not being set? the impl in TableAliasReverse looks wrong or I don't
     // understand it yet. TBD if we run into this as an issue maybe it was never actually used.
-
-private:
-    struct TableAlias {
-        std::string alias;
-        DbTablePair dbTablePair;
-        TableAlias(std::string alias_, DbTablePair dbTablePair_)
-        : alias(alias_), dbTablePair(dbTablePair_)
-        {}
-    };
-
-    struct ByAlias{};
-    struct ByDbTablePair{};
-
-    typedef boost::multi_index::multi_index_container<
-        TableAlias,
-        boost::multi_index::indexed_by<
-            boost::multi_index::ordered_unique<
-                boost::multi_index::tag<ByAlias>,
-                boost::multi_index::member<TableAlias, std::string, &TableAlias::alias>
-            >,
-            boost::multi_index::ordered_non_unique<
-                boost::multi_index::tag<ByDbTablePair>,
-                boost::multi_index::member<TableAlias, DbTablePair, &TableAlias::dbTablePair>
-            >
-        >
-    > TableAliasSet;
-
-    TableAliasSet tableAliasSet;
 };
 
 

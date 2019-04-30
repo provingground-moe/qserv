@@ -35,42 +35,4 @@ namespace qserv {
 namespace query {
 
 
-DbTablePair TableAliases::get(std::string const& alias) const {
-    auto&& itr = tableAliasSet.get<ByAlias>().find(alias);
-    if (itr != tableAliasSet.end()) {
-        return itr->dbTablePair;
-    }
-    return DbTablePair();
-}
-
-
-bool TableAliases::set(std::string const& db, std::string const& table, std::string const& alias) {
-    return tableAliasSet.insert(TableAlias(alias, DbTablePair(db, table))).second;
-}
-
-
-bool TableAliases::set(std::shared_ptr<TableRef> const& tableRef) {
-    if (nullptr == tableRef) {
-        return false;
-    }
-    return set(tableRef->getDb(), tableRef->getTable(), tableRef->getAlias());
-}
-
-
-std::string const TableAliases::get(std::string db, std::string table) const {
-    return get(DbTablePair(db, table));
-}
-
-
-std::string const TableAliases::get(DbTablePair const& dbTablePair) const {
-    //TableAliasSet::index<ByDbTablePair>::type::const_iterator itr =
-    auto&& itr = tableAliasSet.get<ByDbTablePair>().find(dbTablePair);
-    if (itr != tableAliasSet.get<ByDbTablePair>().end()) {
-        return itr->alias;
-    }
-    return std::string();
-}
-
-
-
 }}} // namespace lsst::qserv::query

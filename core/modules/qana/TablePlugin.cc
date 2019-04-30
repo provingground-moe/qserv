@@ -134,11 +134,20 @@ private:
         auto&& ref = valueFactor.getColumnRef();
         auto&& aliasPair = _selectListAliases.getAliasFor(*ref);
         if (not aliasPair.first.empty()) {
+            // replace the ValueExpr in the ValueFactor with one that is aliased, and is the one in the
+            // SelectList (nptodo this is right, right?)
             LOGS(_log, LOG_LVL_TRACE, "changing ColumnRef from: " << ref);
             valueFactor.set(aliasPair.second);
             LOGS(_log, LOG_LVL_TRACE, "changed ColumnRef to:    " << ref);
             return;
         }
+
+        // nptodo
+        // TableRefs from the FROM list are in the _tableAlias container.
+        // All the ColumnRefs need to be patched; replace the embedded TableRefBase with the one from the
+        // container, which comes from the from list.
+        // But first, ColumnRef needs to use TableRefBase instead of having its own db and table.
+
         std::string newAlias = _getAlias(ref->getDb(), ref->getTable());
         if (newAlias.empty()) {
             return; // Ignore if no replacement exists.
@@ -154,6 +163,11 @@ private:
     }
 
     void _patchStar(query::ValueFactor& vt) {
+        // nptodo I need to understand why the star was using alias for this.
+        // I *think* the need comes from wanting to put a default db, plus table
+        // name onto the *. I wonder if the alias was the right way to do that, or
+        // if it was a hack that Just Worked?
+
         // TODO: No support for <db>.<table>.* in framework
         // Only <table>.* is supported.
         std::string newAlias = _getAlias("", vt.getConstVal());
@@ -232,7 +246,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
         if (not tableRef->hasAlias()) {
             tableRef->setAlias("`" + tableRef->getDb() + "." + tableRef->getTable() + "`");
         }
-        if (not context.tableAliases.set(tableRef)) {
+        if (not context.tableAliases.set(tableRef, tableRef.getAlias())) {
             throw std::logic_error("could not set alias for " + tableRef->sqlFragment());
         }
         for (auto&& joinRef : tableRef->getJoins()){
