@@ -35,4 +35,19 @@ namespace qserv {
 namespace query {
 
 
+std::pair<std::string, std::shared_ptr<query::TableRefBase>>
+TableAliases::getAliasFor(std::string const& db, std::string const& table) const {
+    for (auto&& aliasInfo : _aliasInfo) {
+        if (not db.empty() && db != aliasInfo.object->getDb()) {
+            continue;
+        }
+        if (table != aliasInfo.object->getTable()) {
+            continue;
+        }
+        return std::make_pair(aliasInfo.alias, aliasInfo.object);
+    }
+    return std::make_pair(std::string(), nullptr);
+}
+
+
 }}} // namespace lsst::qserv::query

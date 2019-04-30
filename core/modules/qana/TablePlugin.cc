@@ -178,7 +178,7 @@ private:
 
     std::string _getAlias(std::string const& db,
                           std::string const& table) {
-        return _tableAliases.get(db.empty() ? _defaultDb : db, table);
+        return _tableAliases.getAliasFor(db.empty() ? _defaultDb : db, table).first;
     }
 
     std::string const& _defaultDb;
@@ -246,7 +246,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
         if (not tableRef->hasAlias()) {
             tableRef->setAlias("`" + tableRef->getDb() + "." + tableRef->getTable() + "`");
         }
-        if (not context.tableAliases.set(tableRef, tableRef.getAlias())) {
+        if (not context.tableAliases.set(tableRef, tableRef->getAlias())) {
             throw std::logic_error("could not set alias for " + tableRef->sqlFragment());
         }
         for (auto&& joinRef : tableRef->getJoins()){

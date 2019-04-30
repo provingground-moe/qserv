@@ -84,7 +84,12 @@ ColumnRef::Ptr ColumnRef::newShared(std::string const& db, std::string const& ta
 }
 
 ColumnRef::ColumnRef(std::string db_, std::string table_, std::string column_)
-    : _tableRef(std::make_shared<TableRef>(db_, table_, "")), _column(column_) {
+    : _tableRef(std::make_shared<TableRefBase>(db_, table_, "")), _column(column_) {
+}
+
+
+ColumnRef::ColumnRef(std::shared_ptr<TableRefBase> const& table, std::string const& column)
+    : _tableRef(table), _column(column) {
 }
 
 

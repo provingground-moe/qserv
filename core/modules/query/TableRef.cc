@@ -268,20 +268,6 @@ bool TableRef::operator==(const TableRef& rhs) const {
 }
 
 
-bool TableRef::operator<(const TableRef& rhs) const {
-    if (not _joinRefs.empty() || not rhs._joinRefs.empty()) {
-        // I'm not really convinced that TableRefs should own JoinRefs. Shouldn't it be the other way around?
-        throw std::logic_error("unsupported less than operator for TableRef with JoinRefs.");
-    }
-    auto&& self = std::tie(_db, _table, _alias);
-    auto&& other = std::tie(rhs._db, rhs._table, rhs._alias);
-    if (self < other) {
-        return true;
-    }
-    return false;
-}
-
-
 void TableRef::getRelatedDbTableInfo(std::vector<DbTablePair>& dbTablePairs) const {
     dbTablePairs.emplace_back(DbTablePair(_db, _table));
     for (auto&& joinRef : _joinRefs) {

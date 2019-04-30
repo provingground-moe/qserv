@@ -43,7 +43,7 @@ namespace qserv {
 namespace query {
     class TableRef;
     class QueryTemplate;
-    class TableRef;
+    class TableRefBase;
 }}} // End of forward declarations
 
 
@@ -87,7 +87,7 @@ public:
     bool operator<(const ColumnRef& rhs) const;
 
 private:
-    std::shared_ptr<TableRef> _tableRef;
+    std::shared_ptr<TableRefBase> _tableRef;
     std::string _column;
 };
 

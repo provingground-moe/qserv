@@ -132,8 +132,6 @@ public:
      */
     void verifyPopulated(std::string const& defaultDb=std::string());
 
-    bool isSubsetOf(TableRef const& rhs) const override { throw logic_error("not supported"); };
-
     TableRef::Ptr clone() const;
 
     // Returns true if the fields in rhs have the same values as the fields in this, without considering
@@ -143,17 +141,6 @@ public:
     bool isSubsetOf(std::shared_ptr<TableRef> const& rhs);
 
     bool operator==(const TableRef& rhs) const;
-
-    /**
-     * @brief less than operator for TableRef. DOES NOT SUPPORT JOIN.
-     *
-     * Will throw a logic_error if used on a TableRef that has joinRefs.
-     *
-     * @param rhs
-     * @return true
-     * @return false
-     */
-    bool operator<(const TableRef& rhs) const;
 
     class render;
 private:

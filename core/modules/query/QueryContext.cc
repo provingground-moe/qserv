@@ -131,8 +131,9 @@ DbTableSet QueryContext::resolve(std::shared_ptr<ColumnRef> cr) {
 
     // If alias, retrieve real reference.
     if (cr->getDb().empty() && !cr->getTable().empty()) {
-        DbTablePair concrete = tableAliases.get(cr->getTable());
-        if (!concrete.empty()) {
+        auto tableRefBase = tableAliases.getAliasFor("", cr->getTable()).second;
+        if (tableRefBase != nullptr) {
+            DbTablePair concrete(tableRefBase->getDb(), tableRefBase->getTable());
             if (concrete.db.empty()) {
                 concrete.db = defaultDb;
             }
@@ -140,6 +141,8 @@ DbTableSet QueryContext::resolve(std::shared_ptr<ColumnRef> cr) {
             return dbTableSet;
         }
     }
+
+
     // Set default db and table.
     DbTablePair p;
     if (cr->getTable().empty()) { // No db or table.
