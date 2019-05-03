@@ -68,6 +68,9 @@ public:
     std::string const& getTable() const;
     std::string const& getColumn() const;
 
+    std::shared_ptr<TableRefBase> getTableRef() const;
+    std::shared_ptr<TableRefBase>& getTableRef();
+
     void setDb(std::string const& db);
     void setTable(std::string const& table);
     void setColumn(std::string const& column);

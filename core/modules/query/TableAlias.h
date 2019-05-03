@@ -152,6 +152,18 @@ public:
     std::pair<std::string, std::shared_ptr<query::TableRefBase>>
     getAliasFor(std::string const& db, std::string const& table) const;
 
+
+    /**
+     * @brief Get a table ref that is a superset of the passed in tableRef
+     *
+     * That is, the passed in tableRef->isSubset(<a table ref in the container>);
+     *
+     * @param tableRef
+     * @return std::shared_ptr<query::TableRefBase>
+     */
+    std::shared_ptr<query::TableRefBase> getTableRefMatch(std::shared_ptr<query::TableRefBase> const& tableRef);
+
+
     // nptodo ? might need to add support for an "ambiguous" lookup (or set?), something to do with the
     // db not being set, or the alias not being set? the impl in TableAliasReverse looks wrong or I don't
     // understand it yet. TBD if we run into this as an issue maybe it was never actually used.

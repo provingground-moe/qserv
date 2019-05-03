@@ -186,6 +186,7 @@ private:
     query::SelectListAliases const& _selectListAliases;
 };
 
+
 ////////////////////////////////////////////////////////////////////////
 // TablePlugin implementation
 ////////////////////////////////////////////////////////////////////////
@@ -255,6 +256,20 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     };
     std::for_each(fromListTableRefs.begin(), fromListTableRefs.end(), aliasSetter);
 
+    // make the TableRef ptrs in the SELECT list point to TableRefs in the FROM list
+    query::SelectList& selectlist = stmt.getSelectList();
+    auto&& selectListValueExprs = selectlist.getValueExprList();
+    for (auto&& valueExpr : *selectListValueExprs) {
+        std::vector<std::shared_ptr<query::ColumnRef>> columnRefs;
+        valueExpr->findColumnRefs(columnRefs);
+        for (auto&& columnRef : columnRefs) {
+            std::shared_ptr<query::TableRefBase>& tableRef = columnRef->getTableRef();
+            auto&& tableRefMatch = context.tableAliases.getTableRefMatch(tableRef);
+            if (nullptr != tableRefMatch) {
+                tableRef = tableRefMatch;
+            }
+        }
+    }
 
     // nptodo implement this using using the TableAliases class.
     // // Patch table references in the select list,

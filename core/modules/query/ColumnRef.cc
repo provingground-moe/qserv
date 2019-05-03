@@ -108,6 +108,16 @@ std::string const& ColumnRef::getColumn() const {
 }
 
 
+std::shared_ptr<TableRefBase> ColumnRef::getTableRef() const {
+    return _tableRef;
+}
+
+
+std::shared_ptr<TableRefBase>& ColumnRef::getTableRef() {
+    return _tableRef;
+}
+
+
 void ColumnRef::setDb(std::string const& db) {
     LOGS(_log, LOG_LVL_TRACE, *this << "; set db:" << db);
     _tableRef->setDb(db);

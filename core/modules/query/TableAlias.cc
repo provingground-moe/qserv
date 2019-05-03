@@ -50,4 +50,18 @@ TableAliases::getAliasFor(std::string const& db, std::string const& table) const
 }
 
 
+std::shared_ptr<query::TableRefBase>
+TableAliases::getTableRefMatch(std::shared_ptr<query::TableRefBase> const& tableRef) {
+    for (auto&& aliasInfo : _aliasInfo) {
+        if (tableRef->isSubsetOf(*aliasInfo.object)) {
+            return aliasInfo.object;
+        }
+        if (tableRef->isAliasedBy(*aliasInfo.object)) {
+            return aliasInfo.object;
+        }
+    }
+    return nullptr;
+}
+
+
 }}} // namespace lsst::qserv::query
