@@ -218,6 +218,23 @@ bool ValueFactor::operator==(const ValueFactor& rhs) const {
 }
 
 
+bool ValueFactor::isSubsetOf(ValueFactor const& rhs) const {
+    if (_type != rhs._type)
+        return false;
+    switch(_type) {
+        default: throw std::logic_error("unhandled factor op type");
+        case NONE:      return true;
+        case COLUMNREF: return _columnRef->isSubsetOf(rhs._columnRef);
+        case FUNCTION:  return _funcExpr->isSubsetOf(*rhs._funcExpr);
+        case AGGFUNC:   return _funcExpr->isSubsetOf(*rhs._funcExpr);
+        case STAR:      return _constVal == rhs._constVal; // (in some cases STAR puts a value in _constVal)
+        case CONST:     return _constVal == rhs._constVal;
+        case EXPR:      return _valueExpr->isSubsetOf(*rhs._valueExpr);
+        // nptodo/next go thru the above types and implement isSubsetOf as needed
+    }
+}
+
+
 void ValueFactor::set(std::shared_ptr<ValueExpr> const& valueExpr) {
     _reset();
     _valueExpr = valueExpr;

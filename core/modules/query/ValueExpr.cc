@@ -54,6 +54,7 @@
 #include "query/QueryTemplate.h"
 #include "query/ValueFactor.h"
 #include "util/IterableFormatter.h"
+#include "util/PointerCompare.h"
 
 
 namespace {
@@ -114,6 +115,13 @@ std::ostream& operator<<(std::ostream& os, const ValueExpr::FactorOp& factorOp) 
 
 bool ValueExpr::FactorOp::operator==(const FactorOp& rhs) const {
     return util::ptrCompare<ValueFactor>(factor, rhs.factor) && op == rhs.op;
+}
+
+
+bool ValueExpr::FactorOp::isSubsetOf(FactorOp const& rhs) const {
+    if (op != rhs.op)
+        return false;
+    return factor->isSubsetOf(*rhs.factor);
 }
 
 
@@ -307,6 +315,13 @@ ValueExprPtr ValueExpr::clone() const {
         ti->factor = i->factor->clone();
     }
     return expr;
+}
+
+
+bool ValueExpr::isSubsetOf(ValueExpr const& valueExpr) const {
+    if (not _alias.empty() && _alias != valueExpr._alias)
+        return false;
+    return util::isSubsetOf(_factorOps, valueExpr._factorOps);
 }
 
 

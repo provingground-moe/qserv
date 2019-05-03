@@ -35,6 +35,18 @@ namespace qserv {
 namespace query {
 
 
+std::shared_ptr<query::ValueExpr>
+SelectListAliases::getValueExprMatch(std::shared_ptr<query::ValueExpr const> const& valExpr) const {
+    for (auto&& aliasInfo : _aliasInfo) {
+        if (valExpr->isSubsetOf(*aliasInfo.object)) {
+            return aliasInfo.object;
+        }
+    }
+    return nullptr;
+}
+
+
+
 std::pair<std::string, std::shared_ptr<query::TableRefBase>>
 TableAliases::getAliasFor(std::string const& db, std::string const& table) const {
     for (auto&& aliasInfo : _aliasInfo) {

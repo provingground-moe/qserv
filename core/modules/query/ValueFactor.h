@@ -126,6 +126,9 @@ public:
     /// Assign a new ValueExpr to this object, any previous parameters will be cleared.
     void set(std::shared_ptr<ValueExpr> const& valueExpr);
 
+    // determine if this object is the same as or a less complete description of the passed in object.
+    bool isSubsetOf(ValueFactor const& rhs) const;
+
 private:
 
     /// Clear this object - drop all its parameters

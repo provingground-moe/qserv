@@ -131,6 +131,17 @@ public:
         }
         return std::make_pair(std::string(), nullptr);
     }
+
+    /**
+     * @brief Get a ValueExpr from the list of ValueExprs used in the SELECT statement that matches a given
+     *        ValueExpr.
+     *
+     * @param valExpr the expr to match
+     * @return std::shared_ptr<query::ValueExpr> that matching expr from the SELECT list, or nullptr
+     */
+    std::shared_ptr<query::ValueExpr> getValueExprMatch(
+        std::shared_ptr<query::ValueExpr const> const& valExpr) const;
+
 };
 
 

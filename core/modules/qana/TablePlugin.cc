@@ -198,7 +198,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     context.collectTopLevelTableSchema(fromList);
 
     // for each top-level ValueExpr in the SELECT list that does not have an alias, assign an alias that
-    // matches the original user query.
+    // matches the original user query and add that item to the selectListAlias list.
     for (auto& valueExpr : *(stmt.getSelectList().getValueExprList())) {
         if (not valueExpr->hasAlias() && not valueExpr->isStar())
             valueExpr->setAlias(valueExpr->sqlFragment(false));
@@ -278,6 +278,24 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     // query::ValueExprPtrVector& exprList = *selectlist.getValueExprList();
     // std::for_each(exprList.begin(), exprList.end(), fixExprAlias(
     //     context.defaultDb, context.tableAliases, context.selectListAliases));
+
+    // order by, group by, and having need to be in the select list and identified the same way.
+    // where and from will not be returned and do not require same-identification (but do downstream
+    // plugins require it?)
+    // order by clause,
+    if (stmt.hasOrderBy()) {
+        query::ValueExprPtrVector valueExprs;
+        stmt.getOrderBy().findValueExprs(valueExprs);
+        for (auto&& valueExpr : valueExprs) {
+            auto&& valueExprMatch = context.selectListAliases.getValueExprMatch(valueExpr);
+            if (nullptr != valueExprMatch) {
+                valueExpr = valueExprMatch;
+            }
+        }
+    }
+
+
+
 
     // where clause,
     LOGS(_log, LOG_LVL_TRACE, "WhereClause:");

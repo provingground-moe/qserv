@@ -76,6 +76,7 @@ public:
         std::shared_ptr<ValueFactor> factor;
         Op op;
         bool operator==(const FactorOp& rhs) const;
+        bool isSubsetOf(FactorOp const& rhs) const;
     };
     typedef std::vector<FactorOp> FactorOpVector;
     friend std::ostream& operator<<(std::ostream& os, FactorOp const& fo);
@@ -157,6 +158,9 @@ public:
     // nptodo in some cases a ValueExpr can be a parent of ValueExprs, we need to be able to get *all* the
     // ValueExprs rescursively for alias patching (and maybe to replace functional verification code in the
     // plugins? TBD.)
+
+    // determine if this object is the same as or a less complete description of the passed in object.
+    bool isSubsetOf(ValueExpr const& valueExpr) const;
 
 private:
     std::string _alias;
