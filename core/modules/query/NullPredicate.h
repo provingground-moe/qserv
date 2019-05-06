@@ -60,8 +60,9 @@ public:
 
     ~NullPredicate() override = default;
 
-    char const* getName() const override { return "NullPredicate"; }
+    char const* getName() const { return "NullPredicate"; }
     void findValueExprs(std::vector<std::shared_ptr<ValueExpr>>& vector) const override;
+    void findValueExprRefs(ValueExprPtrRefVector& vector) override;
     void findColumnRefs(std::vector<std::shared_ptr<ColumnRef>>& vector) const override;
     std::ostream& putStream(std::ostream& os) const override;
     void renderTo(QueryTemplate& qt) const override;

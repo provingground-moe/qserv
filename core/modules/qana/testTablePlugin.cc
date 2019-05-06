@@ -90,10 +90,28 @@ void REQUIRE_IS_COLUMN_REF(std::vector<std::shared_ptr<query::ValueExpr>> const&
     }
 }
 
+std::vector<std::string> statements_1 {
+    "SELECT        objectId FROM Object ORDER BY        objectId",
+    "SELECT        objectId FROM Object ORDER BY Object.objectId",
+    "SELECT Object.objectId FROM Object ORDER BY        objectId",
+    "SELECT Object.objectId FROM Object ORDER BY Object.objectId",
 
-BOOST_AUTO_TEST_CASE(PluginRewrite_1) {
-    auto&& selectStmt = makeStmtAndRunLogical("SELECT o.objectId FROM Object o ORDER BY o.objectId",
-            css, schemaCfg);
+    "SELECT o.objectId FROM Object o ORDER BY o.objectId",
+    "SELECT   objectId FROM Object o ORDER BY o.objectId",
+    "SELECT o.objectId FROM Object o ORDER BY   objectId",
+    "SELECT   objectId FROM Object o ORDER BY   objectId",
+
+    "SELECT Object.objectId FROM Object o ORDER BY      o.objectId",
+    "SELECT        objectId FROM Object o ORDER BY Object.objectId",
+
+};
+
+
+// Test that the SelectStmt is rewritten by the TablePlugin so that the TableRef in the FROM list is the
+// same as the one in the SELECT list, and that the ValueExpr in the SELECT list is the same as the one
+// in the ORDER BY clause.
+BOOST_DATA_TEST_CASE(PluginRewrite_1, statements_1, statement) {
+    auto&& selectStmt = makeStmtAndRunLogical(statement, css, schemaCfg);
 
     // verify there is 1 value expr in the select list, and that it's a ColumnRef.
     auto&& selValExprList = *selectStmt->getSelectList().getValueExprList();
@@ -110,9 +128,7 @@ BOOST_AUTO_TEST_CASE(PluginRewrite_1) {
     selectStmt->getOrderBy().findValueExprs(orderByValExprList);
     BOOST_REQUIRE_EQUAL(orderByValExprList.size(), size_t(1));
     // below is a pointer compare, not value compare; verify they point at the same object.
-    BOOST_REQUIRE_EQUAL(selColRef, orderByValExprList[0]->getColumnRef());
-
-    // TODO check that the column ref's tableRef is the same as in the FROM clause
+    BOOST_REQUIRE_EQUAL(selValExprList[0], orderByValExprList[0]);
 }
 
 

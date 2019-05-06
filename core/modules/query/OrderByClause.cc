@@ -203,6 +203,13 @@ void OrderByClause::findValueExprs(ValueExprPtrVector& list) const {
 }
 
 
+void OrderByClause::findValueExprRefs(ValueExprPtrRefVector& list) {
+    for (auto&& orderByTerm : *_terms) {
+        list.push_back(orderByTerm.getExpr());
+    }
+}
+
+
 bool OrderByClause::operator==(const OrderByClause& rhs) const {
     return util::ptrVectorCompare<OrderByTerm>(_terms, rhs._terms);
 }

@@ -68,6 +68,8 @@
 #include "query/SelectStmt.h"
 #include "query/TableAlias.h"
 #include "query/TableRef.h"
+#include "query/typedefs.h"
+#include "query/ValueExpr.h"
 #include "query/ValueFactor.h"
 #include "query/WhereClause.h"
 #include "util/common.h"
@@ -75,7 +77,36 @@
 
 namespace {
 LOG_LOGGER _log = LOG_GET("lsst.qserv.qana.TablePlugin");
+
+template <typename CLAUSE_T>
+void matchValueExprs(lsst::qserv::query::QueryContext& context, CLAUSE_T & clause) {
+    lsst::qserv::query::ValueExprPtrRefVector valueExprRefs;
+    clause.findValueExprRefs(valueExprRefs);
+    for (auto&& valueExprRef : valueExprRefs) {
+        auto&& valueExprMatch = context.selectListAliases.getValueExprMatch(valueExprRef.get());
+        if (nullptr != valueExprMatch) {
+            valueExprRef.get() = valueExprMatch;
+        }
+    }
 }
+
+// make the TableRef ptrs in the given ValueExprs point to TableRefs in the FROM list
+void matchTableRefs(lsst::qserv::query::QueryContext& context,
+                    lsst::qserv::query::ValueExprPtrVector& valueExprs) {
+    for (auto&& valueExpr : valueExprs) {
+        std::vector<std::shared_ptr<lsst::qserv::query::ColumnRef>> columnRefs;
+        valueExpr->findColumnRefs(columnRefs);
+        for (auto&& columnRef : columnRefs) {
+            std::shared_ptr<lsst::qserv::query::TableRefBase>& tableRef = columnRef->getTableRef();
+            auto&& tableRefMatch = context.tableAliases.getTableRefMatch(tableRef);
+            if (nullptr != tableRefMatch) {
+                tableRef = tableRefMatch;
+            }
+        }
+    }
+}
+
+} // namespace
 
 namespace lsst {
 namespace qserv {
@@ -256,79 +287,32 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     };
     std::for_each(fromListTableRefs.begin(), fromListTableRefs.end(), aliasSetter);
 
-    // make the TableRef ptrs in the SELECT list point to TableRefs in the FROM list
+    // Select List
     query::SelectList& selectlist = stmt.getSelectList();
-    auto&& selectListValueExprs = selectlist.getValueExprList();
-    for (auto&& valueExpr : *selectListValueExprs) {
-        std::vector<std::shared_ptr<query::ColumnRef>> columnRefs;
-        valueExpr->findColumnRefs(columnRefs);
-        for (auto&& columnRef : columnRefs) {
-            std::shared_ptr<query::TableRefBase>& tableRef = columnRef->getTableRef();
-            auto&& tableRefMatch = context.tableAliases.getTableRefMatch(tableRef);
-            if (nullptr != tableRefMatch) {
-                tableRef = tableRefMatch;
-            }
-        }
-    }
-
-    // nptodo implement this using using the TableAliases class.
-    // // Patch table references in the select list,
-    // LOGS(_log, LOG_LVL_TRACE, "SelectList:");
-    // query::SelectList& selectlist = stmt.getSelectList();
-    // query::ValueExprPtrVector& exprList = *selectlist.getValueExprList();
-    // std::for_each(exprList.begin(), exprList.end(), fixExprAlias(
-    //     context.defaultDb, context.tableAliases, context.selectListAliases));
-
-    // order by, group by, and having need to be in the select list and identified the same way.
-    // where and from will not be returned and do not require same-identification (but do downstream
-    // plugins require it?)
-    // order by clause,
+    matchTableRefs(context, *selectlist.getValueExprList());
+    // OrderBy List
     if (stmt.hasOrderBy()) {
         query::ValueExprPtrVector valueExprs;
         stmt.getOrderBy().findValueExprs(valueExprs);
-        for (auto&& valueExpr : valueExprs) {
-            auto&& valueExprMatch = context.selectListAliases.getValueExprMatch(valueExpr);
-            if (nullptr != valueExprMatch) {
-                valueExpr = valueExprMatch;
-            }
-        }
+        matchTableRefs(context, valueExprs);
     }
 
-
-
-
-    // where clause,
-    LOGS(_log, LOG_LVL_TRACE, "WhereClause:");
-    if (stmt.hasWhereClause()) {
-        query::ValueExprPtrVector e;
-        stmt.getWhereClause().findValueExprs(e);
-        std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases, context.selectListAliases));
-    }
-    // group by clause,
-    LOGS(_log, LOG_LVL_TRACE, "GroupByClause:");
-    if (stmt.hasGroupBy()) {
-        query::ValueExprPtrVector e;
-        stmt.getGroupBy().findValueExprs(e);
-        std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases, context.selectListAliases));
-    }
-    // having clause,
-    LOGS(_log, LOG_LVL_TRACE, "HavingClause:");
-    if (stmt.hasHaving()) {
-        query::ValueExprPtrVector e;
-        stmt.getHaving().findValueExprs(e);
-        std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases, context.selectListAliases));
-    }
-    LOGS(_log, LOG_LVL_TRACE, "OrderByClause:");
-    // order by clause,
+    // ORDER BY, GROUP BY, and HAVING need to be in the select list and identified the same way.
+    // WHERE and FROM will not be returned and do not require same-identification (but do downstream
+    // plugins require equivalance/patching?)
     if (stmt.hasOrderBy()) {
-        query::ValueExprPtrVector e;
-        stmt.getOrderBy().findValueExprs(e);
-        std::for_each(e.begin(), e.end(), fixExprAlias(
-            context.defaultDb, context.tableAliases, context.selectListAliases));
+        matchValueExprs(context, stmt.getOrderBy());
     }
+    if (stmt.hasWhereClause()) {
+        matchValueExprs(context, stmt.getWhereClause());
+    }
+    if (stmt.hasGroupBy()) {
+        matchValueExprs(context, stmt.getGroupBy());
+    }
+    if (stmt.hasHaving()) {
+        matchValueExprs(context, stmt.getHaving());
+    }
+
     LOGS(_log, LOG_LVL_TRACE, "OnClauses of Join:");
     // and in the on clauses of all join specifications.
     for (auto&& tableRef : fromListTableRefs) {
@@ -340,9 +324,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
                 // so only patch on clauses.
                 auto&& onBoolTerm = joinSpec->getOn();
                 if (onBoolTerm) {
-                    query::ValueExprPtrVector valueExprs;
-                    onBoolTerm->findValueExprs(valueExprs);
-                    std::for_each(valueExprs.begin(), valueExprs.end(), fix);
+                    matchValueExprs(context, *onBoolTerm);
                 }
             }
         }
