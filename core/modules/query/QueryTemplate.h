@@ -101,15 +101,6 @@ public:
         virtual std::string getValue() const { return s; }
         std::string s;
     };
-    class TableEntry : public Entry {
-    public:
-        TableEntry(std::string const& db_, std::string const& table_)
-            : db(db_), table(table_) {}
-        virtual std::string getValue() const;
-        virtual bool isDynamic() const { return true; }
-        std::string db;
-        std::string table;
-    };
     /// An abstract mapping from entry to entry
     class EntryMapping {
     public:

@@ -367,7 +367,12 @@ void ValueExpr::render::applyToQT(ValueExpr const& ve) {
     }
 
     if (_needsComma && _count++ > 0) { _qt.append(","); }
+
+    // Even though we are defining this ValueExpr's alias, we still must USE the alias of any contained
+    // ValueFactor.
+    _qt.setAliasMode(QueryTemplate::USE);
     ValueFactor::render render(_qt);
+
     bool needsClose = false;
     if (!_isProtected && ve._factorOps.size() > 1) { // Need opening parenthesis
         _qt.append("(");
@@ -402,6 +407,7 @@ void ValueExpr::render::applyToQT(ValueExpr const& ve) {
         _qt.append(")");
     }
     if (!ve._alias.empty()) { _qt.append("AS"); _qt.append("`" + ve._alias + "`"); }
+    _qt.setAliasMode(QueryTemplate::DEFINE);
 }
 
 
