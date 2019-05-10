@@ -133,6 +133,9 @@ public:
     /// @return ORDER BY part of SELECT statement to be executed by proxy
     std::string getProxyOrderBy() const override;
 
+    /// @return get the SELECT part of the SELECT statement to be executed by proxy
+    std::string getResultSelectList() const override;
+
     std::string getQueryIdString() const override;
 
     /// @return this query's QueryId.

@@ -361,16 +361,19 @@ std::ostream& operator<<(std::ostream& os, ValueExpr const* ve) {
 ////////////////////////////////////////////////////////////////////////
 void ValueExpr::render::applyToQT(ValueExpr const& ve) {
 
+    if (_needsComma && _count++ > 0) { _qt.append(","); }
     if (_qt.getAliasMode() == QueryTemplate::USE && ve.hasAlias()) {
-        _qt.append("`" + ve._alias + "`");
+        _qt.append(ve._alias);
         return;
     }
+    auto previousAliasMode = _qt.getAliasMode();
 
-    if (_needsComma && _count++ > 0) { _qt.append(","); }
+    // If we are defining this ValueExpr's alias, we still must USE the alias of any contained ValueFactor.
+    // If the mode is DONT_USE then we can leave it as is.
+    if (_qt.getAliasMode() == QueryTemplate::DEFINE) {
+        _qt.setAliasMode(QueryTemplate::USE);
+    }
 
-    // Even though we are defining this ValueExpr's alias, we still must USE the alias of any contained
-    // ValueFactor.
-    _qt.setAliasMode(QueryTemplate::USE);
     ValueFactor::render render(_qt);
 
     bool needsClose = false;
@@ -406,8 +409,10 @@ void ValueExpr::render::applyToQT(ValueExpr const& ve) {
     if (needsClose) { // Need closing parenthesis
         _qt.append(")");
     }
-    if (!ve._alias.empty()) { _qt.append("AS"); _qt.append("`" + ve._alias + "`"); }
-    _qt.setAliasMode(QueryTemplate::DEFINE);
+    _qt.setAliasMode(previousAliasMode);
+    if (_qt.getAliasMode() == QueryTemplate::DEFINE) {
+        if (!ve._alias.empty()) { _qt.append("AS"); _qt.append(ve._alias); }
+    }
 }
 
 

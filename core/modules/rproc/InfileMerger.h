@@ -58,6 +58,7 @@ namespace qdisp {
     class MessageStore;
 }
 namespace query {
+    class ColumnRef;
     class SelectStmt;
 }
 namespace sql {
@@ -191,7 +192,12 @@ public:
     bool scrubResults(int jobId, int attempt);
     int makeJobIdAttempt(int jobId, int attemptCount);
 
-    bool makeResultsTableForQuery(query::SelectStmt const& stmt, std::string& errMsg);
+    /// Make the results table for the given query. If the query contains a star in the SELECT statement, the
+    /// names of the columns resulting from the star need to be known upstream, and so are filled into the
+    /// starColumns vector.
+    bool makeResultsTableForQuery(query::SelectStmt const& stmt,
+                                  std::vector<std::shared_ptr<query::ColumnRef>>& starColumns,
+                                  std::string& errMsg);
 
 private:
     bool _applyMysql(std::string const& query);

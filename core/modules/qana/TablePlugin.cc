@@ -94,6 +94,20 @@ void matchValueExprs(lsst::qserv::query::QueryContext& context, CLAUSE_T & claus
 void matchTableRefs(lsst::qserv::query::QueryContext& context,
                     lsst::qserv::query::ValueExprPtrVector& valueExprs) {
     for (auto&& valueExpr : valueExprs) {
+        if (valueExpr->isStar()) {
+            // is it "Table.*"? (or just "*")
+            auto&& tableName = valueExpr->getConstVal();
+            if (tableName.empty())
+                continue;
+            auto&& tableRefMatch = context.tableAliases.getTableRefMatch(tableRef);
+
+            // TODO/next I think I need to change Table.* to use a TableRef instead of .const (string).
+
+            if (nullptr != tableRefMatch) {
+                tableRef = tableRefMatch;
+            }
+        }
+
         std::vector<std::shared_ptr<lsst::qserv::query::ColumnRef>> columnRefs;
         valueExpr->findColumnRefs(columnRefs);
         for (auto&& columnRef : columnRefs) {
@@ -103,6 +117,7 @@ void matchTableRefs(lsst::qserv::query::QueryContext& context,
                 tableRef = tableRefMatch;
             }
         }
+
     }
 }
 
@@ -111,111 +126,6 @@ void matchTableRefs(lsst::qserv::query::QueryContext& context,
 namespace lsst {
 namespace qserv {
 namespace qana {
-
-
-////////////////////////////////////////////////////////////////////////
-// fixExprAlias is a functor that acts on ValueExpr objects and
-// modifys them in-place, altering table names to use an aliased name
-// that is mapped via TableAliases.
-// It does not add table qualifiers where none already exist, because
-// there is no compelling reason to do so (yet).
-////////////////////////////////////////////////////////////////////////
-class fixExprAlias {
-public:
-    fixExprAlias(std::string const& db, query::TableAliases const& tableAliases,
-                 query::SelectListAliases const& selectListAliases) :
-        _defaultDb(db), _tableAliases(tableAliases), _selectListAliases(selectListAliases) {}
-
-    void operator()(query::ValueExprPtr& valueExpr) {
-        if (nullptr == valueExpr)
-            return;
-
-        // For each factor in the expr, patch for aliasing:
-        query::ValueExpr::FactorOpVector& factorOps = valueExpr->getFactorOps();
-        for (auto&& factorOp : factorOps) {
-            if (nullptr == factorOp.factor) {
-                throw std::logic_error("Bad ValueExpr::FactorOps");
-            }
-            auto valueFactor = factorOp.factor;
-            switch(valueFactor->getType()) {
-            case query::ValueFactor::COLUMNREF:
-                // check columnref.
-                _patchColumnRef(*valueFactor);
-                break;
-            case query::ValueFactor::FUNCTION:
-            case query::ValueFactor::AGGFUNC:
-                // recurse for func params (aggfunc is special case of function)
-                _patchFuncExpr(*valueFactor->getFuncExpr());
-                break;
-            case query::ValueFactor::STAR:
-                // Patch db/table name if applicable
-                _patchStar(*valueFactor);
-                break;
-            case query::ValueFactor::CONST:
-                break; // Constants don't need patching.
-            default:
-                LOGS(_log, LOG_LVL_WARN, "Unhandled ValueFactor:" << *valueFactor);
-                break;
-            }
-        }
-    }
-
-private:
-    void _patchColumnRef(query::ValueFactor& valueFactor) {
-        auto&& ref = valueFactor.getColumnRef();
-        auto&& aliasPair = _selectListAliases.getAliasFor(*ref);
-        if (not aliasPair.first.empty()) {
-            // replace the ValueExpr in the ValueFactor with one that is aliased, and is the one in the
-            // SelectList (nptodo this is right, right?)
-            LOGS(_log, LOG_LVL_TRACE, "changing ColumnRef from: " << ref);
-            valueFactor.set(aliasPair.second);
-            LOGS(_log, LOG_LVL_TRACE, "changed ColumnRef to:    " << ref);
-            return;
-        }
-
-        // nptodo
-        // TableRefs from the FROM list are in the _tableAlias container.
-        // All the ColumnRefs need to be patched; replace the embedded TableRefBase with the one from the
-        // container, which comes from the from list.
-        // But first, ColumnRef needs to use TableRefBase instead of having its own db and table.
-
-        std::string newAlias = _getAlias(ref->getDb(), ref->getTable());
-        if (newAlias.empty()) {
-            return; // Ignore if no replacement exists.
-        }
-        // Eliminate db. Replace table with aliased table.
-        ref->setDb("");
-        ref->setTable(newAlias);
-    }
-
-    void _patchFuncExpr(query::FuncExpr& fe) {
-        std::for_each(fe.params.begin(), fe.params.end(),
-                fixExprAlias(_defaultDb, _tableAliases, _selectListAliases));
-    }
-
-    void _patchStar(query::ValueFactor& vt) {
-        // nptodo I need to understand why the star was using alias for this.
-        // I *think* the need comes from wanting to put a default db, plus table
-        // name onto the *. I wonder if the alias was the right way to do that, or
-        // if it was a hack that Just Worked?
-
-        // TODO: No support for <db>.<table>.* in framework
-        // Only <table>.* is supported.
-        std::string newAlias = _getAlias("", vt.getConstVal());
-        if (newAlias.empty()) { return; } //  Ignore if no replacement
-                                         //  exists.
-        else { vt.setConstVal(newAlias); }
-    }
-
-    std::string _getAlias(std::string const& db,
-                          std::string const& table) {
-        return _tableAliases.getAliasFor(db.empty() ? _defaultDb : db, table).first;
-    }
-
-    std::string const& _defaultDb;
-    query::TableAliases const& _tableAliases;
-    query::SelectListAliases const& _selectListAliases;
-};
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -231,10 +141,15 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     // for each top-level ValueExpr in the SELECT list that does not have an alias, assign an alias that
     // matches the original user query and add that item to the selectListAlias list.
     for (auto& valueExpr : *(stmt.getSelectList().getValueExprList())) {
-        if (not valueExpr->hasAlias() && not valueExpr->isStar())
-            valueExpr->setAlias(valueExpr->sqlFragment(false));
-        if (not context.selectListAliases.set(valueExpr, valueExpr->getAlias())) {
-            throw std::logic_error("could not set alias for " + valueExpr->sqlFragment(false));
+        if (not valueExpr->hasAlias()) {
+            if (not valueExpr->isStar()) {
+                valueExpr->setAlias("`" + valueExpr->sqlFragment(false) + "`");
+                if (not context.selectListAliases.set(valueExpr, valueExpr->getAlias())) {
+                    throw std::logic_error("could not set alias for " + valueExpr->sqlFragment(false));
+                }
+            }
+        } else {
+            valueExpr->setAliasIsUserDefined(true);
         }
     }
     // nptodo make each of the value exprs in the later clauses (where, group by, etc) refer to the alias
@@ -290,12 +205,6 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     // Select List
     query::SelectList& selectlist = stmt.getSelectList();
     matchTableRefs(context, *selectlist.getValueExprList());
-    // OrderBy List
-    if (stmt.hasOrderBy()) {
-        query::ValueExprPtrVector valueExprs;
-        stmt.getOrderBy().findValueExprs(valueExprs);
-        matchTableRefs(context, valueExprs);
-    }
 
     // ORDER BY, GROUP BY, and HAVING need to be in the select list and identified the same way.
     // WHERE and FROM will not be returned and do not require same-identification (but do downstream
@@ -319,7 +228,6 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
         for (auto&& joinRef : tableRef->getJoins()) {
             auto&& joinSpec = joinRef->getSpec();
             if (joinSpec) {
-                fixExprAlias fix(context.defaultDb, context.tableAliases, context.selectListAliases);
                 // A column name in a using clause should be unqualified,
                 // so only patch on clauses.
                 auto&& onBoolTerm = joinSpec->getOn();

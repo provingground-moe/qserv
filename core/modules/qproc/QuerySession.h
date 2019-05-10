@@ -59,6 +59,7 @@ namespace css {
     class StripingParams;
 }
 namespace query {
+    class SelectList;
     class SelectStmt;
     class QueryContext;
 }}} // End of forward declarations
@@ -113,6 +114,15 @@ public:
      * @return std::shared_ptr<query::SelectStmt> const&
      */
     std::shared_ptr<query::SelectStmt> const& getPreFlightStmt() const { return _stmtPreFlight; }
+
+    /**
+     * @brief Get the select list for the query that will be returned to the proxy.
+     *
+     * This select list indicates how to select the contents of the results table for the user. All grouping
+     * and sorting will already be completed in the results table. In this list the columns are alaised to
+     * provide the expected view; this is the point where any internal-only column aliasing is removed.
+     */
+    std::string getResultSelectList() const;
 
     /** @brief Return the ORDER BY clause to run on mysql-proxy at result retrieval.
      *
@@ -229,6 +239,7 @@ private:
     *
     */
     query::SelectStmtPtr _stmtMerge;
+
     bool _hasMerge{false};
     bool _isDummy{false}; ///< Use dummy chunk, disabling subchunks or any real chunks
     std::string _tmpTable;

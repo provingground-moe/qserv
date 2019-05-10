@@ -66,6 +66,7 @@
 #include "qana/WherePlugin.h"
 #include "qproc/QueryProcessingBug.h"
 #include "query/Constraint.h"
+#include "query/SelectList.h"
 #include "query/QsRestrictor.h"
 #include "query/QueryContext.h"
 #include "query/SelectStmt.h"
@@ -199,6 +200,27 @@ std::shared_ptr<query::ConstraintVector> QuerySession::getConstraints() const {
     }
     return cv;
 }
+
+
+std::string QuerySession::getResultSelectList() const {
+    auto selectList = std::make_shared<query::SelectList>();
+    const auto& valueExprList = *_stmt->getSelectList().getValueExprList();
+    for (std::shared_ptr<query::ValueExpr const> const& valueExpr : valueExprList) {
+        auto newValueExpr = std::make_shared<query::ValueExpr>();
+        auto columnRef = query::ColumnRef::newShared("", "", valueExpr->getAlias());
+        auto valueFactor = query::ValueFactor::newColumnRefFactor(columnRef);
+        newValueExpr->addValueFactor(valueFactor);
+        if (valueExpr->isColumnRef()) {
+            if (not valueExpr->getAliasIsUserDefined()) {
+                newValueExpr->setAlias(valueExpr->getColumnRef()->getColumn());
+            }
+        }
+        selectList->addValueExpr(newValueExpr);
+    }
+    std::string generated = selectList->getGenerated();
+    return generated;
+}
+
 
 // return the ORDER BY clause to run on mysql-proxy at result retrieval
 std::string QuerySession::getProxyOrderBy() const {
@@ -357,6 +379,8 @@ void QuerySession::_generateConcrete() {
     LOG_STATEMENTS(LOG_LVL_TRACE, "did generateConcrete:");
     // TableMerger needs to be integrated into this design.
 }
+
+
 
 void QuerySession::_applyConcretePlugins() {
     qana::QueryPlugin::Plan p(*_stmt, _stmtParallel, _stmtPreFlight, *_stmtMerge, _hasMerge);

@@ -202,6 +202,11 @@ UserQuerySelect::getProxyOrderBy() const {
 }
 
 
+std::string UserQuerySelect::getResultSelectList() const {
+    return _qSession->getResultSelectList();
+}
+
+
 /// Begin running on all chunks added so far.
 void UserQuerySelect::submit() {
     _qSession->finalize();
@@ -394,7 +399,8 @@ void UserQuerySelect::setupMerger() {
             "Could not create results table for query (no worker queries).");
     }
     std::string errMsg;
-    if (not _infileMerger->makeResultsTableForQuery(*preFlightStmt, errMsg)) {
+    std::vector<std::shared_ptr<query::ColumnRef>> starColumns;
+    if (not _infileMerger->makeResultsTableForQuery(*preFlightStmt, starColumns, errMsg)) {
         _qMetaUpdateStatus(qmeta::QInfo::FAILED);
         throw UserQueryError(getQueryIdString() + errMsg);
     }

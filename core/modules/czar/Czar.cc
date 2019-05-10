@@ -36,6 +36,7 @@
 
 // Qserv headers
 #include "ccontrol/ConfigMap.h"
+#include "ccontrol/UserQuerySelect.h"
 #include "ccontrol/UserQueryType.h"
 #include "czar/CzarErrors.h"
 #include "czar/MessageTable.h"
@@ -167,6 +168,10 @@ Czar::submitQuery(std::string const& query,
         return result;
     }
 
+    // getResultSelectList uses the QuerySession in the UserQuerySelect and must be called before
+    // `uq->discard()` in the following block.
+    std::string selectList = uq->getResultSelectList();
+
     // spawn background thread to wait until query finishes to unlock,
     // note that lambda stores copies of uq and msgTable.
     auto finalizer = [uq, msgTable]() mutable {
@@ -208,13 +213,14 @@ Czar::submitQuery(std::string const& query,
         result.resultTable = resultTableName;
         result.messageTable = asyncLockName;
         if (not resultTableName.empty()) {
-            result.resultQuery = std::string("SELECT * FROM ") + resultTableName;
+            // get the result statement out of the user query
+            result.resultQuery = "SELECT " + selectList + " FROM " + resultTableName;
         }
     } else {
         result.messageTable = lockName;
         if (not uq->getResultTableName().empty()) {
             result.resultTable = resultDb + "." + uq->getResultTableName();
-            result.resultQuery = std::string("SELECT * FROM ") + result.resultTable;
+            result.resultQuery = "SELECT " + selectList + " FROM " + result.resultTable;
             auto&& orderBy = uq->getProxyOrderBy();
             if (not orderBy.empty()) {
                 result.resultQuery += ' ';

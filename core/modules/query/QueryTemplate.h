@@ -133,7 +133,10 @@ public:
      */
     friend std::ostream& operator<<(std::ostream& os, QueryTemplate const& queryTemplate);
 
-    enum AliasMode { DEFINE, USE };
+    // DEFINE should print out the table or column name followed by AS and the alias name
+    // USE should only print out the alias
+    // DONT USE should only print out the table or column name.
+    enum AliasMode { DEFINE, USE, DONT_USE };
 
     /**
      * @brief Set a flag indicating if aliases should be defined or used.

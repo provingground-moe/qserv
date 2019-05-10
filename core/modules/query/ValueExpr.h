@@ -92,6 +92,20 @@ public:
     void setAlias(std::string const& alias);
     bool hasAlias() const { return not _alias.empty(); }
 
+    /**
+     * @brief Set a flag to indicate if the alias was defined by the user in the select statement.
+     *
+     * For example 'SELECT object AS o' as the user-defined alias 'o'. Otherwise internally Qserv may assign
+     * an alias for disambiguation, e.g. in the results table, but that alias should not be used in the
+     * select statement used to return results to the user.
+     *
+     * @param isUserDefined true if the alias was defined by the user.
+     */
+    void setAliasIsUserDefined(bool isUserDefined) { _aliasIsUserDefined = isUserDefined; }
+
+    // get if the alias is user defined
+    bool getAliasIsUserDefined() const { return _aliasIsUserDefined; }
+
     /// @return a list of ValueFactor-Op
     FactorOpVector& getFactorOps() { return _factorOps; }
     /// @return a const list of ValueFactor-Op
@@ -126,10 +140,10 @@ public:
     ColumnRef::Ptr getColumnRef() const;
     std::shared_ptr<ValueFactor const> getFactor() const;
 
-    bool isStar() const;
-    bool isFactor() const;
 
     // Convenience checkers
+    bool isStar() const;
+    bool isFactor() const;
     bool isColumnRef() const;
     bool isFunction() const;
 
@@ -165,6 +179,7 @@ public:
 private:
     std::string _alias;
     FactorOpVector _factorOps;
+    bool _aliasIsUserDefined; /// true if the alias was defined by the user in the select statement.
 };
 
 

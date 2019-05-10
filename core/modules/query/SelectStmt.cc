@@ -106,8 +106,9 @@ SelectStmt::getQueryTemplate() const {
     qt.setAliasMode(QueryTemplate::DEFINE);
     renderTemplate(qt, selectQuant.c_str(), _selectList);
     renderTemplate(qt, "FROM", _fromList);
-    qt.setAliasMode(QueryTemplate::USE);
+    qt.setAliasMode(QueryTemplate::DONT_USE);
     renderTemplate(qt, "WHERE", _whereClause);
+    qt.setAliasMode(QueryTemplate::USE);
     renderTemplate(qt, "GROUP BY", _groupBy);
     renderTemplate(qt, "HAVING", _having);
     renderTemplate(qt, "ORDER BY", _orderBy);

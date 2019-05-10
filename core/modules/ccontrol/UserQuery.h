@@ -94,6 +94,9 @@ public:
     /// @return ORDER BY part of SELECT statement to be executed by proxy
     virtual std::string getProxyOrderBy() const { return std::string(); }
 
+    /// @return get the SELECT part of the SELECT statement to be executed by proxy
+    virtual std::string getResultSelectList() const { return std::string(); }
+
     /// @return this query's QueryId.
     virtual QueryId getQueryId() const { return QueryId(0); }
 

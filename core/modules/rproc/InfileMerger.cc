@@ -348,7 +348,8 @@ int InfileMerger::makeJobIdAttempt(int jobId, int attemptCount) {
 }
 
 
-bool InfileMerger::makeResultsTableForQuery(query::SelectStmt const& stmt, std::string& errMsg) {
+bool InfileMerger::makeResultsTableForQuery(query::SelectStmt const& stmt,
+        std::vector<std::shared_ptr<query::ColumnRef>>& starColumns, std::string& errMsg) {
     // run query
     sql::SqlResults results;
     sql::SqlErrorObject getSchemaErrObj;
