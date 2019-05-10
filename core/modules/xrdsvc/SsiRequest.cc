@@ -281,6 +281,10 @@ wbase::WorkerCommand::Ptr SsiRequest::parseWorkerCommand(char const* reqData, in
                         }
                     );
                 }
+                std::vector<std::string> databases;
+                for (int i = 0, num = message.databases_size(); i < num; ++i) {
+                    databases.push_back(message.databases(i));
+                }
                 bool const force = message.force();
 
                 command = std::make_shared<wpublish::SetChunkListCommand>(
@@ -289,6 +293,7 @@ wbase::WorkerCommand::Ptr SsiRequest::parseWorkerCommand(char const* reqData, in
                                     _resourceMonitor,
                                     _mySqlConfig,
                                     chunks,
+                                    databases,
                                     force);
                 break;
             }
