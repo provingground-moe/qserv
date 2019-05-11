@@ -47,6 +47,7 @@
 #include "query/ColumnRef.h"
 #include "query/FuncExpr.h"
 #include "query/QueryTemplate.h"
+#include "query/TableRef.h"
 #include "query/ValueExpr.h"
 
 namespace lsst {
@@ -84,7 +85,7 @@ ValueFactorPtr ValueFactor::newStarFactor(std::string const& table) {
     ValueFactorPtr term = std::make_shared<ValueFactor>();
     term->_type = STAR;
     if (!table.empty()) {
-        term->_constVal = table;
+        term->_tableStar = std::make_shared<TableRefBase>("", table, "");
     }
     return term;
 }
@@ -131,6 +132,7 @@ void ValueFactor::findColumnRefs(ColumnRef::Vector& vector) const {
         _funcExpr->findColumnRefs(vector);
         break;
     case STAR:
+        break;
     case CONST:
         break;
     case EXPR:
@@ -171,7 +173,10 @@ std::ostream& operator<<(std::ostream& os, ValueFactor const& ve) {
     } else if (ve._valueExpr != nullptr) {
         os <<  ve._valueExpr;
     } else if (ve._type == ValueFactor::STAR) {
-        os << "STAR, \"" << ve._constVal << "\"";
+        os << "STAR";
+        if (nullptr != ve._tableStar) {
+            os << ",  << ve._tableStar << ";
+        }
     } else {
         os << "\"" << ve._constVal << "\"";
     }
@@ -192,8 +197,8 @@ void ValueFactor::render::applyToQT(ValueFactor const& ve) {
     case ValueFactor::FUNCTION: ve._funcExpr->renderTo(_qt); break;
     case ValueFactor::AGGFUNC: ve._funcExpr->renderTo(_qt); break;
     case ValueFactor::STAR:
-        if (!ve._constVal.empty()) {
-            _qt.append(ColumnRef("",ve._constVal, "*"));
+        if (nullptr != ve._tableStar) {
+            _qt.append(ColumnRef(ve._tableStar, "*"));
         } else {
             _qt.append("*");
         }
@@ -227,10 +232,15 @@ bool ValueFactor::isSubsetOf(ValueFactor const& rhs) const {
         case COLUMNREF: return _columnRef->isSubsetOf(rhs._columnRef);
         case FUNCTION:  return _funcExpr->isSubsetOf(*rhs._funcExpr);
         case AGGFUNC:   return _funcExpr->isSubsetOf(*rhs._funcExpr);
-        case STAR:      return _constVal == rhs._constVal; // (in some cases STAR puts a value in _constVal)
+        case STAR:
+            if (nullptr == _tableStar && nullptr == rhs._tableStar)
+                return true;
+            if (nullptr != _tableStar && nullptr != rhs._tableStar)
+                return _tableStar->isSubsetOf(*rhs._tableStar);
+            else
+                return false;
         case CONST:     return _constVal == rhs._constVal;
         case EXPR:      return _valueExpr->isSubsetOf(*rhs._valueExpr);
-        // nptodo/next go thru the above types and implement isSubsetOf as needed
     }
 }
 
@@ -240,6 +250,14 @@ void ValueFactor::set(std::shared_ptr<ValueExpr> const& valueExpr) {
     _valueExpr = valueExpr;
     _type = EXPR;
 }
+
+
+void ValueFactor::setStar(std::shared_ptr<TableRefBase> const& tableRef) {
+    _reset();
+    _tableStar = tableRef;
+    _type = STAR;
+}
+
 
 
 void ValueFactor::_reset() {

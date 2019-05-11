@@ -122,7 +122,7 @@ public:
      * and sorting will already be completed in the results table. In this list the columns are alaised to
      * provide the expected view; this is the point where any internal-only column aliasing is removed.
      */
-    std::string getResultSelectList() const;
+    std::shared_ptr<query::SelectList> getResultSelectList() const;
 
     /** @brief Return the ORDER BY clause to run on mysql-proxy at result retrieval.
      *

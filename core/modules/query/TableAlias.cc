@@ -64,6 +64,9 @@ TableAliases::getAliasFor(std::string const& db, std::string const& table) const
 
 std::shared_ptr<query::TableRefBase>
 TableAliases::getTableRefMatch(std::shared_ptr<query::TableRefBase> const& tableRef) {
+    if (nullptr == tableRef) {
+        return nullptr;
+    }
     for (auto&& aliasInfo : _aliasInfo) {
         if (tableRef->isSubsetOf(*aliasInfo.object)) {
             return aliasInfo.object;

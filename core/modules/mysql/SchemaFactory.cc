@@ -147,7 +147,6 @@ private:
 /// Set a ColSchema according to the contents of a MYSQL_FIELD
 void setColSchemaTo(sql::ColSchema& cs, MYSQL_FIELD const& f) {
     cs.name = f.name;
-    cs.table = f.table;
 }
 
 ////////////////////////////////////////////////////////////////////////

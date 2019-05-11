@@ -59,6 +59,7 @@
 #include "global/intTypes.h"
 #include "proto/WorkerResponse.h"
 #include "proto/ProtoImporter.h"
+#include "query/ColumnRef.h"
 #include "query/SelectStmt.h"
 #include "rproc/ProtoRowBuffer.h"
 #include "sql/Schema.h"
@@ -94,6 +95,13 @@ std::string getTimeStampId() {
 }
 
 const char JOB_ID_BASE_NAME[] = "jobId";
+
+void populateStarColumns(lsst::qserv::sql::Schema const& schema,
+                         std::vector<std::shared_ptr<lsst::qserv::query::ColumnRef>>& starColumns) {
+    for (auto const& columnSchema : schema.columns) {
+        starColumns.push_back(std::make_shared<lsst::qserv::query::ColumnRef>("", "", columnSchema.name));
+    }
+}
 
 } // anonymous namespace
 
@@ -369,6 +377,8 @@ bool InfileMerger::makeResultsTableForQuery(query::SelectStmt const& stmt,
         return false;
     }
     LOGS(_log, LOG_LVL_DEBUG, "InfileMerger extracted schema: " << schema);
+
+    populateStarColumns(schema, starColumns);
 
     _addJobIdColumnToSchema(schema);
 

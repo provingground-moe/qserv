@@ -93,31 +93,26 @@ void matchValueExprs(lsst::qserv::query::QueryContext& context, CLAUSE_T & claus
 // make the TableRef ptrs in the given ValueExprs point to TableRefs in the FROM list
 void matchTableRefs(lsst::qserv::query::QueryContext& context,
                     lsst::qserv::query::ValueExprPtrVector& valueExprs) {
-    for (auto&& valueExpr : valueExprs) {
+    for (auto& valueExpr : valueExprs) {
+        // If it's a STAR factor it can only have one table ref. Get that & handle it & continue.
         if (valueExpr->isStar()) {
-            // is it "Table.*"? (or just "*")
-            auto&& tableName = valueExpr->getConstVal();
-            if (tableName.empty())
-                continue;
-            auto&& tableRefMatch = context.tableAliases.getTableRefMatch(tableRef);
-
-            // TODO/next I think I need to change Table.* to use a TableRef instead of .const (string).
-
+            auto valueFactor = valueExpr->getFactor();
+            auto tableRefMatch = context.tableAliases.getTableRefMatch(valueFactor->getTableStar());
             if (nullptr != tableRefMatch) {
-                tableRef = tableRefMatch;
+                valueFactor->setStar(tableRefMatch);
             }
+            continue;
         }
-
+        // Otherwise, get all the contained column refs and handle them.
         std::vector<std::shared_ptr<lsst::qserv::query::ColumnRef>> columnRefs;
         valueExpr->findColumnRefs(columnRefs);
-        for (auto&& columnRef : columnRefs) {
+        for (auto& columnRef : columnRefs) {
             std::shared_ptr<lsst::qserv::query::TableRefBase>& tableRef = columnRef->getTableRef();
             auto&& tableRefMatch = context.tableAliases.getTableRefMatch(tableRef);
             if (nullptr != tableRefMatch) {
                 tableRef = tableRefMatch;
             }
         }
-
     }
 }
 

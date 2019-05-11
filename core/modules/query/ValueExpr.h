@@ -49,6 +49,7 @@ namespace lsst {
 namespace qserv {
 namespace query {
     class QueryTemplate;
+    class TableRefBase;
     class ValueFactor;
 }}} // End of forward declarations
 
@@ -135,11 +136,18 @@ public:
     bool hasAggregation() const;
 
     /**
-     * @return the ColumnRef in current object if there is one.
+     * @return The ColumnRef in current object if there is exactly one factor and it is a ColumnRef factor,
+     *         otherwise returns nullptr.
      */
     ColumnRef::Ptr getColumnRef() const;
-    std::shared_ptr<ValueFactor const> getFactor() const;
 
+    /**
+     * @return the first value factor if there are any.
+     *
+     * @throws logic_error if there are no value factors.
+     */
+    std::shared_ptr<ValueFactor const> getFactor() const;
+    std::shared_ptr<ValueFactor> getFactor();
 
     // Convenience checkers
     bool isStar() const;

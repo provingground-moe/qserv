@@ -282,6 +282,14 @@ std::shared_ptr<ValueFactor const> ValueExpr::getFactor() const {
 }
 
 
+std::shared_ptr<ValueFactor> ValueExpr::getFactor() {
+    if (_factorOps.empty()) {
+        throw std::logic_error("ValueExpr::getFactor no factors");
+    }
+    return _factorOps.front().factor;
+}
+
+
 /// @return true if holding a single ValueFactor
 bool ValueExpr::isColumnRef() const {
     if (_factorOps.size() == 1) {

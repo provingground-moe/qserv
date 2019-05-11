@@ -47,32 +47,33 @@
 #include "qproc/ChunkSpec.h"
 #include "query/Constraint.h"
 
-// Forward decl
+
+// Forward declarations
 namespace lsst {
 namespace qserv {
 namespace qdisp {
-class Executive;
-class MessageStore;
+    class Executive;
+    class MessageStore;
+    class QdispPool;
 }
 namespace qmeta {
-class QMeta;
+    class QMeta;
 }
 namespace qproc {
-class QuerySession;
-class SecondaryIndex;
+    class QuerySession;
+    class SecondaryIndex;
+}
+namespace query {
+    class ColumnRef;
 }
 namespace rproc {
-class InfileMerger;
-class InfileMergerConfig;
-}}}
+    class InfileMerger;
+    class InfileMergerConfig;
+}}} // End of forward declarations
+
 
 namespace lsst {
 namespace qserv {
-
-namespace qdisp {
-class QdispPool;
-}
-
 namespace ccontrol {
 
 /// UserQuerySelect : implementation of the UserQuery for regular SELECT statements.
@@ -166,6 +167,7 @@ private:
     std::shared_ptr<qmeta::QMeta> _queryMetadata;
     std::shared_ptr<qmeta::QStatus> _queryStatsData;
 
+    std::vector<std::shared_ptr<query::ColumnRef>> _starColumns; ///< Columns selected by a "SELECT *" statement
     qmeta::CzarId _qMetaCzarId; ///< Czar ID in QMeta database
     QueryId _qMetaQueryId{0};      ///< Query ID in QMeta database
     std::shared_ptr<qdisp::QdispPool> _qdispPool;

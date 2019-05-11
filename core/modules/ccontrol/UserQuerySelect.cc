@@ -91,9 +91,13 @@
 #include "qproc/IndexMap.h"
 #include "qproc/QuerySession.h"
 #include "qproc/TaskMsgFactory.h"
+#include "query/ColumnRef.h"
 #include "query/FromList.h"
 #include "query/JoinRef.h"
+#include "query/SelectList.h"
 #include "query/SelectStmt.h"
+#include "query/ValueExpr.h"
+#include "query/ValueFactor.h"
 #include "rproc/InfileMerger.h"
 #include "util/IterableFormatter.h"
 #include "util/ThreadPriority.h"
@@ -203,7 +207,14 @@ UserQuerySelect::getProxyOrderBy() const {
 
 
 std::string UserQuerySelect::getResultSelectList() const {
-    return _qSession->getResultSelectList();
+    auto selectList = _qSession->getResultSelectList();
+    for (auto columnRef : _starColumns) {
+        auto valueExpr = std::make_shared<query::ValueExpr>();
+        valueExpr->addValueFactor(query::ValueFactor::newColumnRefFactor(columnRef));
+        selectList->addValueExpr(valueExpr);
+    }
+    std::string generated = selectList->getGenerated();
+    return generated;
 }
 
 
@@ -399,8 +410,7 @@ void UserQuerySelect::setupMerger() {
             "Could not create results table for query (no worker queries).");
     }
     std::string errMsg;
-    std::vector<std::shared_ptr<query::ColumnRef>> starColumns;
-    if (not _infileMerger->makeResultsTableForQuery(*preFlightStmt, starColumns, errMsg)) {
+    if (not _infileMerger->makeResultsTableForQuery(*preFlightStmt, _starColumns, errMsg)) {
         _qMetaUpdateStatus(qmeta::QInfo::FAILED);
         throw UserQueryError(getQueryIdString() + errMsg);
     }
