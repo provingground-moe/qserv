@@ -149,11 +149,33 @@ public:
     std::shared_ptr<ValueFactor const> getFactor() const;
     std::shared_ptr<ValueFactor> getFactor();
 
-    // Convenience checkers
+    /**
+     * @brief Check if this ValueExpr represents a star factor.
+     *
+     * @return true if there is exactly 1 factor, and it is a STAR factor.
+     */
     bool isStar() const;
-    bool isFactor() const;
+
+    /**
+     * @brief Check if this ValueExpr represents a column ref factor.
+     *
+     * @return true if there is exactly 1 factor, and it is a COLUMNREF factor.
+     */
     bool isColumnRef() const;
+
+    /**
+     * @brief Check if this ValueExpr represents a function factor.
+     *
+     * @return true if there is exactly 1 factor, and it is a FUNCTION factor.
+     */
     bool isFunction() const;
+
+    /**
+     * @brief Check if this ValueExpr represents a single factor.
+     *
+     * @return Returns true if there is exactly 1 factor.
+     */
+    bool isFactor() const;
 
     /**
      * @brief Get the sql string that this ValueExpr represents

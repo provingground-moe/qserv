@@ -206,15 +206,10 @@ std::shared_ptr<query::SelectList> QuerySession::getResultSelectList() const {
     auto selectList = std::make_shared<query::SelectList>();
     const auto& valueExprList = *_stmt->getSelectList().getValueExprList();
 
-    // the following block does not copy a star element correctly, it ends up putting an empty columnRef into the select
-    // list, which shortcuts the render and ends up being an empty string.
-    // I think the mechanism is too simple right now anyway;
-    // non-star factors can get added to the list.
-    // star factors must get handled differently (either in a different container or found later): we need to transform
-    // each star factor (* or table.*) into a list of column names.
-    // right now getResultSelectList gets called by the czar (via UserQuerySelect) just before submitting the query,
-    // and then I have code in the UserQuerySelect that tries to add the starColumns to this list, where the starColumns
-    // list was populated earlier, while creating the results table.
+    // star factors must get handled differently (either in a different container or found later): we need to
+    // transform each star factor (* or table.*) into a list of column names. This happens after running the
+    // preflight query and just before creating the results table.
+
     // Right now I think (but should ponder this more over the weekend or on monday) that getting the result select list
     // from the query should happen earlier, probably executed by the UserQuerySelect, and then it should be transformed
     // or used to extract the correct columns, in the correct order, from the creation & examination of the results table
@@ -224,16 +219,19 @@ std::shared_ptr<query::SelectList> QuerySession::getResultSelectList() const {
     // SELECT a.* FROM a, b; will have all the columns of 'a'
     // SELECT 'monkey', * FROM a, b; will have the 'monkey' column, followed by all the columns of a, then b.
     // and so forth.
-
-
     for (std::shared_ptr<query::ValueExpr const> const& valueExpr : valueExprList) {
-        auto newValueExpr = std::make_shared<query::ValueExpr>();
-        auto columnRef = query::ColumnRef::newShared("", "", valueExpr->getAlias());
-        auto valueFactor = query::ValueFactor::newColumnRefFactor(columnRef);
-        newValueExpr->addValueFactor(valueFactor);
-        if (valueExpr->isColumnRef()) {
-            if (not valueExpr->getAliasIsUserDefined()) {
-                newValueExpr->setAlias(valueExpr->getColumnRef()->getColumn());
+        std::shared_ptr<query::ValueExpr> newValueExpr;
+        if (valueExpr->isStar()) {
+            newValueExpr = valueExpr->clone();
+        } else {
+            newValueExpr = std::make_shared<query::ValueExpr>();
+            auto columnRef = query::ColumnRef::newShared("", "", valueExpr->getAlias());
+            auto valueFactor = query::ValueFactor::newColumnRefFactor(columnRef);
+            newValueExpr->addValueFactor(valueFactor);
+            if (valueExpr->isColumnRef()) {
+                if (not valueExpr->getAliasIsUserDefined()) {
+                    newValueExpr->setAlias(valueExpr->getColumnRef()->getColumn());
+                }
             }
         }
         selectList->addValueExpr(newValueExpr);

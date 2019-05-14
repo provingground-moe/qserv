@@ -96,13 +96,6 @@ std::string getTimeStampId() {
 
 const char JOB_ID_BASE_NAME[] = "jobId";
 
-void populateStarColumns(lsst::qserv::sql::Schema const& schema,
-                         std::vector<std::shared_ptr<lsst::qserv::query::ColumnRef>>& starColumns) {
-    for (auto const& columnSchema : schema.columns) {
-        starColumns.push_back(std::make_shared<lsst::qserv::query::ColumnRef>("", "", columnSchema.name));
-    }
-}
-
 } // anonymous namespace
 
 namespace lsst {
@@ -356,9 +349,7 @@ int InfileMerger::makeJobIdAttempt(int jobId, int attemptCount) {
 }
 
 
-bool InfileMerger::makeResultsTableForQuery(query::SelectStmt const& stmt,
-        std::vector<std::shared_ptr<query::ColumnRef>>& starColumns, std::string& errMsg) {
-    // run query
+sql::Schema InfileMerger::getSchemaForQueryResults(query::SelectStmt const& stmt, std::string& errMsg) {
     sql::SqlResults results;
     sql::SqlErrorObject getSchemaErrObj;
     std::string query = stmt.getQueryTemplate().sqlFragment();
@@ -366,19 +357,25 @@ bool InfileMerger::makeResultsTableForQuery(query::SelectStmt const& stmt,
     if (not ok) {
         LOGS(_log, LOG_LVL_ERROR, "Failed to get schema:" << getSchemaErrObj.errMsg());
         errMsg = getSchemaErrObj.errMsg();
-        return false;
+        return sql::Schema();
     }
-
     sql::SqlErrorObject errObj;
-    auto schema = results.makeSchema(errObj);
     if (errObj.isSet()) {
         LOGS(_log, LOG_LVL_ERROR, "failed to extract schema from result: " << errObj.errMsg());
         errMsg = errObj.errMsg();
+        return sql::Schema();
+    }
+    auto schema = results.makeSchema(errObj);
+    LOGS(_log, LOG_LVL_DEBUG, "InfileMerger extracted schema: " << schema);
+    return schema;
+}
+
+
+bool InfileMerger::makeResultsTableForQuery(query::SelectStmt const& stmt, std::string& errMsg) {
+    auto schema = getSchemaForQueryResults(stmt, errMsg);
+    if (schema.columns.empty()) {
         return false;
     }
-    LOGS(_log, LOG_LVL_DEBUG, "InfileMerger extracted schema: " << schema);
-
-    populateStarColumns(schema, starColumns);
 
     _addJobIdColumnToSchema(schema);
 

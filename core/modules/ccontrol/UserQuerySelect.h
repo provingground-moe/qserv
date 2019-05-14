@@ -167,7 +167,6 @@ private:
     std::shared_ptr<qmeta::QMeta> _queryMetadata;
     std::shared_ptr<qmeta::QStatus> _queryStatsData;
 
-    std::vector<std::shared_ptr<query::ColumnRef>> _starColumns; ///< Columns selected by a "SELECT *" statement
     qmeta::CzarId _qMetaCzarId; ///< Czar ID in QMeta database
     QueryId _qMetaQueryId{0};      ///< Query ID in QMeta database
     std::shared_ptr<qdisp::QdispPool> _qdispPool;

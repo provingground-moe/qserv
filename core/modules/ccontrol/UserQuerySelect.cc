@@ -99,6 +99,7 @@
 #include "query/ValueExpr.h"
 #include "query/ValueFactor.h"
 #include "rproc/InfileMerger.h"
+#include "sql/Schema.h"
 #include "util/IterableFormatter.h"
 #include "util/ThreadPriority.h"
 
@@ -207,11 +208,36 @@ UserQuerySelect::getProxyOrderBy() const {
 
 
 std::string UserQuerySelect::getResultSelectList() const {
-    auto selectList = _qSession->getResultSelectList();
-    for (auto columnRef : _starColumns) {
-        auto valueExpr = std::make_shared<query::ValueExpr>();
-        valueExpr->addValueFactor(query::ValueFactor::newColumnRefFactor(columnRef));
-        selectList->addValueExpr(valueExpr);
+    auto selectList = std::make_shared<query::SelectList>();
+    auto const& valueExprList = *_qSession->getStmt().getSelectList().getValueExprList();
+    for (auto const& valueExpr : valueExprList) {
+        if (valueExpr->isStar()) {
+            std::string errMsg;
+            auto useSelectList = std::make_shared<query::SelectList>();
+            useSelectList->addValueExpr(valueExpr);
+            auto starStmt = std::make_shared<query::SelectStmt>(useSelectList,
+                                                                _qSession->getStmt().getFromList().clone());
+            auto schema = _infileMerger->getSchemaForQueryResults(*starStmt, errMsg);
+            for (auto const& column : schema.columns) {
+                auto newColumnRef = query::ColumnRef::newShared("", "", column.name);
+                auto newValueFactor = query::ValueFactor::newColumnRefFactor(newColumnRef);
+                auto newValueExpr = std::make_shared<query::ValueExpr>();
+                newValueExpr->addValueFactor(newValueFactor);
+                selectList->addValueExpr(newValueExpr);
+            }
+        } else {
+            // add a column that describes the top-level ValueExpr
+            auto newValueExpr = std::make_shared<query::ValueExpr>();
+            auto newColumnRef = query::ColumnRef::newShared("", "", valueExpr->getAlias());
+            auto newValueFactor = query::ValueFactor::newColumnRefFactor(newColumnRef);
+            newValueExpr->addValueFactor(newValueFactor);
+            if (valueExpr->isColumnRef()) {
+                if (not valueExpr->getAliasIsUserDefined()) {
+                    newValueExpr->setAlias(valueExpr->getColumnRef()->getColumn());
+                }
+            }
+            selectList->addValueExpr(newValueExpr);
+        }
     }
     std::string generated = selectList->getGenerated();
     return generated;
@@ -410,7 +436,7 @@ void UserQuerySelect::setupMerger() {
             "Could not create results table for query (no worker queries).");
     }
     std::string errMsg;
-    if (not _infileMerger->makeResultsTableForQuery(*preFlightStmt, _starColumns, errMsg)) {
+    if (not _infileMerger->makeResultsTableForQuery(*preFlightStmt, errMsg)) {
         _qMetaUpdateStatus(qmeta::QInfo::FAILED);
         throw UserQueryError(getQueryIdString() + errMsg);
     }

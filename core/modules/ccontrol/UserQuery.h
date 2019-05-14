@@ -44,7 +44,7 @@
 namespace lsst {
 namespace qserv {
 namespace qdisp {
-class MessageStore;
+    class MessageStore;
 }}}
 
 namespace lsst {

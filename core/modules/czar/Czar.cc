@@ -168,9 +168,7 @@ Czar::submitQuery(std::string const& query,
         return result;
     }
 
-    // getResultSelectList uses the QuerySession in the UserQuerySelect and must be called before
-    // `uq->discard()` in the following block.
-    std::string selectList = uq->getResultSelectList();
+    auto selectList = uq->getResultSelectList();
 
     // spawn background thread to wait until query finishes to unlock,
     // note that lambda stores copies of uq and msgTable.
@@ -214,7 +212,7 @@ Czar::submitQuery(std::string const& query,
         result.messageTable = asyncLockName;
         if (not resultTableName.empty()) {
             // get the result statement out of the user query
-            result.resultQuery = "SELECT " + selectList + " FROM " + resultTableName;
+            result.resultQuery = "SELECT * FROM " + resultTableName;
         }
     } else {
         result.messageTable = lockName;
