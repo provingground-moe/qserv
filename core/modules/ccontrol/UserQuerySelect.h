@@ -134,8 +134,8 @@ public:
     /// @return ORDER BY part of SELECT statement to be executed by proxy
     std::string getProxyOrderBy() const override;
 
-    /// @return get the SELECT part of the SELECT statement to be executed by proxy
-    std::string getResultSelectList() const override;
+    /// @return get the SELECT statement to be executed by proxy
+    std::string getResultQuery() const override;
 
     std::string getQueryIdString() const override;
 
@@ -151,6 +151,9 @@ public:
     /// @throw UserQueryError if the merge table can't be set up (maybe the user query is not valid?). The
     /// exception's what() message will be returned to the user.
     void setupMerger() override;
+
+    /// Save the result query in metadata, to give to the proxy when fetching results from an async query.
+    void saveResultQuery(std::string const& resultQuery) override;
 
 private:
     void _discardMerger();

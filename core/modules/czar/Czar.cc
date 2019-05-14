@@ -152,6 +152,7 @@ Czar::submitQuery(std::string const& query,
         uq = _uqFactory->newUserQuery(query, defaultDb, getQdispPool(), userQueryId, msgTableName);
     }
     auto queryIdStr = uq->getQueryIdString();
+    uq->setResultDb(resultDb);
 
     // check for errors
     auto error = uq->getError();
@@ -168,7 +169,7 @@ Czar::submitQuery(std::string const& query,
         return result;
     }
 
-    auto selectList = uq->getResultSelectList();
+    auto resultQuery = uq->getResultQuery();
 
     // spawn background thread to wait until query finishes to unlock,
     // note that lambda stores copies of uq and msgTable.
@@ -211,14 +212,18 @@ Czar::submitQuery(std::string const& query,
         result.resultTable = resultTableName;
         result.messageTable = asyncLockName;
         if (not resultTableName.empty()) {
-            // get the result statement out of the user query
+            // respond with info about the results table.
             result.resultQuery = "SELECT * FROM " + resultTableName;
         }
+        uq->saveResultQuery(resultQuery);
     } else {
+        if (resultQuery.empty()) {
+            throw std::runtime_error("No result query for query " + query);
+        }
         result.messageTable = lockName;
         if (not uq->getResultTableName().empty()) {
             result.resultTable = resultDb + "." + uq->getResultTableName();
-            result.resultQuery = "SELECT " + selectList + " FROM " + result.resultTable;
+            result.resultQuery = resultQuery;
             auto&& orderBy = uq->getProxyOrderBy();
             if (not orderBy.empty()) {
                 result.resultQuery += ' ';

@@ -202,44 +202,6 @@ std::shared_ptr<query::ConstraintVector> QuerySession::getConstraints() const {
 }
 
 
-std::shared_ptr<query::SelectList> QuerySession::getResultSelectList() const {
-    auto selectList = std::make_shared<query::SelectList>();
-    const auto& valueExprList = *_stmt->getSelectList().getValueExprList();
-
-    // star factors must get handled differently (either in a different container or found later): we need to
-    // transform each star factor (* or table.*) into a list of column names. This happens after running the
-    // preflight query and just before creating the results table.
-
-    // Right now I think (but should ponder this more over the weekend or on monday) that getting the result select list
-    // from the query should happen earlier, probably executed by the UserQuerySelect, and then it should be transformed
-    // or used to extract the correct columns, in the correct order, from the creation & examination of the results table
-    // by matching the tables used to create each column, for any select * statement, matched with the appropriate column(s).
-    // for example
-    // SELECT * FROM a, b; will have all the columns of 'a' followed by all the columns of 'b'
-    // SELECT a.* FROM a, b; will have all the columns of 'a'
-    // SELECT 'monkey', * FROM a, b; will have the 'monkey' column, followed by all the columns of a, then b.
-    // and so forth.
-    for (std::shared_ptr<query::ValueExpr const> const& valueExpr : valueExprList) {
-        std::shared_ptr<query::ValueExpr> newValueExpr;
-        if (valueExpr->isStar()) {
-            newValueExpr = valueExpr->clone();
-        } else {
-            newValueExpr = std::make_shared<query::ValueExpr>();
-            auto columnRef = query::ColumnRef::newShared("", "", valueExpr->getAlias());
-            auto valueFactor = query::ValueFactor::newColumnRefFactor(columnRef);
-            newValueExpr->addValueFactor(valueFactor);
-            if (valueExpr->isColumnRef()) {
-                if (not valueExpr->getAliasIsUserDefined()) {
-                    newValueExpr->setAlias(valueExpr->getColumnRef()->getColumn());
-                }
-            }
-        }
-        selectList->addValueExpr(newValueExpr);
-    }
-    return selectList;
-}
-
-
 // return the ORDER BY clause to run on mysql-proxy at result retrieval
 std::string QuerySession::getProxyOrderBy() const {
     std::string orderBy;

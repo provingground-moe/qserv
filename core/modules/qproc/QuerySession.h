@@ -115,15 +115,6 @@ public:
      */
     std::shared_ptr<query::SelectStmt> const& getPreFlightStmt() const { return _stmtPreFlight; }
 
-    /**
-     * @brief Get the select list for the query that will be returned to the proxy.
-     *
-     * This select list indicates how to select the contents of the results table for the user. All grouping
-     * and sorting will already be completed in the results table. In this list the columns are alaised to
-     * provide the expected view; this is the point where any internal-only column aliasing is removed.
-     */
-    std::shared_ptr<query::SelectList> getResultSelectList() const;
-
     /** @brief Return the ORDER BY clause to run on mysql-proxy at result retrieval.
      *
      *  Indeed, MySQL results order is undefined with simple "SELECT *" clause.

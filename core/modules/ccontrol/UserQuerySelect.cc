@@ -207,7 +207,7 @@ UserQuerySelect::getProxyOrderBy() const {
 }
 
 
-std::string UserQuerySelect::getResultSelectList() const {
+std::string UserQuerySelect::getResultQuery() const {
     auto selectList = std::make_shared<query::SelectList>();
     auto const& valueExprList = *_qSession->getStmt().getSelectList().getValueExprList();
     for (auto const& valueExpr : valueExprList) {
@@ -239,8 +239,7 @@ std::string UserQuerySelect::getResultSelectList() const {
             selectList->addValueExpr(newValueExpr);
         }
     }
-    std::string generated = selectList->getGenerated();
-    return generated;
+    return "SELECT " + selectList->getGenerated() + " FROM " + getResultDb() + "." + getResultTableName();
 }
 
 
@@ -581,6 +580,12 @@ void UserQuerySelect::qMetaRegister(std::string const& resultLocation, std::stri
         }
     }
 }
+
+
+void UserQuerySelect::saveResultQuery(std::string const& resultQuery) {
+    _queryMetadata->saveResultQuery(_qMetaQueryId, resultQuery);
+}
+
 
 // update query status in QMeta
 void UserQuerySelect::_qMetaUpdateStatus(qmeta::QInfo::QStatus qStatus)
