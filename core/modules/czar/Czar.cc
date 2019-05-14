@@ -217,11 +217,8 @@ Czar::submitQuery(std::string const& query,
         }
         uq->saveResultQuery(resultQuery);
     } else {
-        if (resultQuery.empty()) {
-            throw std::runtime_error("No result query for query " + query);
-        }
         result.messageTable = lockName;
-        if (not uq->getResultTableName().empty()) {
+        if (not resultQuery.empty()) {
             result.resultTable = resultDb + "." + uq->getResultTableName();
             result.resultQuery = resultQuery;
             auto&& orderBy = uq->getProxyOrderBy();
