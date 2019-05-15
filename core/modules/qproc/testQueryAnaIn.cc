@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(SecondaryIndex) {
 BOOST_AUTO_TEST_CASE(CountIn) {
     std::string stmt = "select COUNT(*) AS N FROM Source WHERE objectId IN(386950783579546, 386942193651348);";
     std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt);
-    std::string expectedParallel = "SELECT COUNT(*) AS QS1_COUNT FROM LSST.Source_100 AS QST_1_ "
+    std::string expectedParallel = "SELECT COUNT(*) AS QS1_COUNT FROM LSST.Source_100 AS`LSST.Source`"
                                    "WHERE objectId IN(386950783579546,386942193651348)";
     std::string expectedMerge = "SELECT SUM(QS1_COUNT) AS N";
     auto queries = queryAnaHelper.getInternalQueries(qsTest, stmt);
