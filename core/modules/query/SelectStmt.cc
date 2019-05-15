@@ -106,7 +106,7 @@ SelectStmt::getQueryTemplate() const {
     qt.setAliasMode(QueryTemplate::DEFINE);
     renderTemplate(qt, selectQuant.c_str(), _selectList);
     renderTemplate(qt, "FROM", _fromList);
-    qt.setAliasMode(QueryTemplate::DONT_USE);
+    qt.setAliasMode(QueryTemplate::DONT_USE); // column aliases are not allowed in the WHERE clause.
     renderTemplate(qt, "WHERE", _whereClause);
     qt.setAliasMode(QueryTemplate::USE);
     renderTemplate(qt, "GROUP BY", _groupBy);
