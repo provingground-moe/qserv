@@ -128,7 +128,7 @@ BOOST_DATA_TEST_CASE(PluginRewrite_1, statements_1, statement) {
     selectStmt->getOrderBy().findValueExprs(orderByValExprList);
     BOOST_REQUIRE_EQUAL(orderByValExprList.size(), size_t(1));
     // below is a pointer compare, not value compare; verify they point at the same object.
-    BOOST_REQUIRE_EQUAL(selValExprList[0], orderByValExprList[0]);
+    BOOST_REQUIRE_EQUAL(selValExprList[0].get(), orderByValExprList[0].get());
 }
 
 
