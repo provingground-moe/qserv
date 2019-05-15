@@ -41,6 +41,16 @@ SelectListAliases::getValueExprMatch(std::shared_ptr<query::ValueExpr const> con
         if (valExpr->isSubsetOf(*aliasInfo.object)) {
             return aliasInfo.object;
         }
+        if (valExpr->isColumnRef() && aliasInfo.object->isColumnRef()) {
+            auto const& columnRef = valExpr->getColumnRef();
+            auto const& aliasInfoColumnRef = aliasInfo.object->getColumnRef();
+            if (columnRef->getColumn() != aliasInfoColumnRef->getColumn()) {
+                continue;
+            }
+            if (columnRef->getTableRef()->isAliasedBy(*aliasInfo.object->getColumnRef()->getTableRef())) {
+                return aliasInfo.object;
+            }
+        }
     }
     return nullptr;
 }
