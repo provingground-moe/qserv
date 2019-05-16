@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(OrderByNotChunked) {
     std::string stmt = "SELECT * FROM Filter ORDER BY filterId";
     std::string expectedParallel = "SELECT * FROM LSST.Filter AS`LSST.Filter`";
     std::string expectedMerge = "";
-    std::string expectedProxyOrderBy = "ORDER BY filterId";
+    std::string expectedProxyOrderBy = "ORDER BY `LSST.Filter`.filterId";
     check(qsTest, queryAnaHelper, stmt, expectedParallel, expectedMerge, expectedProxyOrderBy);
 }
 
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(OrderByThreeField) {
         "ORDER BY objectId, taiMidPoint, xFlux DESC";
     std::string expectedParallel = "SELECT * FROM LSST.Source_100 AS`LSST.Source`";
     std::string expectedMerge = "";
-    std::string expectedProxyOrderBy = "ORDER BY objectId, taiMidPoint, xFlux DESC";
+    std::string expectedProxyOrderBy = "ORDER BY `LSST.Source`.objectId, `LSST.Source`.taiMidPoint, `LSST.Source`.xFlux DESC";
     check(qsTest, queryAnaHelper, stmt, expectedParallel, expectedMerge, expectedProxyOrderBy);
 }
 
@@ -152,9 +152,12 @@ BOOST_AUTO_TEST_CASE(OrderByLimit) {
 BOOST_AUTO_TEST_CASE(OrderByLimitNotChunked) { // Test flipped syntax in DM-661
     std::string bad = "SELECT run FROM LSST.Science_Ccd_Exposure limit 2 order by field";
     std::string good = "SELECT run FROM LSST.Science_Ccd_Exposure order by field limit 2";
-    std::string expectedParallel = "SELECT `LSST.Science_Ccd_Exposure`.run AS`run`FROM LSST.Science_Ccd_Exposure AS`LSST.Science_Ccd_Exposure`ORDER BY field LIMIT 2";
+    std::string expectedParallel = "SELECT `LSST.Science_Ccd_Exposure`.run AS`run`"
+                                   "FROM LSST.Science_Ccd_Exposure AS`LSST.Science_Ccd_Exposure`"
+                                   "ORDER BY`LSST.Science_Ccd_Exposure`.field "
+                                   "LIMIT 2";
     std::string expectedMerge = "";
-    std::string expectedProxyOrderBy = "ORDER BY field";
+    std::string expectedProxyOrderBy = "ORDER BY `LSST.Science_Ccd_Exposure`.field";
     // TODO: commented out test that is supposed to fail but it does not currently
     // check(qsTest, queryAnaHelper, bad, expectedParallel, expectedMerge, expectedProxyOrderBy);
     check(qsTest, queryAnaHelper, good, expectedParallel, expectedMerge, expectedProxyOrderBy);
