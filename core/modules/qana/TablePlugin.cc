@@ -152,16 +152,6 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
             valueExpr->setAliasIsUserDefined(true);
         }
     }
-    // nptodo make each of the value exprs in the later clauses (where, group by, etc) refer to the alias
-    // of the ValueExpr (if we don't do this already?)
-    // nptodo the alias _may_ need disambiguation, but really only if the user may have used an alias
-    // that matches a non-aliased ValueExpr
-
-    // update the "resolver tables" (which is to say; the tables used in the FROM list) in the context.
-    query::DbTableVector v = fromList.computeResolverTables();
-    LOGS(_log, LOG_LVL_TRACE, "changing resolver tables from " << util::printable(context.resolverTables) <<
-            " to " << util::printable(v));
-    context.resolverTables.swap(v);
 
     // make sure the TableRefs in the from list are all completetly populated (db AND table)
     query::TableRefList& fromListTableRefs = fromList.getTableRefList();
@@ -205,7 +195,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     matchTableRefs(context, *stmt.getSelectList().getValueExprList());
 
     if (stmt.hasOrderBy()) {
-        matchTableRefs(context, stmt.getWhereClause());
+        matchTableRefs(context, stmt.getOrderBy());
         matchValueExprs(context, stmt.getOrderBy());
     }
     if (stmt.hasWhereClause()) {
@@ -213,11 +203,11 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
         matchValueExprs(context, stmt.getWhereClause());
     }
     if (stmt.hasGroupBy()) {
-        matchTableRefs(context, stmt.getWhereClause());
+        matchTableRefs(context, stmt.getGroupBy());
         matchValueExprs(context, stmt.getGroupBy());
     }
     if (stmt.hasHaving()) {
-        matchTableRefs(context, stmt.getWhereClause());
+        matchTableRefs(context, stmt.getHaving());
         matchValueExprs(context, stmt.getHaving());
     }
 
