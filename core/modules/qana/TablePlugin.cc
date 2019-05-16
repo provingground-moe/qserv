@@ -90,11 +90,9 @@ void matchValueExprs(lsst::qserv::query::QueryContext& context, CLAUSE_T & claus
     }
 }
 
-// make the TableRef ptrs in the given ValueExprs point to TableRefs in the FROM list
 void matchTableRefs(lsst::qserv::query::QueryContext& context,
                     lsst::qserv::query::ValueExprPtrVector& valueExprs) {
-    for (auto& valueExpr : valueExprs) {
-        // If it's a STAR factor it can only have one table ref. Get that & handle it & continue.
+    for (auto&& valueExpr : valueExprs) {
         if (valueExpr->isStar()) {
             auto valueFactor = valueExpr->getFactor();
             auto tableRefMatch = context.tableAliases.getTableRefMatch(valueFactor->getTableStar());
@@ -114,6 +112,13 @@ void matchTableRefs(lsst::qserv::query::QueryContext& context,
             }
         }
     }
+}
+
+template <typename CLAUSE_T>
+void matchTableRefs(lsst::qserv::query::QueryContext& context, CLAUSE_T & clause) {
+    lsst::qserv::query::ValueExprPtrVector valueExprs;
+    clause.findValueExprs(valueExprs);
+    matchTableRefs(context, valueExprs);
 }
 
 } // namespace
@@ -197,23 +202,22 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
     };
     std::for_each(fromListTableRefs.begin(), fromListTableRefs.end(), aliasSetter);
 
-    // Select List
-    query::SelectList& selectlist = stmt.getSelectList();
-    matchTableRefs(context, *selectlist.getValueExprList());
+    matchTableRefs(context, *stmt.getSelectList().getValueExprList());
 
-    // ORDER BY, GROUP BY, and HAVING need to be in the select list and identified the same way.
-    // WHERE and FROM will not be returned and do not require same-identification (but do downstream
-    // plugins require equivalance/patching?)
     if (stmt.hasOrderBy()) {
+        matchTableRefs(context, stmt.getWhereClause());
         matchValueExprs(context, stmt.getOrderBy());
     }
     if (stmt.hasWhereClause()) {
+        matchTableRefs(context, stmt.getWhereClause());
         matchValueExprs(context, stmt.getWhereClause());
     }
     if (stmt.hasGroupBy()) {
+        matchTableRefs(context, stmt.getWhereClause());
         matchValueExprs(context, stmt.getGroupBy());
     }
     if (stmt.hasHaving()) {
+        matchTableRefs(context, stmt.getWhereClause());
         matchValueExprs(context, stmt.getHaving());
     }
 
@@ -227,6 +231,7 @@ TablePlugin::applyLogical(query::SelectStmt& stmt,
                 // so only patch on clauses.
                 auto&& onBoolTerm = joinSpec->getOn();
                 if (onBoolTerm) {
+                    matchTableRefs(context, *onBoolTerm);
                     matchValueExprs(context, *onBoolTerm);
                 }
             }

@@ -91,6 +91,7 @@ typedef std::pair<std::string, std::string> StringPair;
 /// the SQL statement should cause an error when tried on the local database,
 /// so that check can be skipped.
 ///
+// nptodo can this be removed?
 query::ColumnRef::Vector resolveAsColumnRef(query::QueryContext& context, query::ValueExprPtr vexpr) {
     query::ColumnRef::Vector columnRefs;
     query::ColumnRef::Ptr cr = vexpr->copyAsColumnRef();

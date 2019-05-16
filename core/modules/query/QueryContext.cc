@@ -129,6 +129,8 @@ DbTableSet QueryContext::resolve(std::shared_ptr<ColumnRef> cr) {
     DbTableSet dbTableSet;
     if (!cr) { return dbTableSet; }
 
+// nptodo can this be removed?
+
     // If alias, retrieve real reference.
     if (cr->getDb().empty() && !cr->getTable().empty()) {
         auto tableRefBase = tableAliases.getAliasFor("", cr->getTable()).second;
