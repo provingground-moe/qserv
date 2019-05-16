@@ -84,25 +84,12 @@ namespace qana {
 
 typedef std::pair<std::string, std::string> StringPair;
 
-/// Returns a list of column references.
-/// This class will usually check the list if any can be used
-/// to restrict the query to a subset of worker nodes via the secondary index.
-/// If there is ambiguity in the possible table that a column belongs to,
-/// the SQL statement should cause an error when tried on the local database,
-/// so that check can be skipped.
-///
-// nptodo can this be removed?
+// nptodo those that call this could just get rewritten to use the vexpr's get/copy columnref
 query::ColumnRef::Vector resolveAsColumnRef(query::QueryContext& context, query::ValueExprPtr vexpr) {
     query::ColumnRef::Vector columnRefs;
-    query::ColumnRef::Ptr cr = vexpr->copyAsColumnRef();
-    if (!cr) {
-        return columnRefs;
-    }
-    std::string column = cr->getColumn();
-    query::DbTableSet set = context.resolve(cr);
-    for (auto const& dbTblPair : set) {
-        columnRefs.push_back(std::make_shared<query::ColumnRef>(dbTblPair.db, dbTblPair.table, column));
-    }
+    auto columnRef = vexpr->copyAsColumnRef();
+    if (nullptr != columnRef)
+        columnRefs.push_back(columnRef);
     return columnRefs;
 }
 

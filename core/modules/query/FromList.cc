@@ -67,16 +67,6 @@ FromList::isJoin() const {
 }
 
 
-std::vector<DbTablePair>
-FromList::computeResolverTables() const {
-    std::vector<DbTablePair> dbTablePairs;
-    for (auto&& tableRef : *_tableRefs) {
-        tableRef->getRelatedDbTableInfo(dbTablePairs);
-    }
-    return dbTablePairs;
-}
-
-
 std::string
 FromList::getGenerated() {
     QueryTemplate qt;

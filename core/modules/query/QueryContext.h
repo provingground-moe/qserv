@@ -84,9 +84,6 @@ public:
     std::string dominantDb; ///< "dominant" database for this query
     std::string userName{"default"}; ///< unused, but reserved.
 
-    // contains the tables (db.table, where db may be an empty string) that are used in the FROM list.
-    std::vector<DbTablePair> resolverTables; ///< Implicit column resolution context.
-
     mysql::MySqlConfig const mysqlSchemaConfig; ///< Used to connect to a database with the schema.
     std::map<std::string, DbTableSet> columnToTablesMap;
 
@@ -121,7 +118,6 @@ public:
         return queryMapping.get() && queryMapping->hasChunks(); }
     bool hasSubChunks() const {
         return queryMapping.get() && queryMapping->hasSubChunks(); }
-    DbTableSet resolve(std::shared_ptr<ColumnRef> cr);
 };
 
 
