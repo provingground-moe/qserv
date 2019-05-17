@@ -51,21 +51,11 @@ void appendColumnRefs(std::string const& column,
                       std::string const& tableAlias,
                       std::vector<ColumnRefConstPtr>& refs)
 {
-    if (column.empty()) {
-        return;
+    if (column.empty() || database.empty() || table.empty() || tableAlias.empty()) {
+        throw std::runtime_error("unexpected empty column info element.");
     }
-    std::string const _; // an empty string
-    refs.push_back(std::make_shared<lsst::qserv::query::ColumnRef>(_, _, column));
-    if (!tableAlias.empty()) {
-        // If a table alias has been introduced, then it is an error to
-        // refer to a column using table.column or db.table.column
-        refs.push_back(std::make_shared<ColumnRef>(_, tableAlias, column));
-    } else if (!table.empty()) {
-        refs.push_back(std::make_shared<ColumnRef>(_, table, column));
-        if (!database.empty()) {
-            refs.push_back(std::make_shared<ColumnRef>(database, table, column));
-        }
-    }
+    refs.push_back(std::make_shared<lsst::qserv::query::ColumnRef>("", "", column));
+    refs.push_back(std::make_shared<ColumnRef>(database, table, tableAlias, column));
 }
 
 } // anonymous namespace
