@@ -347,12 +347,10 @@ query::FuncExpr::Ptr newFuncExpr(char const fName[],
     fe->setName(UDF_PREFIX + fName);
     fe->params.push_back(
           query::ValueExpr::newSimple(query::ValueFactor::newColumnRefFactor(
-                  std::make_shared<query::ColumnRef>(
-                          "", tableAlias, chunkColumns.first))));
+                std::make_shared<query::ColumnRef>("", "", tableAlias, chunkColumns.first))));
     fe->params.push_back(
           query::ValueExpr::newSimple(query::ValueFactor::newColumnRefFactor(
-                  std::make_shared<query::ColumnRef>(
-                          "", tableAlias, chunkColumns.second))));
+                std::make_shared<query::ColumnRef>("", "", tableAlias, chunkColumns.second))));
 
     typename C::const_iterator i;
     for (i = c.begin(); i != c.end(); ++i) {
