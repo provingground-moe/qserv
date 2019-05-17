@@ -170,10 +170,10 @@ BOOST_AUTO_TEST_CASE(RestrictorNeighborCount) {
         "where qserv_areaspec_box(6,6,7,7) AND rFlux_PS<0.005 AND scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test) < 0.001;";
     std::string expected_100_subchunk_core =
         "SELECT count(*) AS QS1_COUNT FROM Subchunks_LSST_100.Object_100_%S\007S% AS o1,Subchunks_LSST_100.Object_100_%S\007S% AS o2 "
-        "WHERE scisql_s2PtInBox(o1.ra_Test,o1.decl_Test,6,6,7,7)=1 AND scisql_s2PtInBox(o2.ra_Test,o2.decl_Test,6,6,7,7)=1 AND rFlux_PS<0.005 AND scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test)<0.001";
+        "WHERE scisql_s2PtInBox(o1.ra_Test,o1.decl_Test,6,6,7,7)=1 AND scisql_s2PtInBox(o2.ra_Test,o2.decl_Test,6,6,7,7)=1 AND o1.rFlux_PS<0.005 AND scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test)<0.001";
     std::string expected_100_subchunk_overlap =
         "SELECT count(*) AS QS1_COUNT FROM Subchunks_LSST_100.Object_100_%S\007S% AS o1,Subchunks_LSST_100.ObjectFullOverlap_100_%S\007S% AS o2 "
-        "WHERE scisql_s2PtInBox(o1.ra_Test,o1.decl_Test,6,6,7,7)=1 AND scisql_s2PtInBox(o2.ra_Test,o2.decl_Test,6,6,7,7)=1 AND rFlux_PS<0.005 AND scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test)<0.001";
+        "WHERE scisql_s2PtInBox(o1.ra_Test,o1.decl_Test,6,6,7,7)=1 AND scisql_s2PtInBox(o2.ra_Test,o2.decl_Test,6,6,7,7)=1 AND o1.rFlux_PS<0.005 AND scisql_angSep(o1.ra_Test,o1.decl_Test,o2.ra_Test,o2.decl_Test)<0.001";
     std::shared_ptr<QuerySession> qs = queryAnaHelper.buildQuerySession(qsTest, stmt);
 
     std::shared_ptr<QueryContext> context = qs->dbgGetContext();
