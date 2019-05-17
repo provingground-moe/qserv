@@ -27,6 +27,7 @@
 
 // Qserv headers
 #include "replica/FileServer.h"
+#include "replica/IngestServer.h"
 #include "replica/WorkerRequestFactory.h"
 #include "replica/WorkerServer.h"
 #include "util/BlockPost.h"
@@ -64,7 +65,8 @@ WorkerAllApp::WorkerAllApp(int argc, char* argv[])
             true    /* boostProtobufVersionCheck */,
             true    /* enableServiceProvider */
         ),
-        _log(LOG_GET("lsst.qserv.replica.WorkerAllApp")) {
+        _log(LOG_GET("lsst.qserv.replica.WorkerAllApp")),
+        _qservDbPassword(Configuration::qservWorkerDatabasePassword()) {
 
     // Configure the command line parser
 
@@ -74,14 +76,30 @@ WorkerAllApp::WorkerAllApp(int argc, char* argv[])
         " configuration status (DISABLED or READ-ONLY).",
         _allWorkers);
 
+    parser().option(
+        "qserv-db-password",
+        "A password for the MySQL account of the Qserv worker database. The account"
+        " name is found in the Configuration. NOTE: an assumption is that all worker"
+        " databases are configured in the same way",
+        _qservDbPassword
+    );
+
     parser().flag(
         "enable-file-server",
-        "Also launch a dedicatedfFile server for each worker.",
+        "Also launch a dedicated file server for each worker.",
         _enableFileServer);
+
+    parser().flag(
+        "enable-ingest-server",
+        "Also launch a dedicated catalog ingest server for each worker.",
+        _enableIngestServer);
 }
 
 
 int WorkerAllApp::runImpl() {
+
+    // Set the database password
+    Configuration::setQservWorkerDatabasePassword(_qservDbPassword);
 
     WorkerRequestFactory requestFactory(serviceProvider());
 
@@ -131,9 +149,10 @@ void WorkerAllApp::_runAllWorkers(WorkerRequestFactory& requestFactory) {
         });
         reqProcMonThread.detach();
 
-        // If requested then also create and run the file server. Note the server
-        // should be running in a separate thread because it's the blocking
-        // operation fr the launching thread.
+        // If requested then also create and run the additional servers or serving
+        // files and catalog ingest requests. Note the servers will be run in
+        // in dedicated threads because starting each service is the blocking
+        // operation for the launching thread.
 
         if (_enableFileServer) {
             auto fileSrv = FileServer::create(serviceProvider(), workerName);
@@ -142,6 +161,14 @@ void WorkerAllApp::_runAllWorkers(WorkerRequestFactory& requestFactory) {
                 fileSrv->run();
             });
             fileSrvThread.detach();
+        }
+        if (_enableIngestServer) {
+            auto ingestSrv = IngestServer::create(serviceProvider(), workerName);
+    
+            thread ingestSrvThread([ingestSrv] () {
+                ingestSrv->run();
+            });
+            ingestSrvThread.detach();
         }
     }
 }
