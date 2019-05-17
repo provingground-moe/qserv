@@ -540,6 +540,9 @@ struct Edge {
 };
 
 
+std::ostream& operator<<(std::ostream& out, Edge const& edge);
+
+
 /// A `Vertex` corresponds to an in-query partitioned table reference. A
 /// reference to the underlying table metadata and a list of edges (join
 /// predicates/constraints) that involve the table reference are bundled
@@ -597,6 +600,10 @@ struct Vertex {
         tr.setTable(info->getOverlapTemplate());
     }
 };
+
+
+std::ostream& operator<<(std::ostream& out, Vertex const& vertex);
+std::ostream& operator<<(std::ostream& out, Edge const& edge);
 
 
 /// A relation graph consists of a list of vertices, representing the
