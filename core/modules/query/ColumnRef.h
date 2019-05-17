@@ -60,13 +60,19 @@ public:
 
     ColumnRef(std::string db, std::string table, std::string column);
 
+    ColumnRef(std::string db, std::string table, std::string tableAlias, std::string column);
+
+    ColumnRef(std::shared_ptr<TableRefBase> const& table, std::string const& column);
+
     static Ptr newShared(std::string const& db,
                          std::string const& table,
                          std::string const& column);
 
+
     std::string const& getDb() const;
     std::string const& getTable() const;
     std::string const& getColumn() const;
+    std::string const& getTableAlias() const;
 
     std::shared_ptr<TableRefBase> getTableRef() const;
     std::shared_ptr<TableRefBase>& getTableRef();

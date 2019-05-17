@@ -83,8 +83,13 @@ ColumnRef::Ptr ColumnRef::newShared(std::string const& db, std::string const& ta
     return std::make_shared<ColumnRef>(db, table, column);
 }
 
-ColumnRef::ColumnRef(std::string db_, std::string table_, std::string column_)
-    : _tableRef(std::make_shared<TableRefBase>(db_, table_, "")), _column(column_) {
+ColumnRef::ColumnRef(std::string db, std::string table, std::string column)
+    : _tableRef(std::make_shared<TableRefBase>(db, table, "")), _column(column) {
+}
+
+
+ColumnRef::ColumnRef(std::string db, std::string table, std::string tableAlias, std::string column)
+    : _tableRef(std::make_shared<TableRefBase>(db, table, tableAlias)), _column(column) {
 }
 
 
@@ -105,6 +110,11 @@ std::string const& ColumnRef::getTable() const {
 
 std::string const& ColumnRef::getColumn() const {
     return _column;
+}
+
+
+std::string const& ColumnRef::getTableAlias() const {
+    return _tableRef->getAlias();
 }
 
 
