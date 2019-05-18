@@ -153,14 +153,7 @@ private:
 struct ColumnRefLt {
     bool operator()(query::ColumnRef const& a,
                     query::ColumnRef const& b) const {
-        int c = a.getColumn().compare(b.getColumn());
-        if (c == 0) {
-            c = a.getTable().compare(b.getTable());
-            if (c == 0) {
-                c = a.getDb().compare(b.getDb());
-            }
-        }
-        return c < 0;
+        return a.lessThan(b, true); // passing true allows the comparison to consider the table alias
     }
     bool operator()(ColumnVertexMap::Entry const& a,
                     ColumnVertexMap::Entry const& b) const {
@@ -187,7 +180,7 @@ struct ColumnRefLt {
 struct ColumnRefEq {
     bool operator()(query::ColumnRef const& a,
                     query::ColumnRef const& b) const {
-        return a.getColumn() == b.getColumn() && a.getTable() == b.getTable() && a.getDb() == b.getDb();
+        return a.equal(b, true); // passing true allows the comparison to consider the table alias
     }
     bool operator()(ColumnVertexMap::Entry const& a,
                     ColumnVertexMap::Entry const& b) const {

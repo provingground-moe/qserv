@@ -91,6 +91,9 @@ public:
     // more-populated rhs.
     bool isSubsetOf(const ColumnRef::Ptr & rhs) const;
 
+    bool lessThan(ColumnRef const& rhs, bool useAlias) const;
+    bool equal(ColumnRef const& rhs, bool useAlias) const;
+
     bool operator==(const ColumnRef& rhs) const;
     bool operator!=(const ColumnRef& rhs) const { return false == (*this == rhs); }
     bool operator<(const ColumnRef& rhs) const;

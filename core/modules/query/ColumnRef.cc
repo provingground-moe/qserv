@@ -173,6 +173,35 @@ bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
 }
 
 
+bool ColumnRef::equal(ColumnRef const& rhs, bool useAlias) const {
+    // if they match they compare
+    if (*this == rhs) {
+        return true;
+    // if we're not supposed to check the alias then we're done; no match.
+    } else if (not useAlias) {
+        return false;
+    }
+    // if we use the alias, check the column first
+    if (_column != rhs._column) {
+        return false;
+    }
+    // now see if either of the tableRefs is an alias of the other
+    if (true == _tableRef->isAliasedBy(*rhs._tableRef) || true == rhs._tableRef->isAliasedBy(*_tableRef)) {
+        return true;
+    }
+    // and now if we haven't returned true then no match, return false.
+    return false;
+}
+
+
+bool ColumnRef::lessThan(ColumnRef const& rhs, bool useAlias) const {
+    if (useAlias && this->equal(rhs, useAlias)) {
+        return false;
+    }
+    return *this < rhs;
+}
+
+
 bool ColumnRef::operator==(const ColumnRef& rhs) const {
     // this implementation _could_ use TableRef's operator==, but historically this function does _not_
     // consider the table's alias (except where it was assigned to the _table string that used to be in this
