@@ -209,15 +209,10 @@ void verifyColumnRef(ColumnRef const& c) {
         throw std::logic_error(
             "Parser/query analysis bug: "
             "ColumnRef with an empty column name.");
-    } else if (!c.getDb().empty()) {
-        if (c.getTable().empty()) {
-            throw std::logic_error(
-                "Parser/query analysis bug: ColumnRef has an empty "
-                "table/alias name but a non-empty database name.");
-        }
-        throw std::logic_error(
-            "Query analysis bug: the db.table portion of a fully "
-            "qualified column name was not replaced with an alias.");
+    }
+    if (c.getTableAlias().empty()) {
+        throw std::logic_error("Query analysis bug: the column ref is expected to have an aliased table "
+                               "name.");
     }
 }
 
