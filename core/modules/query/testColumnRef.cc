@@ -84,6 +84,19 @@ struct TestColumns {
     bool pass; // if the test should pass; i.e. the available columns should satisfy the required columns.
 };
 
+
+// TestColumns plus an pass/fail indicator for using the alias
+struct TestColumnsAlias : public TestColumns {
+    TestColumnsAlias(std::string aDb, std::string aTable, std::string aTableAlias, std::string aColumn,
+                     std::string bDb, std::string bTable, std::string bTableAlias, std::string bColumn,
+                     bool noAliasPass, bool usingAliasPass)
+    : TestColumns(aDb, aTable, aTableAlias, aColumn, bDb, bTable, bTableAlias, bColumn, noAliasPass)
+    , aliasPass(usingAliasPass) {}
+
+    bool aliasPass; // if the test should pass when using the TableRef alias (instead of the db & table vals);
+};
+
+
 std::ostream& operator<<(std::ostream& os, TestColumns const& self) {
     os << "TestColumns(";
     os << "a:" << self.a;

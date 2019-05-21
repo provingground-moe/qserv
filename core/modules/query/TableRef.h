@@ -142,6 +142,8 @@ public:
 
     bool operator==(const TableRef& rhs) const;
 
+    // bool lessThan(TableRefBase const& rhs, bool useAlias) const override;
+
     class render;
 private:
     friend std::ostream& operator<<(std::ostream& os, TableRef const& refN);

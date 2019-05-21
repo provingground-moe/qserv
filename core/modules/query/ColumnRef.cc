@@ -195,10 +195,12 @@ bool ColumnRef::equal(ColumnRef const& rhs, bool useAlias) const {
 
 
 bool ColumnRef::lessThan(ColumnRef const& rhs, bool useAlias) const {
-    if (useAlias && this->equal(rhs, useAlias)) {
+    if (_tableRef->lessThan(*rhs._tableRef, useAlias)) {
+        return true;
+    } else if (rhs._tableRef->lessThan(*_tableRef, useAlias)) {
         return false;
     }
-    return *this < rhs;
+    return _column < rhs._column;
 }
 
 
