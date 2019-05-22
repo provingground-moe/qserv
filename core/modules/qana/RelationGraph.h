@@ -584,6 +584,7 @@ struct Vertex {
     void rewriteAsChunkTemplate() {
         tr.setDb(info->database);
         tr.setTable(info->getChunkTemplate());
+        tr.setAlias("");
     }
 
     /// `rewriteAsSubChunkTemplate` rewrites `tr` to contain a sub-chunk
@@ -591,6 +592,7 @@ struct Vertex {
     void rewriteAsSubChunkTemplate() {
         tr.setDb(info->getSubChunkDb());
         tr.setTable(info->getSubChunkTemplate());
+        tr.setAlias("");
     }
 
     /// `rewriteAsOverlapTemplate` rewrites `tr` to contain an overlap
@@ -598,6 +600,7 @@ struct Vertex {
     void rewriteAsOverlapTemplate() {
         tr.setDb(info->getSubChunkDb());
         tr.setTable(info->getOverlapTemplate());
+        tr.setAlias("");
     }
 };
 

@@ -83,6 +83,7 @@ UserQueryProcessList::UserQueryProcessList(std::shared_ptr<query::SelectStmt> co
         // (in practice we accept only one table in FROM
         tblRef->setDb("");
         tblRef->setTable("InfoSchemaProcessList");
+        tblRef->setAlias("");
     }
 
     auto qtempl = stmt->getQueryTemplate();
