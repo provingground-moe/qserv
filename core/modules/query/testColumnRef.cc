@@ -179,4 +179,30 @@ BOOST_AUTO_TEST_CASE(ColumnRefThrow) {
 }
 
 
+
+
+
+BOOST_AUTO_TEST_CASE(ColumnRefEqual) {
+    // everything the same, check via alias
+    BOOST_REQUIRE_EQUAL(query::ColumnRef("db", "table", "alais", "column").equal(
+                        query::ColumnRef("db", "table", "alais", "column"), true), true);
+    // everything the same, check via db & table
+    BOOST_REQUIRE_EQUAL(query::ColumnRef("db", "table", "alais", "column").equal(
+                        query::ColumnRef("db", "table", "alais", "column"), false), true);
+    // different db and table, check via alias
+    BOOST_REQUIRE_EQUAL(query::ColumnRef("db", "table", "alais", "column").equal(
+                        query::ColumnRef("",   "",      "alais", "column"), true), true);
+    // different db and table, check via db & table
+    BOOST_REQUIRE_EQUAL(query::ColumnRef("db", "table", "alais", "column").equal(
+                        query::ColumnRef("",   "",      "alais", "column"), false), false);
+    // different alias, check via alias
+    BOOST_REQUIRE_EQUAL(query::ColumnRef("db", "table", "a", "column").equal(
+                        query::ColumnRef("db", "table", "alais", "column"), true), false);
+    // different alias, check via db & table
+    BOOST_REQUIRE_EQUAL(query::ColumnRef("db", "table", "a", "column").equal(
+                        query::ColumnRef("db", "table", "alais", "column"), false), true);
+
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()

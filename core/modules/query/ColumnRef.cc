@@ -174,23 +174,10 @@ bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
 
 
 bool ColumnRef::equal(ColumnRef const& rhs, bool useAlias) const {
-    // if they match they compare
-    if (*this == rhs) {
-        return true;
-    // if we're not supposed to check the alias then we're done; no match.
-    } else if (not useAlias) {
-        return false;
-    }
-    // if we use the alias, check the column first
+    return _tableRef->equal(*rhs._tableRef, useAlias);
     if (_column != rhs._column) {
         return false;
     }
-    // now see if either of the tableRefs is an alias of the other
-    if (true == _tableRef->isAliasedBy(*rhs._tableRef) || true == rhs._tableRef->isAliasedBy(*_tableRef)) {
-        return true;
-    }
-    // and now if we haven't returned true then no match, return false.
-    return false;
 }
 
 
