@@ -41,6 +41,7 @@
 namespace lsst {
 namespace qserv {
 namespace query {
+    class TableRef;
     class QueryTemplate;
 }}} // End of forward declarations
 
@@ -56,17 +57,15 @@ public:
     typedef std::shared_ptr<ColumnRef>  Ptr;
     typedef std::vector<Ptr> Vector;
 
-    ColumnRef(std::string db_, std::string table_, std::string column_)
-        : _db(db_), _table(table_), _column(column_) {}
-    static Ptr newShared(std::string const& db_,
-                         std::string const& table_,
-                         std::string const& column_) {
-        return std::make_shared<ColumnRef>(db_, table_, column_);
-    }
+    ColumnRef(std::string db, std::string table, std::string column);
 
-    std::string const& getDb() const { return _db; }
-    std::string const& getTable() const { return _table; }
-    std::string const& getColumn() const { return _column; }
+    static Ptr newShared(std::string const& db,
+                         std::string const& table,
+                         std::string const& column);
+
+    std::string const& getDb() const;
+    std::string const& getTable() const;
+    std::string const& getColumn() const;
 
     void setDb(std::string const& db);
     void setTable(std::string const& table);
@@ -77,14 +76,8 @@ public:
     void renderTo(QueryTemplate& qt) const;
 
     // Returns true if the fields in rhs have the same values as the fields in this, without considering
-    // unpopulated fields. This can be used to determine if rhs could refer to the same _column as this
-    // ColumnRef.
-    // Only considers populated member variables, e.g. if `_db` is not populated in this or in rhs it is
-    // ignored during comparison, except if e.g. _db is populated but _table is not (or _table is but _column is
-    // not) this will return false.
-    // This function requires that the _column field be populated, and requires that less significant fields
-    // be populated if more significant fields are populated, e.g. if _db is populated, _table (and _column)
-    // must be populated.
+    // unpopulated fields. This can be used to determine if this could refer to the same column as a
+    // more-populated rhs.
     bool isSubsetOf(const ColumnRef::Ptr & rhs) const;
 
     bool operator==(const ColumnRef& rhs) const;
@@ -92,8 +85,7 @@ public:
     bool operator<(const ColumnRef& rhs) const;
 
 private:
-    std::string _db;
-    std::string _table;
+    std::shared_ptr<TableRef> _tableRef;
     std::string _column;
 };
 
