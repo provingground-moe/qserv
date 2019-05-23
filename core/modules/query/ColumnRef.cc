@@ -192,6 +192,7 @@ bool ColumnRef::lessThan(ColumnRef const& rhs, bool useAlias) const {
 
 
 bool ColumnRef::operator==(const ColumnRef& rhs) const {
+<<<<<<< HEAD
     // this implementation _could_ use TableRef's operator==, but historically this function does _not_
     // consider the table's alias (except where it was assigned to the _table string that used to be in this
     // object, instead of having a TableRef). For the time being, to preserve functionality, I'm going to
@@ -201,14 +202,23 @@ bool ColumnRef::operator==(const ColumnRef& rhs) const {
     // are to be fully populated then maybe it does not matter if the alias or db+table are used? TBD.
     return std::tie(_tableRef->getDb(), _tableRef->getTable(), _column) ==
             std::tie(rhs._tableRef->getDb(), rhs._tableRef->getTable(), rhs._column);
+=======
+    throw std::runtime_error("fixme?");
+    return TableRefStringTuple(*_tableRef, _column) == TableRefStringTuple(*rhs._tableRef, rhs._column);
+>>>>>>> b7a2e72ca... RelationGraph logging & WIP
 }
 
 
 bool ColumnRef::operator<(const ColumnRef& rhs) const {
+<<<<<<< HEAD
     // this implementation _could_ use TableRef's operator<, but for now it's not, for the reasons discussed
     // in the comment of ColumnRef::operator==.
     return std::tie(_tableRef->getDb(), _tableRef->getTable(), _column) <
             std::tie(rhs._tableRef->getDb(), rhs._tableRef->getTable(), rhs._column);
+=======
+    throw std::runtime_error("fixme?");
+    return TableRefStringTuple(*_tableRef, _column) < TableRefStringTuple(*rhs._tableRef, rhs._column);
+>>>>>>> b7a2e72ca... RelationGraph logging & WIP
 }
 
 

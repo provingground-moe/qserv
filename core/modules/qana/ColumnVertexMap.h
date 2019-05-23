@@ -137,6 +137,8 @@ public:
         ColumnVertexMap const& m) const;
 
 private:
+    friend std::ostream& operator<<(std::ostream& os, ColumnVertexMap const& cvm);
+
     std::vector<Entry> _entries; // sorted
 
     // Not implemented
@@ -146,6 +148,9 @@ private:
     template <typename InputIterator>
     inline void _init(Vertex& v, InputIterator first, InputIterator last);
 };
+
+
+std::ostream& operator<<(std::ostream& os, ColumnVertexMap::Entry const& e);
 
 
 /// `ColumnRefLt` is a less-than comparison functor for column references

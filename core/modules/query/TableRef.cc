@@ -98,8 +98,14 @@ TableRef::TableRef(std::string const& db_, std::string const& table_, std::strin
 }
 
 
+<<<<<<< HEAD
 bool TableRef::hasDb() const {
     return not _db.empty();
+=======
+bool TableRefBase::operator==(TableRefBase const& rhs) const {
+    throw std::runtime_error("fixme?");
+    return std::tie(_db, _table, _alias) == std::tie(rhs._db, rhs._table, rhs._alias);
+>>>>>>> b7a2e72ca... RelationGraph logging & WIP
 }
 
 
@@ -113,9 +119,15 @@ bool TableRef::hasAlias() const {
 }
 
 
+<<<<<<< HEAD
 void TableRef::setAlias(std::string const& alias) {
     LOGS(_log, LOG_LVL_TRACE, *this << "; set alias:" << alias);
     _alias = alias;
+=======
+bool TableRefBase::operator<(const TableRefBase& rhs) const {
+    throw std::runtime_error("fixme?");
+    return std::tie(_db, _table, _alias) < std::tie(rhs._db, rhs._table, rhs._alias);
+>>>>>>> b7a2e72ca... RelationGraph logging & WIP
 }
 
 
@@ -125,34 +137,10 @@ void TableRef::setDb(std::string const& db) {
 }
 
 
-<<<<<<< HEAD
 void TableRef::setTable(std::string const& table) {
     LOGS(_log, LOG_LVL_TRACE, *this << "; set table:" << table);
     if (table.empty()) {
         throw std::logic_error("TableRef::setTable - table can not be empty");
-=======
-bool TableRefBase::equal(TableRefBase const& rhs, bool useAlias) const {
-    if (useAlias) {
-        return _alias == rhs._alias;
-    }
-    return std::tie(_db, _table) == std::tie(rhs._db, rhs._table);
-}
-
-
-
-////////////////////////////////////////////////////////////////////////
-// TableRef
-////////////////////////////////////////////////////////////////////////
-
-
-std::ostream& operator<<(std::ostream& os, TableRef const& ref) {
-    os << "TableRef(";
-    os << "\"" << ref._db << "\"";
-    os << ", \"" << ref._table << "\"";
-    os << ", \"" << ref._alias << "\"";
-    if (!ref._joinRefs.empty()) {
-        os << ", " << util::printable(ref._joinRefs, "", "");
->>>>>>> f084a29be... fix lessThan and equalTo and add unit test
     }
     _table = table;
 }

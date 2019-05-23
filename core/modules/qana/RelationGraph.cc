@@ -55,6 +55,7 @@
 #include "query/ValueExpr.h"
 #include "query/ValueFactor.h"
 #include "query/WhereClause.h"
+#include "util/IterableFormatter.h"
 #include "global/constants.h"
 
 namespace {
@@ -118,7 +119,7 @@ std::ostream& operator<<(std::ostream& out, Edge const& edge) {
 // Vertex implementation
 
 void Vertex::insert(Edge const& e) {
-    LOGS(_log, LOG_LVL_DEBUG, "Vertex::" <<__FUNCTION__ << " " << e);
+    LOGS(_log, LOG_LVL_DEBUG, "Vertex::" <<__FUNCTION__ << "(" << this << ")" << e);
     typedef std::vector<Edge>::iterator Iter;
     // Look for an existing edge incident to the same vertex as e using
     // binary search.
@@ -182,6 +183,7 @@ BoolTerm::Ptr findFirstNonTrivialChild(BoolTerm::Ptr tree) {
             break;
         }
     }
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning " << *tree);
     return tree;
 }
 
@@ -192,12 +194,17 @@ bool isOuterJoin(JoinRef::Type jt) {
 
 /// `getColumnRef` returns the ColumnRef in `ve` if there is one.
 ColumnRef::Ptr getColumnRef(ValueExprPtr const& ve) {
-    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__);
-    ColumnRef::Ptr cr;
     if (!ve) {
-        return cr;
+        LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning nullptr");
+        return nullptr;
     }
-    return ve->getColumnRef();
+    auto cr = ve->getColumnRef();
+    if (nullptr == cr) {
+        LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning nullptr");
+    } else {
+        LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning " << *cr);
+    }
+    return cr;
 }
 
 /// `verifyColumnRef` checks that a column reference has a column name and an
@@ -271,7 +278,8 @@ size_t addEqEdge(std::string const& ca,
                  Vertex* a,
                  Vertex* b)
 {
-    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__);
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " columnA:" << ca << ", columnB:" << cb <<
+        ", outer:" << outer << ", vertexA:" << a << ", vertexB:" << b);
     if (a == b) {
         // Loops are useless for query analysis.
         return 0;
@@ -341,22 +349,28 @@ std::pair<ColumnRef::Ptr, ColumnRef::Ptr> const getEqColumnRefs(
     // Look for a BoolFactor containing a single CompPredicate.
     BoolFactor::Ptr bf = std::dynamic_pointer_cast<BoolFactor>(bt);
     if (!bf || bf->_terms.size() != 1) {
+        LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning " << p.first << ", " << p.second);
         return p;
     }
     CompPredicate::Ptr cp =
         std::dynamic_pointer_cast<CompPredicate>(bf->_terms.front());
     if (!cp || cp->op != query::CompPredicate::EQUALS_OP) {
+        LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning " << p.first << ", " << p.second);
         return p;
     }
     // Extract column references (if they exist)
     ColumnRef::Ptr l = getColumnRef(cp->left);
     ColumnRef::Ptr r = getColumnRef(cp->right);
     if (!l || !r) {
+        LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning " << p.first << ", " << p.second);
         return p;
     }
     verifyColumnRef(*l);
     verifyColumnRef(*r);
-    return std::make_pair(l, r);
+    auto ret = std::make_pair(l, r);
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning " << ret.first << ", " << ret.second);
+    return ret;
+
 }
 
 } // anonymous namespace
@@ -369,7 +383,7 @@ size_t RelationGraph::_addOnEqEdges(BoolTerm::Ptr on,
                                     bool outer,
                                     RelationGraph& g)
 {
-    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << *on << ", outer:" << outer);
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " " << *on << ", outer:" << outer);
     size_t numEdges = 0;
     on = findFirstNonTrivialChild(on);
     AndTerm::Ptr at = std::dynamic_pointer_cast<AndTerm>(on);
@@ -388,9 +402,13 @@ size_t RelationGraph::_addOnEqEdges(BoolTerm::Ptr on,
     }
     // Lookup column references in graphs being joined together
     std::vector<Vertex*> const& a1 = _map.find(*c.first);
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " found vertex a1 " << util::printable(a1) << " for column:" << *c.first);
     std::vector<Vertex*> const& b1 = g._map.find(*c.first);
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " found vertex b1 " << util::printable(b1) << " for column:" << *c.first);
     std::vector<Vertex*> const& a2 = _map.find(*c.second);
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " found vertex a2 " << util::printable(a2) << " for column:" << *c.second);
     std::vector<Vertex*> const& b2 = g._map.find(*c.second);
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " found vertex b2 " << util::printable(b2) << " for column:" << *c.second);
     if ((!a1.empty() && !b1.empty()) || (!a2.empty() && !b2.empty())) {
         // At least one column reference was found in both graphs
         QueryTemplate qt;
@@ -439,6 +457,8 @@ size_t RelationGraph::_addOnEqEdges(BoolTerm::Ptr on,
                 c.first->getColumn(), c.second->getColumn(), outer, *i1, *i2);
         }
     }
+
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " returning numEdges:" << numEdges);
     return numEdges;
 }
 
@@ -710,6 +730,7 @@ void RelationGraph::_fuse(JoinRef::Type joinType,
             "Unable to evaluate query by joining only partition-local data");
     }
     // Splice g into this graph.
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__ << " (" << this << ") splicing in verticies from (" << &g << "): " << util::printable(g._vertices));
     _vertices.splice(_vertices.end(), g._vertices);
     _map.fuse(g._map, natural, usingCols);
     // Add spatial edges
@@ -986,8 +1007,14 @@ RelationGraph::RelationGraph(SelectStmt& stmt, TableInfoPool& pool) :
     // WHERE clause
     if (stmt.hasWhereClause()) {
         BoolTerm::Ptr where = stmt.getWhereClause().getRootTerm();
+        LOGS(_log, LOG_LVL_DEBUG, "Before _addWhereEqEdges");
+        g._dumpGraph();
         g._addWhereEqEdges(where);
+        LOGS(_log, LOG_LVL_DEBUG, "After _addWhereEqEdges, before _addSpEdges");
+        g._dumpGraph();
         g._addSpEdges(where);
+        LOGS(_log, LOG_LVL_DEBUG, "After _addWhereEqEdges, before _addSpEdges");
+        g._dumpGraph();
     }
 
     g._dumpGraph();
@@ -1105,5 +1132,13 @@ void RelationGraph::rewrite(SelectStmtPtrVector& outputs,
         outputs.push_back(_query->clone());
     }
 }
+
+
+void RelationGraph::swap(RelationGraph& g) {
+    LOGS(_log, LOG_LVL_DEBUG, __FUNCTION__);
+    _vertices.swap(g._vertices);
+    _map.swap(g._map);
+}
+
 
 }}} // namespace lsst::qserv::qana

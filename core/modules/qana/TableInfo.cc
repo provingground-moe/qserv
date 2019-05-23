@@ -34,6 +34,7 @@
 
 // Qserv headers
 #include "query/ColumnRef.h"
+#include "util/IterableFormatter.h"
 
 
 namespace {
@@ -56,6 +57,7 @@ void appendColumnRefs(std::string const& column,
     }
     refs.push_back(std::make_shared<lsst::qserv::query::ColumnRef>("", "", column));
     refs.push_back(std::make_shared<ColumnRef>(database, table, tableAlias, column));
+    LOGS(_log, LOG_LVL_DEBUG, "did appendColumnRefs" << lsst::qserv::util::printable(refs));
 }
 
 } // anonymous namespace
