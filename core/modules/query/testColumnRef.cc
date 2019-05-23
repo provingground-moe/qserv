@@ -89,8 +89,6 @@ static const std::vector<TestColumns> COLUMN_REF_MATCHES = {
     TestColumns("foo", "bar", "baz",    "foo", "bar", "bar", false), // mismatch: column
     TestColumns("foo", "bar", "baz",    "foo", "foo", "baz", false), // mismatch: table
     TestColumns("foo", "bar", "baz",    "bar", "bar", "baz", false), // mismatch: db
-    TestColumns("foo", "",    "baz",    "foo", "bar", "baz", false), // mismatch: db populated but table not
-    TestColumns("foo", "bar", "baz",    "foo", "",    "baz", false), // mismatch: db populated but table not
     TestColumns("foo", "bar", "",       "foo", "bar", "baz", false), // mismatch: column not populated
     TestColumns("foo", "bar", "baz",    "foo", "bar", "",    false), // mismatch: column not populated
     TestColumns("foo", "bar", "baz",    "",    "",    "baz", false), // mismatch: can't match db or table
@@ -104,6 +102,12 @@ static const std::vector<TestColumns> COLUMN_REF_MATCHES = {
 BOOST_DATA_TEST_CASE(ColumnRefMatches, COLUMN_REF_MATCHES, columns) {
     BOOST_REQUIRE_MESSAGE(columns.pass == columns.a->isSubsetOf(columns.b), columns.a <<
             (columns.pass ? "should " : "should NOT ") << "be a subset of " << columns.b);
+}
+
+
+BOOST_AUTO_TEST_CASE(ColumnRefThrow) {
+    BOOST_REQUIRE_THROW(query::ColumnRef("db", "", ""), std::logic_error); // db populated but table not populated
+    BOOST_REQUIRE_THROW(query::ColumnRef("db", "", "alias"), std::logic_error); // db & alias populated but table not populated
 }
 
 

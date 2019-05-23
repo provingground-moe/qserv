@@ -73,11 +73,15 @@ public:
     typedef std::shared_ptr<TableRef> Ptr;
     typedef std::shared_ptr<TableRef const> CPtr;
 
-    TableRef(std::string const& db_, std::string const& table_,
-               std::string const& alias_)
-        : _alias(alias_), _db(db_), _table(table_)  {
-        if(table_.empty()) { throw std::logic_error("TableRef without table"); }
-    }
+    /**
+     * @brief Construct a new Table Ref object
+     *
+     * If db is popuated, table must also be populated.
+     *
+     * @throws logic_error if db is populated and table is not populated.
+     */
+    TableRef(std::string const& db_, std::string const& table_, std::string const& alias_);
+
     virtual ~TableRef() {}
 
     std::ostream& putStream(std::ostream& os) const;
@@ -88,6 +92,10 @@ public:
     std::string const& getTable() const { return _table; }
     std::string const& getAlias() const { return _alias; }
     JoinRefPtrVector const& getJoins() const { return _joinRefs; }
+
+    bool hasDb() const;
+    bool hasTable() const;
+    bool hasAlias() const;
 
     // Modifiers
     void setAlias(std::string const& alias);
@@ -121,6 +129,12 @@ public:
     void verifyPopulated(std::string const& defaultDb=std::string());
 
     TableRef::Ptr clone() const;
+
+    // Returns true if the fields in rhs have the same values as the fields in this, without considering
+    // unpopulated fields. This can be used to determine if this could refer to the same table as a
+    // more-populated rhs.
+    // ColumnRef.
+    bool isSubsetOf(std::shared_ptr<TableRef> const& rhs);
 
     bool operator==(const TableRef& rhs) const;
 

@@ -89,6 +89,30 @@ std::ostream& operator<<(std::ostream& os, TableRef const* ref) {
 }
 
 
+TableRef::TableRef(std::string const& db_, std::string const& table_, std::string const& alias_)
+        : _alias(alias_), _db(db_), _table(table_) {
+    if (hasDb() && not hasTable()) {
+        throw std::logic_error("table must be populated when db is populated.");
+    }
+}
+
+
+
+bool TableRef::hasDb() const {
+    return not _db.empty();
+}
+
+
+bool TableRef::hasTable() const {
+    return not _table.empty();
+}
+
+
+bool TableRef::hasAlias() const {
+    return not _alias.empty();
+}
+
+
 void TableRef::setAlias(std::string const& alias) {
     LOGS(_log, LOG_LVL_TRACE, *this << "; set alias:" << alias);
     _alias = alias;
@@ -201,6 +225,28 @@ TableRef::Ptr TableRef::clone() const {
     std::transform(_joinRefs.begin(), _joinRefs.end(),
                    std::back_inserter(newCopy->_joinRefs), joinRefClone);
     return newCopy;
+}
+
+
+bool TableRef::isSubsetOf(std::shared_ptr<TableRef> const& rhs) {
+    // if the _table is empty, the _db must be empty
+    if (not hasTable() && hasDb()) {
+        throw std::logic_error("Db is populated but Table is not.");
+    }
+    if (not rhs->hasTable() && rhs->hasDb()) {
+        throw std::logic_error("Db is populated but Table is not.");
+    }
+    if (hasDb()) {
+        if (getDb() != rhs->getDb()) {
+            return false;
+        }
+    }
+    if (hasTable()) {
+        if (getTable() != rhs->getTable()) {
+            return false;
+        }
+    }
+    return true;
 }
 
 

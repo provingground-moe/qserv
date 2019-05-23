@@ -40,6 +40,7 @@
 #include "lsst/log/Log.h"
 
 // Qserv headers
+#include "query/TableRef.h"
 #include "query/QueryTemplate.h"
 
 
@@ -55,8 +56,7 @@ namespace query {
 
 std::ostream& operator<<(std::ostream& os, ColumnRef const& cr) {
     os << "ColumnRef(";
-    os << "\"" << cr._db << "\"";
-    os << ", \"" << cr._table << "\"";
+    os << *cr._tableRef;
     os << ", \"" << cr._column << "\"";
     os << ")";
     return os;
@@ -73,15 +73,41 @@ std::ostream& operator<<(std::ostream& os, ColumnRef const* cr) {
 }
 
 
+ColumnRef::ColumnRef(std::string db, std::string table, std::string column)
+    : _tableRef(std::make_shared<TableRef>(db, table, "")), _column(column)
+{}
+
+
+ColumnRef::Ptr ColumnRef::newShared(std::string const& db, std::string const& table,
+        std::string const& column) {
+    return std::make_shared<ColumnRef>(db, table, column);
+}
+
+
+std::string const& ColumnRef::getDb() const {
+    return _tableRef->getDb();
+}
+
+
+std::string const& ColumnRef::getTable() const {
+    return _tableRef->getTable();
+}
+
+
+std::string const& ColumnRef::getColumn() const {
+    return _column;
+}
+
+
 void ColumnRef::setDb(std::string const& db) {
     LOGS(_log, LOG_LVL_TRACE, *this << "; set db:" << db);
-    _db = db;
+    _tableRef->setDb(db);
 }
 
 
 void ColumnRef::setTable(std::string const& table) {
     LOGS(_log, LOG_LVL_TRACE, *this << "; set table:" << table);
-    _table = table;
+    _tableRef->setTable(table);
 }
 
 
@@ -101,23 +127,8 @@ bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
     if (_column.empty() || rhs->_column.empty()) {
         return false;
     }
-    // if the _table is empty, the _db must be empty
-    if (_table.empty() && !_db.empty()) {
+    if (not _tableRef->isSubsetOf(rhs->_tableRef)) {
         return false;
-    }
-    if (rhs->_table.empty() && !rhs->_db.empty()) {
-        return false;
-    }
-
-    if (!_db.empty()) {
-        if (_db != rhs->_db) {
-            return false;
-        }
-    }
-    if (!_table.empty()) {
-        if (_table != rhs->_table) {
-            return false;
-        }
     }
     if (_column != rhs->_column) {
         return false;
@@ -127,12 +138,23 @@ bool ColumnRef::isSubsetOf(const ColumnRef::Ptr & rhs) const {
 
 
 bool ColumnRef::operator==(const ColumnRef& rhs) const {
-    return std::tie(_db, _table, _column) == std::tie(rhs._db, rhs._table, rhs._column);
+    // this implementation _could_ use TableRef's operator==, but historically this function does _not_
+    // consider the table's alias (except where it was assigned to the _table string that used to be in this
+    // object, instead of having a TableRef). For the time being, to preserve functionality, I'm going to
+    // keep this as similar to what it was as possible. However, since some functions assigned alias to the
+    // table of the ColumnRef and that will be going away, this may have to be revisited. I suspect a rule
+    // like "if both TableRefs have an alias use that, otherwise use the db & table". OTOH, if all TableRefs
+    // are to be fully populated then maybe it does not matter if the alias or db+table are used? TBD.
+    return std::tie(_tableRef->getDb(), _tableRef->getTable(), _column) ==
+            std::tie(rhs._tableRef->getDb(), rhs._tableRef->getTable(), rhs._column);
 }
 
 
 bool ColumnRef::operator<(const ColumnRef& rhs) const {
-    return std::tie(_db, _table, _column) < std::tie(rhs._db, rhs._table, rhs._column);
+    // this implementation _could_ use TableRef's operator<, but for now it's not, for the reasons discussed
+    // in the comment of ColumnRef::operator==.
+    return std::tie(_tableRef->getDb(), _tableRef->getTable(), _column) <
+            std::tie(rhs._tableRef->getDb(), rhs._tableRef->getTable(), rhs._column);
 }
 
 
