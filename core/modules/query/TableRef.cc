@@ -98,14 +98,8 @@ TableRef::TableRef(std::string const& db_, std::string const& table_, std::strin
 }
 
 
-<<<<<<< HEAD
 bool TableRef::hasDb() const {
     return not _db.empty();
-=======
-bool TableRefBase::operator==(TableRefBase const& rhs) const {
-    throw std::runtime_error("fixme?");
-    return std::tie(_db, _table, _alias) == std::tie(rhs._db, rhs._table, rhs._alias);
->>>>>>> b7a2e72ca... RelationGraph logging & WIP
 }
 
 
@@ -119,15 +113,9 @@ bool TableRef::hasAlias() const {
 }
 
 
-<<<<<<< HEAD
 void TableRef::setAlias(std::string const& alias) {
     LOGS(_log, LOG_LVL_TRACE, *this << "; set alias:" << alias);
     _alias = alias;
-=======
-bool TableRefBase::operator<(const TableRefBase& rhs) const {
-    throw std::runtime_error("fixme?");
-    return std::tie(_db, _table, _alias) < std::tie(rhs._db, rhs._table, rhs._alias);
->>>>>>> b7a2e72ca... RelationGraph logging & WIP
 }
 
 
