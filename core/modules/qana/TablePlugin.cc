@@ -90,6 +90,9 @@ void matchValueExprs(lsst::qserv::query::QueryContext& context, CLAUSE_T & claus
     }
 }
 
+
+// Change the contents of the ValueExprs to use the TableRef objects that are stored in the context, instead
+// of allowing these ValueExprs to own their own unique TableRef objects.
 void matchTableRefs(lsst::qserv::query::QueryContext& context,
                     lsst::qserv::query::ValueExprPtrVector& valueExprs) {
     for (auto&& valueExpr : valueExprs) {
