@@ -153,6 +153,7 @@ public:
         int cfgNum;
         std::shared_ptr<css::CssAccess> css;
         std::string defaultDb;
+        mysql::MySqlConfig mysqlSchemaConfig;
     };
     explicit QuerySession(Test& t); ///< Debug constructor
     std::shared_ptr<query::QueryContext> dbgGetContext() { return _context; }
